@@ -15,6 +15,7 @@ type Conn struct {
 	ws        *websocket.Conn
 	projectID string
 	sceneID   id.SceneID
+	userID    string
 	operator  *usecase.Operator
 	bgCtx     context.Context
 	send      chan []byte

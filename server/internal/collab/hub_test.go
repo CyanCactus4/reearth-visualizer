@@ -13,13 +13,27 @@ func TestNewHub_NoRedis(t *testing.T) {
 	assert.Nil(t, h.relay)
 }
 
+func drainConnSend(t *testing.T, c *Conn) {
+	t.Helper()
+	for {
+		select {
+		case <-c.send:
+		default:
+			return
+		}
+	}
+}
+
 func TestHubRegisterBroadcastUnregister(t *testing.T) {
 	h := NewHub("")
 	c1 := &Conn{hub: h, projectID: "proj-1", send: make(chan []byte, 16)}
 	c2 := &Conn{hub: h, projectID: "proj-1", send: make(chan []byte, 16)}
 
 	h.register(c1)
+	drainConnSend(t, c1)
 	h.register(c2)
+	drainConnSend(t, c1)
+	drainConnSend(t, c2)
 
 	payload := []byte(`{"v":1,"t":"relay"}`)
 	h.broadcastLocal("proj-1", payload, c1)
@@ -37,7 +51,10 @@ func TestHubRegisterBroadcastUnregister(t *testing.T) {
 	default:
 	}
 
+	drainConnSend(t, c1)
+	drainConnSend(t, c2)
 	h.unregister(c1)
+	drainConnSend(t, c2)
 	h.unregister(c2)
 
 	h.mu.RLock()

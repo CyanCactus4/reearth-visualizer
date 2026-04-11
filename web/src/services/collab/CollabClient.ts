@@ -2,6 +2,7 @@ import { buildCollabWsUrl } from "./collabUrl";
 
 export type CollabInbound =
   | { v: 1; t: "pong" }
+  | { v: 1; t: "presence"; d?: { event?: string; userId?: string } }
   | { v: 1; t: "applied"; d?: Record<string, unknown> }
   | { v: 1; t: "error"; d?: { code?: string; message?: string } }
   | { v: 1; t: string; d?: unknown };

@@ -91,11 +91,16 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 		}
 
 		bgCtx := context.WithoutCancel(c.Request().Context())
+		userID := ""
+		if u := adapter.User(bgCtx); u != nil {
+			userID = u.ID().String()
+		}
 		conn := &Conn{
 			hub:       hub,
 			ws:        ws,
 			projectID: pid.String(),
 			sceneID:   pj.Scene(),
+			userID:    userID,
 			operator:  op,
 			bgCtx:     bgCtx,
 			send:      make(chan []byte, sendChannelBuf),

@@ -67,9 +67,12 @@ func (h *Hub) register(c *Conn) {
 	n := len(r.conns)
 	r.mu.Unlock()
 	log.Infofc(context.Background(), "collab: join room project=%s conns=%d", c.projectID, n)
+	h.presenceBroadcast(context.Background(), c, "join")
 }
 
 func (h *Hub) unregister(c *Conn) {
+	h.presenceBroadcast(context.Background(), c, "leave")
+
 	h.mu.RLock()
 	r, ok := h.rooms[c.projectID]
 	h.mu.RUnlock()
@@ -123,13 +126,11 @@ type relayWire struct {
 	D string `json:"d"` // base64 payload
 }
 
-func (h *Hub) broadcastFromClient(ctx context.Context, projectID string, payload []byte, from *Conn) {
-	h.broadcastLocal(projectID, payload, from)
-
+func (h *Hub) relayPublish(ctx context.Context, projectID string, inner []byte) {
 	if h.relay == nil {
 		return
 	}
-	w := relayWire{I: h.instanceID, P: projectID, D: base64.StdEncoding.EncodeToString(payload)}
+	w := relayWire{I: h.instanceID, P: projectID, D: base64.StdEncoding.EncodeToString(inner)}
 	b, err := json.Marshal(w)
 	if err != nil {
 		return
@@ -137,6 +138,32 @@ func (h *Hub) broadcastFromClient(ctx context.Context, projectID string, payload
 	if err := h.relay.publish(ctx, projectID, b); err != nil {
 		log.Warnfc(ctx, "collab: redis publish: %v", err)
 	}
+}
+
+func (h *Hub) broadcastFromClient(ctx context.Context, projectID string, payload []byte, from *Conn) {
+	h.broadcastLocal(projectID, payload, from)
+	h.relayPublish(ctx, projectID, payload)
+}
+
+func (h *Hub) fanoutRoom(ctx context.Context, projectID string, inner []byte) {
+	h.broadcastLocal(projectID, inner, nil)
+	h.relayPublish(ctx, projectID, inner)
+}
+
+func (h *Hub) presenceBroadcast(ctx context.Context, c *Conn, event string) {
+	uid := c.userID
+	if uid == "" {
+		uid = "unknown"
+	}
+	b, err := json.Marshal(map[string]any{
+		"v": 1,
+		"t": "presence",
+		"d": map[string]string{"event": event, "userId": uid},
+	})
+	if err != nil {
+		return
+	}
+	h.fanoutRoom(ctx, c.projectID, b)
 }
 
 func (h *Hub) deliverFromRedis(_ context.Context, projectID string, payload []byte) {
