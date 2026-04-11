@@ -71,7 +71,7 @@ export default ({
     addPropertyItem,
     movePropertyItem,
     removePropertyItem
-  } = usePropertyMutations();
+  } = usePropertyMutations(sceneId);
 
   const { createInfoboxBlock, deleteInfoboxBlock, moveInfoboxBlock } =
     useInfoboxBlockMutations();

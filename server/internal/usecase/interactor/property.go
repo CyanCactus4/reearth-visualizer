@@ -3,6 +3,7 @@ package interactor
 import (
 	"context"
 	"errors"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/gateway"
@@ -81,6 +82,15 @@ func (i *Property) UpdateValue(ctx context.Context, inp interfaces.UpdatePropert
 
 	err = i.propertyRepo.Save(ctx, p)
 	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+
+	sce, err := i.sceneRepo.FindByID(ctx, p.Scene())
+	if err != nil {
+		return nil, nil, nil, nil, err
+	}
+	sce.SetUpdatedAt(time.Now())
+	if err = i.sceneRepo.Save(ctx, sce); err != nil {
 		return nil, nil, nil, nil, err
 	}
 

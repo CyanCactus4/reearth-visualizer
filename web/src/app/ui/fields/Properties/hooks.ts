@@ -2,13 +2,13 @@ import { ValueType, ValueTypes } from "@reearth/app/utils/value";
 import { usePropertyMutations } from "@reearth/services/api/property";
 import { useCallback } from "react";
 
-export default (propertyId: string, schemaGroup: string) => {
+export default (propertyId: string, schemaGroup: string, sceneId?: string) => {
   const {
     updatePropertyValue,
     addPropertyItem,
     removePropertyItem,
     movePropertyItem
-  } = usePropertyMutations();
+  } = usePropertyMutations(sceneId);
 
   const handlePropertyItemUpdate = useCallback(
     (fieldId: string, vt: ValueType, itemId?: string) => {

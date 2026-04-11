@@ -17,6 +17,7 @@ import {
   applyRemoveStylePayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyUpdatePropertyValuePayload,
   applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyRemoveWidgetPayload,
@@ -362,6 +363,30 @@ describe("apply payloads", () => {
       sceneId: "sc1",
       styleId: "st1",
       baseSceneRev: 3
+    });
+  });
+
+  it("builds update_property_value apply envelope", () => {
+    const s = applyUpdatePropertyValuePayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      schemaGroupId: "tiles",
+      itemId: "it1",
+      fieldId: "opacity",
+      type: "NUMBER",
+      value: 0.5,
+      baseSceneRev: 9
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "update_property_value",
+      sceneId: "sc1",
+      propertyId: "pr1",
+      schemaGroupId: "tiles",
+      itemId: "it1",
+      fieldId: "opacity",
+      type: "NUMBER",
+      value: 0.5,
+      baseSceneRev: 9
     });
   });
 });

@@ -11,9 +11,10 @@ type Props = {
   propertyId: string;
   propertyItems?: Item[];
   onFlyTo?: FlyTo;
+  sceneId?: string;
 };
 
-const Settings: FC<Props> = ({ propertyId, propertyItems, onFlyTo }) => {
+const Settings: FC<Props> = ({ propertyId, propertyItems, onFlyTo, sceneId }) => {
   const t = useT();
   const visibleItems = useMemo(
     () => filterVisibleItems(propertyItems),
@@ -33,6 +34,7 @@ const Settings: FC<Props> = ({ propertyId, propertyItems, onFlyTo }) => {
             propertyId={propertyId}
             item={i}
             onFlyTo={onFlyTo}
+            sceneId={sceneId}
           />
         </Collapse>
       ))}

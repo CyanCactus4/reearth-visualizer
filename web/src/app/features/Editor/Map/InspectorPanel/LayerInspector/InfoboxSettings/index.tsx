@@ -10,9 +10,10 @@ import useHooks from "./hooks";
 type Props = {
   selectedLayerId: string;
   infobox?: NLSInfobox;
+  sceneId?: string;
 };
 
-const Infobox: FC<Props> = ({ selectedLayerId, infobox }) => {
+const Infobox: FC<Props> = ({ selectedLayerId, infobox, sceneId }) => {
   const t = useT();
 
   const { visibleItems, handleInfoboxCreate } = useHooks({
@@ -29,6 +30,7 @@ const Infobox: FC<Props> = ({ selectedLayerId, infobox }) => {
               key={i.id ?? ""}
               propertyId={infobox.property.id}
               item={i}
+              sceneId={sceneId}
             />
           ) : null
         )

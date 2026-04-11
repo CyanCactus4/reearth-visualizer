@@ -58,7 +58,7 @@ Every client message is a JSON object:
 | --- | ---- |
 | `ping` | Keep-alive; server responds with `pong`. |
 | `relay` | Opaque fan-out (escape hatch). |
-| `apply` | Server-authoritative mutation; `d.kind` ∈ `update_widget`, `add_widget`, `remove_widget`, `move_story_block`, `create_story_block`, `remove_story_block`, `create_story_page`, `remove_story_page`, `move_story_page`, `update_story_page`, `duplicate_story_page`, `add_nls_layer_simple`, `remove_nls_layer`, `update_nls_layer`, `update_nls_layers`, `add_style`, `update_style`, `remove_style` (scene writes via interactors). |
+| `apply` | Server-authoritative mutation; `d.kind` ∈ `update_widget`, `add_widget`, `remove_widget`, `move_story_block`, `create_story_block`, `remove_story_block`, `create_story_page`, `remove_story_page`, `move_story_page`, `update_story_page`, `duplicate_story_page`, `add_nls_layer_simple`, `remove_nls_layer`, `update_nls_layer`, `update_nls_layers`, `add_style`, `update_style`, `remove_style`, **`update_property_value`** (single field/value on a scene-linked **Property** via `Property.UpdateValue`; bumps **scene** revision) (scene writes via interactors). |
 | `lock` | Object lock acquire/release/heartbeat. |
 | `chat` | Room chat; persisted when Mongo store is configured. |
 | `cursor` | Normalized pointer position for presence. |
@@ -83,6 +83,7 @@ Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config
 | **Storytelling** | `apply` kinds: blocks — **`move_story_block`**, **`create_story_block`**, **`remove_story_block`**; pages — **`create_story_page`**, **`remove_story_page`**, **`move_story_page`**, **`update_story_page`**, **`duplicate_story_page`** (same auth/audit/`applied`/`sceneRev` path as widgets). |
 | **NLS layers** | **`add_nls_layer_simple`**, **`remove_nls_layer`**, **`update_nls_layer`**; batch reorder / multi-field — **`update_nls_layers`** (one `baseSceneRev` check; multiple `NLSLayer.Update` calls; optional **layer** collab-lock, same `applied` / `sceneRev` path). |
 | **Layer styles (scene `Style`)** | **`add_style`**, **`update_style`**, **`remove_style`** (interactors `Style.*`; optional collab-lock **`resource: "style"`** + `styleId`). |
+| **Property field values (scene-linked)** | **`update_property_value`** — `propertyId`, `fieldId`, `type`, optional `value`, `schemaGroupId`, `itemId`; same revision guard / `applied` / `sceneRev` as other applies; no CRDT merge on arbitrary JSON. |
 | **GraphQL-style streaming** | **`GET /api/collab/scene-rev/stream?sceneId=`** (SSE) emits new `sceneRev` after applies (hub-local). See [collab production deploy](../collab-production-deploy.md). |
 | **Mentions “push”** | Outbound WS **`notify`** with `d.kind=chat_mention` to tabs whose `userId` equals a parsed `@handle` (in-room only; not FCM/email). |
 

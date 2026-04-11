@@ -15,6 +15,7 @@ export {
   applyRemoveWidgetPayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyUpdatePropertyValuePayload,
   applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyUpdateWidgetPayload

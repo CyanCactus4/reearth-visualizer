@@ -10,9 +10,14 @@ import useHooks from "./hooks";
 type Props = {
   selectedLayerId: string;
   photoOverlay?: NLSPhotoOverlay;
+  sceneId?: string;
 };
 
-const PhotoOverlaySettings: FC<Props> = ({ selectedLayerId, photoOverlay }) => {
+const PhotoOverlaySettings: FC<Props> = ({
+  selectedLayerId,
+  photoOverlay,
+  sceneId
+}) => {
   const t = useT();
 
   const { visibleItems, handlePhotoOverlayCreate } = useHooks({
@@ -29,6 +34,7 @@ const PhotoOverlaySettings: FC<Props> = ({ selectedLayerId, photoOverlay }) => {
               key={i.id ?? ""}
               propertyId={photoOverlay.property.id}
               item={i}
+              sceneId={sceneId}
             />
           ) : null
         )

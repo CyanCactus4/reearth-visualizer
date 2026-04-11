@@ -15,8 +15,14 @@ import useHooks from "./hooks";
 type Props = Pick<PanelProps, "showCollapseArea" | "areaRef">;
 
 const PageSettingsPanel: FC<Props> = ({ showCollapseArea, areaRef }) => {
-  const { selectedStoryPage, layers, handleStoryPageUpdate, tab, handleFlyTo } =
-    useStoryPage();
+  const {
+    selectedStoryPage,
+    layers,
+    handleStoryPageUpdate,
+    tab,
+    handleFlyTo,
+    sceneId
+  } = useStoryPage();
 
   const {
     allCheckedLayers,
@@ -100,6 +106,7 @@ const PageSettingsPanel: FC<Props> = ({ showCollapseArea, areaRef }) => {
                 propertyId={selectedStoryPage.property.id}
                 item={i}
                 onFlyTo={handleFlyTo}
+                sceneId={sceneId}
                 data-testid={`page-settings-property-item-${i.id}`}
               />
             </Collapse>

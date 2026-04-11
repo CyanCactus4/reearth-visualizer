@@ -371,3 +371,33 @@ export function applyRemoveStylePayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+/** Collab apply for scene/widget/… property field edits (server `Property.UpdateValue`). */
+export function applyUpdatePropertyValuePayload(params: {
+  sceneId: string;
+  propertyId: string;
+  fieldId: string;
+  /** GraphQL `ValueType` enum string, e.g. `STRING`, `NUMBER`. */
+  type: string;
+  value?: unknown;
+  schemaGroupId?: string;
+  itemId?: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_property_value",
+    sceneId: params.sceneId,
+    propertyId: params.propertyId,
+    fieldId: params.fieldId,
+    type: params.type
+  };
+  if (params.schemaGroupId !== undefined && params.schemaGroupId !== "") {
+    d.schemaGroupId = params.schemaGroupId;
+  }
+  if (params.itemId !== undefined && params.itemId !== "") {
+    d.itemId = params.itemId;
+  }
+  if (params.value !== undefined) d.value = params.value;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}

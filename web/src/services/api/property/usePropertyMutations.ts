@@ -16,11 +16,17 @@ import { useT } from "@reearth/services/i18n/hooks";
 import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
+import {
+  applyUpdatePropertyValuePayload,
+  useCollab
+} from "@reearth/services/collab";
+
 import { MutationReturn } from "../types";
 
-export const usePropertyMutations = () => {
+export const usePropertyMutations = (sceneId?: string) => {
   const t = useT();
   const [, setNotification] = useNotification();
+  const collab = useCollab();
 
   const [updatePropertyValueMutation] = useMutation(UPDATE_PROPERTY_VALUE);
   const [addPropertyItemMutation] = useMutation(ADD_PROPERTY_ITEM);
@@ -40,6 +46,27 @@ export const usePropertyMutations = () => {
       const gvt = valueTypeToGQL(vt);
       if (!gvt) return;
       const value = valueToGQL(v, vt);
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyUpdatePropertyValuePayload({
+            sceneId,
+            propertyId,
+            schemaGroupId: schemaGroupId || undefined,
+            itemId: itemId || undefined,
+            fieldId,
+            type: gvt,
+            value,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the property value!")
+          });
+          return { data: undefined, status: "success" as const };
+        }
+      }
       const { data, error } = await updatePropertyValueMutation({
         variables: {
           propertyId,
@@ -71,7 +98,7 @@ export const usePropertyMutations = () => {
         status: "success"
       };
     },
-    [updatePropertyValueMutation, setNotification, t]
+    [collab, sceneId, updatePropertyValueMutation, setNotification, t]
   );
 
   const addPropertyItem = useCallback(

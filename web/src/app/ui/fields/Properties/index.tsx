@@ -19,16 +19,18 @@ type Props = {
   propertyId: string;
   item?: Item;
   onFlyTo?: FlyTo;
+  /** When set with collab open, property value updates use WS `apply` for this scene. */
+  sceneId?: string;
 };
 
-const PropertyItem: FC<Props> = ({ propertyId, item, onFlyTo }) => {
+const PropertyItem: FC<Props> = ({ propertyId, item, onFlyTo, sceneId }) => {
   const t = useT();
   const [selected, select] = useState<string>();
   const {
     handlePropertyItemDelete,
     handlePropertyItemAdd,
     handlePropertyItemMove
-  } = useHooks(propertyId, item?.schemaGroup || "");
+  } = useHooks(propertyId, item?.schemaGroup || "", sceneId);
 
   const isList = item && "items" in item;
   const layerMode = useMemo(() => {
@@ -133,6 +135,7 @@ const PropertyItem: FC<Props> = ({ propertyId, item, onFlyTo }) => {
               itemId={selected}
               schema={f.schemaField}
               onFlyTo={onFlyTo}
+              sceneId={sceneId}
             />
           );
         })}

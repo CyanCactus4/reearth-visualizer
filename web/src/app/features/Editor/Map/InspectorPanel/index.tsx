@@ -51,6 +51,7 @@ const InspectorPanel: FC<Props> = ({ areaRef, showCollapseArea }) => {
             propertyId={scenePropertyId}
             propertyItems={sceneSettings}
             onFlyTo={handleFlyTo}
+            sceneId={sceneId}
           />
         </CollabLockGate>
       )}

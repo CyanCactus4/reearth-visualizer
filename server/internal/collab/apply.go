@@ -115,6 +115,8 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyUpdateStyleOp(ctx, hub, from, d)
 	case "remove_style":
 		return applyRemoveStyleOp(ctx, hub, from, d)
+	case "update_property_value":
+		return applyUpdatePropertyValueOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

@@ -34,6 +34,7 @@ const WidgetInspectorPanel: FC = () => {
                   propertyId={selectedWidget.propertyId}
                   item={i}
                   onFlyTo={handleFlyTo}
+                  sceneId={sceneId}
                 />
               </Collapse>
             ))}

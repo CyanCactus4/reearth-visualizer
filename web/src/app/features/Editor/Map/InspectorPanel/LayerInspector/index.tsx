@@ -106,6 +106,7 @@ const InspectorTabs: FC<Props> = ({
           <InfoboxSettings
             selectedLayerId={selectedLayer.layer.id}
             infobox={selectedLayer.layer?.infobox}
+            sceneId={sceneId}
           />
         )
       }
@@ -121,6 +122,7 @@ const InspectorTabs: FC<Props> = ({
           <PhotoOverlaySettings
             selectedLayerId={selectedLayer.layer.id}
             photoOverlay={selectedLayer.layer?.photoOverlay}
+            sceneId={sceneId}
           />
         )
       });

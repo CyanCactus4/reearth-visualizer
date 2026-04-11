@@ -33,6 +33,7 @@ type Props = {
   schema: SchemaField;
   field?: Field;
   onFlyTo?: FlyTo;
+  sceneId?: string;
 };
 
 const PropertyField: FC<Props> = ({
@@ -41,10 +42,11 @@ const PropertyField: FC<Props> = ({
   field,
   schemaGroup,
   schema,
-  onFlyTo
+  onFlyTo,
+  sceneId
 }) => {
   const t = useT();
-  const { handlePropertyItemUpdate } = useHooks(propertyId, schemaGroup);
+  const { handlePropertyItemUpdate } = useHooks(propertyId, schemaGroup, sceneId);
   const value = useMemo(
     () => field?.mergedValue ?? field?.value ?? schema.defaultValue,
     [field?.mergedValue, field?.value, schema.defaultValue]
