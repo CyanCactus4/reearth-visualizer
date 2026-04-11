@@ -1,9 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import {
   buildCollabApplyAuditUrl,
   buildCollabChatUrl,
-  buildCollabWsUrl
+  buildCollabRedoPostUrl,
+  buildCollabUndoPostUrl,
+  buildCollabWsUrl,
+  postCollabRedo,
+  postCollabUndo
 } from "./collabUrl";
 
 describe("buildCollabWsUrl", () => {
@@ -40,5 +44,53 @@ describe("buildCollabApplyAuditUrl", () => {
     ).toBe(
       "http://localhost:8080/api/collab/apply-audit?projectId=proj1&limit=20"
     );
+  });
+});
+
+describe("buildCollabUndoPostUrl / buildCollabRedoPostUrl", () => {
+  it("builds POST URLs under api base", () => {
+    expect(buildCollabUndoPostUrl("http://localhost:8080/api")).toBe(
+      "http://localhost:8080/api/collab/undo"
+    );
+    expect(buildCollabRedoPostUrl("https://x.test/api/")).toBe(
+      "https://x.test/api/collab/redo"
+    );
+  });
+});
+
+describe("postCollabUndo / postCollabRedo", () => {
+  it("POSTs JSON sceneId and optional bearer token", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(null, { status: 200 })
+    );
+    try {
+      await postCollabUndo(
+        "http://localhost:8080/api",
+        async () => "tok",
+        "scene-1"
+      );
+      expect(fetchSpy).toHaveBeenCalledTimes(1);
+      const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
+      expect(url).toBe("http://localhost:8080/api/collab/undo");
+      expect(init?.method).toBe("POST");
+      expect(init?.credentials).toBe("include");
+      expect((init?.headers as Record<string, string>).Authorization).toBe(
+        "Bearer tok"
+      );
+      expect(init?.body).toBe(JSON.stringify({ sceneId: "scene-1" }));
+
+      await postCollabRedo(
+        "http://localhost:8080/api",
+        async () => null,
+        "scene-2"
+      );
+      const init2 = fetchSpy.mock.calls[1][1] as RequestInit;
+      expect(init2?.body).toBe(JSON.stringify({ sceneId: "scene-2" }));
+      expect(
+        (init2.headers as Record<string, string>).Authorization
+      ).toBeUndefined();
+    } finally {
+      fetchSpy.mockRestore();
+    }
   });
 });
