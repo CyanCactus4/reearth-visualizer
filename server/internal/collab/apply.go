@@ -455,6 +455,7 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 		blockID, _ := extra["blockId"].(string)
 		propID, _ := extra["propertyId"].(string)
 		fieldID, _ := extra["fieldId"].(string)
+		styleID, _ := extra["styleId"].(string)
 		rec := ApplyAuditRecord{
 			ProjectID:  from.projectID,
 			UserID:     actorUserID(from),
@@ -467,6 +468,7 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 			BlockID:    blockID,
 			PropertyID: propID,
 			FieldID:    fieldID,
+			StyleID:    styleID,
 		}
 		go func() {
 			pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

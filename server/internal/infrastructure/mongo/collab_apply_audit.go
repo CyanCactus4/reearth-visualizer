@@ -65,6 +65,9 @@ func (s *CollabApplyAudit) Append(ctx context.Context, rec collab.ApplyAuditReco
 	if rec.FieldID != "" {
 		doc["fieldId"] = rec.FieldID
 	}
+	if rec.StyleID != "" {
+		doc["styleId"] = rec.StyleID
+	}
 	_, err := s.coll.InsertOne(ctx, doc)
 	return err
 }
@@ -117,6 +120,7 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 	blockID, _ := d["blockId"].(string)
 	propID, _ := d["propertyId"].(string)
 	fieldID, _ := d["fieldId"].(string)
+	styleID, _ := d["styleId"].(string)
 	sceneRev := int64(0)
 	switch v := d["sceneRev"].(type) {
 	case int32:
@@ -138,6 +142,6 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 	return collab.ApplyAuditListRow{
 		ID: id, UserID: uid, Kind: kind, SceneRev: sceneRev,
 		SceneID: sceneID, WidgetID: widgetID, StoryID: storyID, PageID: pageID, BlockID: blockID,
-		PropertyID: propID, FieldID: fieldID, Ts: ts,
+		PropertyID: propID, FieldID: fieldID, StyleID: styleID, Ts: ts,
 	}
 }

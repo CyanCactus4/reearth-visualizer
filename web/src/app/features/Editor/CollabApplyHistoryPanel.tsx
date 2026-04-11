@@ -22,6 +22,7 @@ type Entry = {
   blockId?: string;
   propertyId?: string;
   fieldId?: string;
+  styleId?: string;
 };
 
 type Props = { sceneId: string };
@@ -181,6 +182,7 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
                   {e.propertyId
                     ? ` · prop ${e.propertyId.slice(0, 8)}…${e.fieldId ? ` / ${e.fieldId}` : ""}`
                     : null}
+                  {e.styleId ? ` · style ${e.styleId.slice(0, 8)}…` : null}
                 </li>
               ))}
             </ul>

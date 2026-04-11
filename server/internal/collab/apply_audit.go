@@ -15,6 +15,7 @@ type ApplyAuditRecord struct {
 	BlockID    string
 	PropertyID string
 	FieldID    string
+	StyleID    string
 }
 
 // ApplyAuditListRow is one row returned by GET /api/collab/apply-audit (newest first).
@@ -30,6 +31,7 @@ type ApplyAuditListRow struct {
 	BlockID    string `json:"blockId,omitempty"`
 	PropertyID string `json:"propertyId,omitempty"`
 	FieldID    string `json:"fieldId,omitempty"`
+	StyleID    string `json:"styleId,omitempty"`
 	Ts         int64  `json:"ts"`
 }
 

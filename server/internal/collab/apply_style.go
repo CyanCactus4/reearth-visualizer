@@ -3,12 +3,14 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/scene"
+	"github.com/reearth/reearthx/log"
 )
 
 type applyAddStyle struct {
@@ -48,6 +50,9 @@ func parseStyleValueRaw(raw json.RawMessage) (*scene.StyleValue, error) {
 }
 
 func styleMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid id.StyleID) bool {
+	if hub == nil {
+		return true
+	}
 	holder, active, err := hub.LockHolder(ctx, from.projectID, "style", sid.String())
 	if err != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_lookup", "message": err.Error()}})
@@ -63,19 +68,20 @@ func styleMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid i
 	return false
 }
 
-func styleBelongsToScene(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, stid id.StyleID, from *Conn) bool {
+func fetchStyleForCollabApply(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, stid id.StyleID, from *Conn) *scene.Style {
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
 	list, err := uc.Style.Fetch(opCtx, id.StyleIDList{stid}, op)
 	if err != nil || list == nil || len(*list) == 0 || (*list)[0] == nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "style not found"}})
-		return false
+		return nil
 	}
-	if (*list)[0].Scene() != sid {
+	st := (*list)[0]
+	if st.Scene() != sid {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "style does not belong to this scene"}})
-		return false
+		return nil
 	}
-	return true
+	return st
 }
 
 func applyAddStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
@@ -174,7 +180,8 @@ func applyUpdateStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_style", "message": err.Error()}})
 		return nil
 	}
-	if !styleBelongsToScene(ctx, uc, op, sid, stid, from) {
+	st := fetchStyleForCollabApply(ctx, uc, op, sid, stid, from)
+	if st == nil {
 		return nil
 	}
 	if !styleMustNotBeLockedByPeer(ctx, hub, from, stid) {
@@ -193,6 +200,10 @@ func applyUpdateStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": errV.Error()}})
 			return nil
 		}
+	}
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		invJSON = buildUpdateStyleInverseJSON(st, &p, p.Name != nil, hasVal)
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
@@ -213,6 +224,24 @@ func applyUpdateStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 		"sceneId": p.SceneID,
 		"styleId": p.StyleID,
 	}, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "update_style",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 
@@ -249,7 +278,7 @@ func applyRemoveStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_style", "message": err.Error()}})
 		return nil
 	}
-	if !styleBelongsToScene(ctx, uc, op, sid, stid, from) {
+	if fetchStyleForCollabApply(ctx, uc, op, sid, stid, from) == nil {
 		return nil
 	}
 	if !styleMustNotBeLockedByPeer(ctx, hub, from, stid) {
