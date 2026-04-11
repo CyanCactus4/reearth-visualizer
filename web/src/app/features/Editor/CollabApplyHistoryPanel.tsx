@@ -14,6 +14,7 @@ import { FC, useCallback, useEffect, useState } from "react";
 type Entry = {
   id: string;
   userId: string;
+  userName?: string;
   kind: string;
   sceneRev: number;
   ts: number;
@@ -180,12 +181,17 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
               {entries.map((e) => (
                 <li key={e.id} style={{ marginBottom: 4 }}>
                   <code>{e.kind}</code> · rev {e.sceneRev} ·{" "}
-                  <span style={{ opacity: 0.85 }} title={e.userId}>
+                  <span
+                    style={{ opacity: 0.85 }}
+                    title={e.userId + (e.userName ? ` (${e.userName})` : "")}
+                  >
                     {me?.id && e.userId === me.id
                       ? t("Collab history author you")
-                      : e.userId.length > 10
-                        ? `${e.userId.slice(0, 8)}…`
-                        : e.userId}
+                      : e.userName?.trim()
+                        ? e.userName.trim()
+                        : e.userId.length > 10
+                          ? `${e.userId.slice(0, 8)}…`
+                          : e.userId}
                   </span>
                   {e.widgetId ? ` · w ${e.widgetId.slice(0, 8)}…` : null}
                   {e.storyId ? ` · story` : null}

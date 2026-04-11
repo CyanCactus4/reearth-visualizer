@@ -74,6 +74,9 @@ func (s *CollabApplyAudit) Append(ctx context.Context, rec collab.ApplyAuditReco
 	if len(rec.LayerIDs) > 0 {
 		doc["layerIds"] = rec.LayerIDs
 	}
+	if rec.UserName != "" {
+		doc["userName"] = rec.UserName
+	}
 	_, err := s.coll.InsertOne(ctx, doc)
 	return err
 }
@@ -118,6 +121,7 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 		id = ""
 	}
 	uid, _ := d["userId"].(string)
+	userName, _ := d["userName"].(string)
 	kind, _ := d["kind"].(string)
 	sceneID, _ := d["sceneId"].(string)
 	widgetID, _ := d["widgetId"].(string)
@@ -148,7 +152,7 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 		ts = int64(v)
 	}
 	return collab.ApplyAuditListRow{
-		ID: id, UserID: uid, Kind: kind, SceneRev: sceneRev,
+		ID: id, UserID: uid, UserName: userName, Kind: kind, SceneRev: sceneRev,
 		SceneID: sceneID, WidgetID: widgetID, StoryID: storyID, PageID: pageID, BlockID: blockID,
 		PropertyID: propID, FieldID: fieldID, StyleID: styleID, LayerID: layerID, LayerIDs: layerIDs, Ts: ts,
 	}

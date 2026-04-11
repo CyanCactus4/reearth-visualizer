@@ -6,6 +6,7 @@ import "context"
 type ApplyAuditRecord struct {
 	ProjectID  string
 	UserID     string
+	UserName   string
 	Kind       string
 	SceneRev   int64
 	SceneID    string
@@ -24,6 +25,7 @@ type ApplyAuditRecord struct {
 type ApplyAuditListRow struct {
 	ID         string   `json:"id"`
 	UserID     string   `json:"userId"`
+	UserName   string   `json:"userName,omitempty"`
 	Kind       string   `json:"kind"`
 	SceneRev   int64    `json:"sceneRev"`
 	SceneID    string   `json:"sceneId,omitempty"`

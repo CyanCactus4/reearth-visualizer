@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
@@ -464,6 +465,7 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 		rec := ApplyAuditRecord{
 			ProjectID:  from.projectID,
 			UserID:     actorUserID(from),
+			UserName:   actorUserDisplayName(from),
 			Kind:       kind,
 			SceneRev:   sceneRevOf(sc),
 			SceneID:    sid,
@@ -492,6 +494,18 @@ func actorUserID(from *Conn) string {
 		return "unknown"
 	}
 	return from.userID
+}
+
+func actorUserDisplayName(from *Conn) string {
+	if from == nil {
+		return ""
+	}
+	if u := adapter.User(from.bgCtx); u != nil {
+		if n := strings.TrimSpace(u.Name()); n != "" {
+			return n
+		}
+	}
+	return ""
 }
 
 func widgetMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, wid id.WidgetID) bool {
