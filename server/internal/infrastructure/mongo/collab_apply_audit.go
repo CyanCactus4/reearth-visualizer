@@ -8,6 +8,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
+	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
 // CollabApplyAudit stores successful collab apply events (append-only).
@@ -50,4 +51,71 @@ func (s *CollabApplyAudit) Append(ctx context.Context, rec collab.ApplyAuditReco
 		"ts":        time.Now().UnixMilli(),
 	})
 	return err
+}
+
+func (s *CollabApplyAudit) ListRecent(ctx context.Context, projectID string, limit int) ([]collab.ApplyAuditListRow, error) {
+	if s == nil || s.coll == nil {
+		return []collab.ApplyAuditListRow{}, nil
+	}
+	if limit <= 0 {
+		limit = 100
+	}
+	if limit > 500 {
+		limit = 500
+	}
+	opts := options.Find().
+		SetSort(bson.D{{Key: "ts", Value: -1}}).
+		SetLimit(int64(limit))
+	cur, err := s.coll.Find(ctx, bson.M{"projectId": projectID}, opts)
+	if err != nil {
+		return nil, err
+	}
+	defer cur.Close(ctx)
+	var docs []bson.M
+	if err := cur.All(ctx, &docs); err != nil {
+		return nil, err
+	}
+	out := make([]collab.ApplyAuditListRow, 0, len(docs))
+	for _, d := range docs {
+		out = append(out, docToApplyAuditRow(d))
+	}
+	return out, nil
+}
+
+func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
+	var id string
+	switch v := d["_id"].(type) {
+	case primitive.ObjectID:
+		id = v.Hex()
+	case string:
+		id = v
+	default:
+		id = ""
+	}
+	uid, _ := d["userId"].(string)
+	kind, _ := d["kind"].(string)
+	sceneID, _ := d["sceneId"].(string)
+	widgetID, _ := d["widgetId"].(string)
+	sceneRev := int64(0)
+	switch v := d["sceneRev"].(type) {
+	case int32:
+		sceneRev = int64(v)
+	case int64:
+		sceneRev = v
+	case float64:
+		sceneRev = int64(v)
+	}
+	ts := int64(0)
+	switch v := d["ts"].(type) {
+	case int32:
+		ts = int64(v)
+	case int64:
+		ts = v
+	case float64:
+		ts = int64(v)
+	}
+	return collab.ApplyAuditListRow{
+		ID: id, UserID: uid, Kind: kind, SceneRev: sceneRev,
+		SceneID: sceneID, WidgetID: widgetID, Ts: ts,
+	}
 }

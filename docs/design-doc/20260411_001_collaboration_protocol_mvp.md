@@ -87,10 +87,10 @@ Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config
 | Data | Collection / store | Status |
 | ---- | -------------------- | ------ |
 | Chat messages | Default `collabChatMessages` (`REEARTH_COLLAB_CHAT_COLLECTION`); fields `_id`, `projectId`, `userId`, `text`, `ts`, optional `mentions` (string array, parsed from `@handle`); index `{ projectId: 1, ts: -1 }` | Implemented |
-| Apply audit (successful `apply` journal) | Default `collabApplyAudit` (`REEARTH_COLLAB_APPLY_AUDIT_COLLECTION`); fields `_id`, `projectId`, `userId`, `kind`, `sceneRev`, `sceneId`, `widgetId`, `ts` (ms); index `{ projectId: 1, ts: -1 }` | **Append-only slice** (Phase 6); no public REST list yet |
+| Apply audit (successful `apply` journal) | Default `collabApplyAudit` (`REEARTH_COLLAB_APPLY_AUDIT_COLLECTION`); fields `_id`, `projectId`, `userId`, `kind`, `sceneRev`, `sceneId`, `widgetId`, `ts` (ms); index `{ projectId: 1, ts: -1 }` | **Append + read REST** (Phase 6 slice): `GET /api/collab/apply-audit?projectId=&limit=` (newest first) |
 | Collab operation log (undo groups, compensating ops, UI history) | TBD / extension of apply audit | **Not implemented** (full Phase 6) |
 
-REST: `GET /api/collab/chat?projectId=&limit=` — same access checks as WS.
+REST: `GET /api/collab/chat?projectId=&limit=` and `GET /api/collab/apply-audit?projectId=&limit=` — same access checks as WS (`Operator` + project + `IsReadableScene`).
 
 ## Security checklist
 
@@ -99,6 +99,17 @@ REST: `GET /api/collab/chat?projectId=&limit=` — same access checks as WS.
 - [x] **Rate limits:** per-connection messages/sec; chat per-user spacing; cursor/activity throttles.
 - [x] **DoS:** max frame size, read limit on WS.
 - [ ] **Room isolation pentest** — Phase 10 (no cross-project fan-out bugs).
+
+## Production hardening (Phase 10 — manual / periodic)
+
+Use this as a release gate before widening collab beta.
+
+- [ ] **Room isolation:** two accounts A/B; A connects to `projectId` of B → must fail at WS upgrade or first frame; B cannot inject `apply` for A’s scene via forged `sceneId` in payload (server rejects `scene_mismatch`).
+- [ ] **Auth bypass:** unauthenticated `GET /api/collab/chat`, `GET /api/collab/apply-audit`, `GET /api/collab/ws` → 401/403 as implemented.
+- [ ] **Redis / multi-instance:** with `REEARTH_COLLAB_REDIS_URL`, two server processes, two browsers on same project → presence, chat, `applied`, and locks still propagate.
+- [ ] **Lock TTL:** after `REEARTH_COLLAB_LOCK_TTL_SECONDS` without heartbeat, lock clears and peer can acquire (documented expected delay).
+- [ ] **Mongo growth:** `collabApplyAudit` and `collabChatMessages` retention or TTL policy for production (not enforced in OSS build).
+- [ ] **Observability:** confirm collab errors appear in logs/traces with `projectId` (no PII in message bodies beyond user ids already in app).
 
 ## Sequence — join room → apply → broadcast
 

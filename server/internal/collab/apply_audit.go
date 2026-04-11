@@ -12,7 +12,19 @@ type ApplyAuditRecord struct {
 	WidgetID  string
 }
 
+// ApplyAuditListRow is one row returned by GET /api/collab/apply-audit (newest first).
+type ApplyAuditListRow struct {
+	ID       string `json:"id"`
+	UserID   string `json:"userId"`
+	Kind     string `json:"kind"`
+	SceneRev int64  `json:"sceneRev"`
+	SceneID  string `json:"sceneId,omitempty"`
+	WidgetID string `json:"widgetId,omitempty"`
+	Ts       int64  `json:"ts"`
+}
+
 // ApplyAuditStore appends successful apply operations for auditing / future undo UI.
 type ApplyAuditStore interface {
 	Append(ctx context.Context, rec ApplyAuditRecord) error
+	ListRecent(ctx context.Context, projectID string, limit int) ([]ApplyAuditListRow, error)
 }

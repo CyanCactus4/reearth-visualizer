@@ -33,6 +33,7 @@ const CollabRemoteCursors: FC = () => {
       {entries.map(([userId, c]) => (
         <div
           key={userId}
+          title={userId}
           style={{
             position: "absolute",
             left: `${c.x * 100}%`,

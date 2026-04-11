@@ -30,3 +30,19 @@ export function buildCollabChatUrl(
   }
   return u.toString();
 }
+
+/** HTTP URL for collab apply audit (GET /api/collab/apply-audit). */
+export function buildCollabApplyAuditUrl(
+  apiBase: string,
+  projectId: string,
+  limit?: number
+): string {
+  const trimmed = apiBase.replace(/\/$/, "");
+  const u = new URL(trimmed, window.location.origin);
+  u.pathname = `${u.pathname.replace(/\/$/, "")}/collab/apply-audit`;
+  u.searchParams.set("projectId", projectId);
+  if (limit != null && limit > 0) {
+    u.searchParams.set("limit", String(limit));
+  }
+  return u.toString();
+}

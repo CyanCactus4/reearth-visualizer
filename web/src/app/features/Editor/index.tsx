@@ -1,9 +1,12 @@
 import styled from "@emotion/styled";
+import { useApolloClient } from "@apollo/client/react";
 import { useMe } from "@reearth/services/api/user";
 import { CollabProvider } from "@reearth/services/collab";
+import { GET_SCENE } from "@reearth/services/gql/queries/scene";
+import { useLang } from "@reearth/services/i18n/hooks";
 import { css } from "@reearth/services/theme/reearthTheme/common";
 import { useAtom } from "jotai";
-import { FC } from "react";
+import { FC, useCallback } from "react";
 
 import CursorStatus from "../CursorStatus";
 import Navbar, { Tab } from "../Navbar";
@@ -40,7 +43,16 @@ type Props = {
 };
 
 const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
+  const apollo = useApolloClient();
+  const lang = useLang();
   const { me } = useMe({ skip: !projectId });
+  const onCollabReconcileScene = useCallback(() => {
+    void apollo.query({
+      query: GET_SCENE,
+      variables: { sceneId, lang },
+      fetchPolicy: "network-only"
+    });
+  }, [apollo, sceneId, lang]);
   const {
     visualizerSize,
     isVisualizerResizing,
@@ -92,7 +104,11 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   };
 
   return (
-    <CollabProvider projectId={projectId} localUserId={me?.id}>
+    <CollabProvider
+      projectId={projectId}
+      localUserId={me?.id}
+      onReconcileScene={onCollabReconcileScene}
+    >
       <CollabSceneRefetch sceneId={sceneId} />
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />

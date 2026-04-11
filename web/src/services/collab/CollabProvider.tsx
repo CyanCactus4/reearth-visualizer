@@ -47,6 +47,8 @@ type Props = {
   projectId?: string;
   /** GraphQL `me.id` — omit when unknown; own cursor/typing events are ignored. */
   localUserId?: string;
+  /** Refetch scene from server (e.g. user chose “reload” after lock conflict). */
+  onReconcileScene?: () => void;
   children: ReactNode;
 };
 
@@ -61,6 +63,7 @@ const LOCAL_TYPING_DEBOUNCE_MS = 2500;
 export const CollabProvider: FC<Props> = ({
   projectId,
   localUserId,
+  onReconcileScene,
   children
 }) => {
   const { getAccessToken } = useAuth();
@@ -611,6 +614,7 @@ export const CollabProvider: FC<Props> = ({
         open={!!lockConflict}
         payload={lockConflict}
         onClose={closeLockConflict}
+        onReconcileScene={onReconcileScene}
       />
     </>
   );

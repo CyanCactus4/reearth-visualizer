@@ -32,7 +32,11 @@ export { default as CollabLockReadOnly } from "./CollabLockReadOnly";
 export { COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES } from "./collabApplyErrorCodes";
 export { extractChatMentions } from "./chatMentions";
 export { CollabProvider } from "./CollabProvider";
-export { buildCollabChatUrl, buildCollabWsUrl } from "./collabUrl";
+export {
+  buildCollabApplyAuditUrl,
+  buildCollabChatUrl,
+  buildCollabWsUrl
+} from "./collabUrl";
 export { useCollab } from "./useCollab";
 export {
   useCollabLockLease,

@@ -33,8 +33,9 @@ describe("CollabRemoteCursors", () => {
     collabState.remoteCursors = {
       peer: { x: 0.5, y: 0.5, inside: true, ts: Date.now() }
     };
-    render(<CollabRemoteCursors />);
+    const { container } = render(<CollabRemoteCursors />);
     expect(screen.getByTestId("collab-remote-cursors")).toBeInTheDocument();
     expect(screen.getByText("peer")).toBeInTheDocument();
+    expect(container.querySelector('[title="peer"]')).toBeTruthy();
   });
 });

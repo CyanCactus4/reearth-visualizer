@@ -175,10 +175,10 @@
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
 | 2 MVP-синхронизация одной сущности | ✅ | `apply`: `update_widget`, `add_widget`, `remove_widget`; `applied` + **`sceneRev`** (ms); Vitest `applyMessages`; Go-тесты `dispatchApply` + `lockTable.Lookup`; фронт: **`CollabSceneRefetch`** (GetScene network-only при новом `sceneRev`), **`useWidgetMutations`** шлёт collab при `status===open` и успешном `sendRaw`, иначе GraphQL. |
 | 3 OT/CRDT | 🟡 | Lock + ошибки `apply` на клиенте: **`CollabSceneRefetch`** делает GetScene при кодах ошибки из `COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES`; toasts **`apply_failed`** / **`object_locked`**. **→ дальше:** настоящий OT/CRDT / остальные сущности. |
-| 4 Блокировки | 🟡 | В коде: locks + UI + связь с `apply` (виджет); без merge-диалога полного уровня. |
-| 5 Presence | 🟡 | Курсоры, typing, полоса presence; без имён/аватаров на курсоре. |
-| 6 История / undo | 🟡 | Журнал успешных **`apply`** в Mongo (`collabApplyAudit` / `REEARTH_COLLAB_APPLY_AUDIT_COLLECTION`), индекс при старте; без undo/UI списка. |
+| 4 Блокировки | 🟡 | Locks + UI + `apply`; кнопка **«Reload scene from server»** в модалке конфликта блокировки (`CollabLockConflictModal` + `onReconcileScene`). Полный merge-диалог — по-прежнему вне scope. |
+| 5 Presence | 🟡 | Курсоры (в т.ч. **`title` = полный userId**), typing, полоса presence; без отдельного аватара на курсоре. |
+| 6 История / undo | 🟡 | Mongo + **`GET /api/collab/apply-audit`** (как chat); без undo/redo и UI-ленты в редакторе. |
 | 7 Уведомления и чат | 🟡 | Чат + Mongo + toasts по `applied`; **`@mentions`**: парсинг на сервере, поле `mentions` в Mongo/WS, подсветка в **`CollabChatPanel`**; отдельного типа `chat:typing` нет (есть `activity`). |
-| 8 GraphQL | ⬜ | Подписок в схеме нет. |
-| 9 Фронт Apollo/offline | 🟡 | Provider + offline queue collab; без Apollo-merge. |
-| 10 Hardening | ⬜ | |
+| 8 GraphQL | 🟡 | Подписок нет; **read-поверхность collab** через REST (`/api/collab/chat`, **`/api/collab/apply-audit`**) — гибрид из фазы 0; при необходимости — тонкие GQL-поля позже. |
+| 9 Фронт Apollo/offline | 🟡 | Provider + **`localforage`** offline queue (`offlineQueue.ts`); reconcile сцены из редактора при lock-conflict. |
+| 10 Hardening | 🟡 | Чеклист ручных проверок в [design doc](docs/design-doc/20260411_001_collaboration_protocol_mvp.md) § «Production hardening»; метрики/деплой-док — частично через существующий OTEL/AGENTS. |
