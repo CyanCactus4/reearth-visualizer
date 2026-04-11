@@ -142,6 +142,7 @@ const EditorVisualizer: React.FC<Props> = ({
       handleSketchFeatureUpdate={onSketchFeatureUpdate}
       handleMount={handleMount}
       handleCoreAPIReady={onCoreAPIReady}
+      sceneId={sceneId}
       forceDevice={forceDevice}
       onDeviceChange={handleDeviceChange}
       // story

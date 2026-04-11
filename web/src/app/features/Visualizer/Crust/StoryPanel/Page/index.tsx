@@ -83,6 +83,7 @@ type Props = {
   ) => Promise<void>;
   renderBlock?: (block: BlockProps<StoryBlockType>) => ReactNode;
   nlsLayers?: NLSLayer[];
+  sceneId?: string;
 };
 const PAGE_DRAG_HANDLE_CLASS_NAME =
   "reearth-visualizer-editor-page-drag-handle";
@@ -112,7 +113,8 @@ const StoryPanel: FC<Props> = ({
   onPropertyItemMove,
   onPropertyItemDelete,
   renderBlock,
-  nlsLayers
+  nlsLayers,
+  sceneId
 }) => {
   const t = useT();
 
@@ -219,6 +221,7 @@ const StoryPanel: FC<Props> = ({
             <StoryBlock
               block={b}
               pageId={page?.id}
+              sceneId={sceneId}
               isSelected={selectedStoryBlockId === b.id}
               isEditable={isEditable}
               dragHandleClassName={PAGE_DRAG_HANDLE_CLASS_NAME}
@@ -263,6 +266,7 @@ const StoryPanel: FC<Props> = ({
       panelSettings?.padding?.value,
       panelSettings?.gap?.value,
       nlsLayers,
+      sceneId,
       disableSelection,
       openBlocksIndex,
       installableStoryBlocks,
@@ -316,6 +320,7 @@ const StoryPanel: FC<Props> = ({
                 propertyId,
                 property: titleProperty
               }}
+              sceneId={sceneId}
               isEditable={isEditable}
               isSelected={selectedStoryBlockId === titleId}
               onClick={() => onBlockSelect?.(titleId)}

@@ -67,6 +67,7 @@ export type StoryPanelProps = {
   ) => Promise<void>;
   renderBlock?: (block: BlockProps<StoryBlock>) => ReactNode;
   nlsLayers?: NLSLayer[];
+  sceneId?: string;
 };
 
 export const StoryPanel = memo(
@@ -87,7 +88,8 @@ export const StoryPanel = memo(
         onPropertyItemMove,
         onPropertyItemDelete,
         renderBlock,
-        nlsLayers
+        nlsLayers,
+        sceneId
       },
       ref: Ref<StoryPanelRef>
     ) => {
@@ -191,6 +193,7 @@ export const StoryPanel = memo(
                       onPropertyItemDelete={onPropertyItemDelete}
                       renderBlock={renderBlock}
                       nlsLayers={nlsLayers}
+                      sceneId={sceneId}
                     />
                   </PanelWrapper>
                 </BlockProvider>

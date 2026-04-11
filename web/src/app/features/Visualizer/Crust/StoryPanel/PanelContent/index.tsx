@@ -68,6 +68,7 @@ export type Props = {
   ) => Promise<void>;
   renderBlock?: (block: BlockProps<StoryBlock>) => ReactNode;
   nlsLayers?: NLSLayer[];
+  sceneId?: string;
 };
 
 const StoryContent: FC<Props> = ({
@@ -93,7 +94,8 @@ const StoryContent: FC<Props> = ({
   onPropertyItemMove,
   onPropertyItemDelete,
   renderBlock,
-  nlsLayers
+  nlsLayers,
+  sceneId
 }) => {
   const {
     pageGap,
@@ -142,6 +144,7 @@ const StoryContent: FC<Props> = ({
           onPropertyItemDelete={onPropertyItemDelete}
           renderBlock={renderBlock}
           nlsLayers={nlsLayers}
+          sceneId={sceneId}
         >
           <PageGap height={pageGap} onClick={() => onPageSelect?.(p.id)} />
         </StoryPage>

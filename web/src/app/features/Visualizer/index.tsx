@@ -163,6 +163,8 @@ type VisualizerProps = {
     schemaGroupId?: string,
     itemId?: string
   ) => Promise<void>;
+  /** Editor: enables collab apply for plugin block property fields in story/infobox. */
+  sceneId?: string;
 };
 
 const Visualizer: FC<VisualizerProps> = ({
@@ -218,6 +220,7 @@ const Visualizer: FC<VisualizerProps> = ({
   handlePropertyItemAdd,
   handlePropertyItemMove,
   handlePropertyItemDelete,
+  sceneId,
   // photoOverlay
   photoOverlayPreview,
   //sketchLayer
@@ -316,6 +319,7 @@ const Visualizer: FC<VisualizerProps> = ({
             onPropertyItemAdd={handlePropertyItemAdd}
             onPropertyItemMove={handlePropertyItemMove}
             onPropertyItemDelete={handlePropertyItemDelete}
+            sceneId={sceneId}
             // Story
             showStoryPanel={showStoryPanel}
             storyPanelRef={storyPanelRef}

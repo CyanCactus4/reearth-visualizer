@@ -27,6 +27,8 @@ export type BlockProps<T = any> = {
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type CommonBlockProps<T = any> = {
   // Blocks from plugins can have arbitrary structure
+  /** When set (e.g. editor), property field updates can go through collab `apply`. */
+  sceneId?: string;
   pageId?: string;
   isEditable?: boolean;
   isBuilt?: boolean;

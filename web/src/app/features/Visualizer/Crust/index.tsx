@@ -174,6 +174,7 @@ export type Props = {
   currentCameraRef?: RefObject<Camera | undefined | null>;
   //sketchLayer
   sketchFeatureTooltip?: SketchFeatureTooltip;
+  sceneId?: string;
 };
 
 export default function Crust({
@@ -227,7 +228,8 @@ export default function Crust({
   nlsLayers,
   currentCameraRef,
   //sketchLayer
-  sketchFeatureTooltip
+  sketchFeatureTooltip,
+  sceneId
 }: Props): JSX.Element | null {
   const {
     interactionMode,
@@ -392,6 +394,7 @@ export default function Crust({
         onPropertyItemDelete={onPropertyItemDelete}
         onPropertyItemMove={onPropertyItemMove}
         onCloseInfobox={handleCloseInfobox}
+        sceneId={sceneId}
       />
       {showStoryPanel && (
         <StoryPanel
@@ -411,6 +414,7 @@ export default function Crust({
           onPropertyItemDelete={onPropertyItemDelete}
           renderBlock={renderBlock}
           nlsLayers={nlsLayers}
+          sceneId={sceneId}
         />
       )}
       <PhotoOverlay

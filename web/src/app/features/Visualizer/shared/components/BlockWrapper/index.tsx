@@ -69,6 +69,7 @@ type Props = {
   ) => Promise<void>;
   onFlyTo?: FlyTo;
   propertyNames?: string[];
+  sceneId?: string;
 };
 
 const BlockWrapper: FC<Props> = ({
@@ -94,7 +95,8 @@ const BlockWrapper: FC<Props> = ({
   onPropertyItemMove,
   onPropertyItemDelete,
   onFlyTo,
-  propertyNames
+  propertyNames,
+  sceneId
 }) => {
   const {
     title,
@@ -196,6 +198,7 @@ const BlockWrapper: FC<Props> = ({
                   key={i.id}
                   propertyId={propertyId}
                   item={i}
+                  sceneId={sceneId}
                   onFlyTo={onFlyTo}
                 />
               </Collapse>

@@ -69,6 +69,7 @@ export type Props = {
     itemId?: string
   ) => Promise<void>;
   onCloseInfobox?: () => void;
+  sceneId?: string;
 };
 
 const Infobox: FC<Props> = ({
@@ -84,7 +85,8 @@ const Infobox: FC<Props> = ({
   onPropertyItemAdd,
   onPropertyItemMove,
   onPropertyItemDelete,
-  onCloseInfobox
+  onCloseInfobox,
+  sceneId
 }) => {
   const {
     wrapperRef,
@@ -120,6 +122,7 @@ const Infobox: FC<Props> = ({
                 key={b.id}
                 block={b}
                 layer={layer}
+                sceneId={sceneId}
                 selectedFeature={infobox?.feature}
                 isEditable={isEditable}
                 renderBlock={renderBlock}
@@ -168,7 +171,8 @@ const Infobox: FC<Props> = ({
       gapField?.value,
       handleBlockCreate,
       handleBlockDoubleClick,
-      handleBlockOpen
+      handleBlockOpen,
+      sceneId
     ]
   );
 
