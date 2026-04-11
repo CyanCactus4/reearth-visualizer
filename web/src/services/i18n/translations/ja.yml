@@ -170,6 +170,9 @@ layer name: レイヤー名
 Layer name: レイヤー名
 Inspector: インスペクター
 Collab object locked by another user: 'ユーザー {{userId}} が編集ロック中です。インスペクターは閲覧のみです。'
+Collab lock denied toast: '編集ロックを取得できません: {{resource}} {{id}} はユーザー {{userId}} が保持中です。'
+Collab edit conflict: 編集ロックの競合
+Collab lock conflict description: 'ユーザー {{userId}} が {{resource}} {{id}} の編集ロックを保持しています。インスペクターは閲覧のみです。バージョンのマージは未実装です。ロック解除後に再試行するか、チームで調整してください。'
 Layer: レイヤー
 Layer Name: レイヤー名
 Format: 形式

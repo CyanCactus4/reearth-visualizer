@@ -1,4 +1,5 @@
 import { Panel, PanelProps } from "@reearth/app/ui/layout";
+import { CollabLockGate } from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { FC, useMemo } from "react";
 
@@ -44,12 +45,14 @@ const InspectorPanel: FC<Props> = ({ areaRef, showCollapseArea }) => {
       areaRef={areaRef}
       showCollapseArea={showCollapseArea}
     >
-      {!!selectedSceneSetting && scenePropertyId && (
-        <SceneSettings
-          propertyId={scenePropertyId}
-          propertyItems={sceneSettings}
-          onFlyTo={handleFlyTo}
-        />
+      {!!selectedSceneSetting && scenePropertyId && sceneId && (
+        <CollabLockGate resource="scene" id={sceneId}>
+          <SceneSettings
+            propertyId={scenePropertyId}
+            propertyItems={sceneSettings}
+            onFlyTo={handleFlyTo}
+          />
+        </CollabLockGate>
       )}
       {selectedLayer && (
         <LayerInspector

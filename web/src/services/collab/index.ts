@@ -7,6 +7,7 @@ export { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
 export {
   collabResourceLockKey,
   lockPayload,
+  widgetAreaLockId,
   type LockAction,
   type LockResource
 } from "./lockMessages";
@@ -16,6 +17,11 @@ export type {
   CollabStatus,
   RemoteCursor
 } from "./collabContext";
+export { default as CollabLockConflictModal } from "./CollabLockConflictModal";
+export type { CollabLockConflictPayload } from "./CollabLockConflictModal";
+export { default as CollabLockGate } from "./CollabLockGate";
+export { default as CollabLockLeaseOnly } from "./CollabLockLeaseOnly";
+export { default as CollabLockReadOnly } from "./CollabLockReadOnly";
 export { CollabProvider } from "./CollabProvider";
 export { buildCollabWsUrl } from "./collabUrl";
 export { useCollab } from "./useCollab";

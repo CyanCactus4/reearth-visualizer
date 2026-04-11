@@ -1,4 +1,11 @@
-export type LockResource = "layer" | "widget";
+import type { WidgetAreaState } from "@reearth/services/state";
+
+export type LockResource = "layer" | "widget" | "scene" | "widget_area";
+
+/** Stable lock id for a widget container area (must match server `widget_area` validation). */
+export function widgetAreaLockId(area: WidgetAreaState): string {
+  return `${area.zone}:${area.section}:${area.area}`;
+}
 
 export type LockAction = "acquire" | "release" | "heartbeat";
 

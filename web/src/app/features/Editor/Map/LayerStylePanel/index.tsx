@@ -1,5 +1,6 @@
 import { IconButton } from "@reearth/app/lib/reearth-ui";
 import { Panel, PanelProps } from "@reearth/app/ui/layout";
+import { CollabLockReadOnly } from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { styled } from "@reearth/services/theme";
 import { css } from "@reearth/services/theme/reearthTheme/common";
@@ -61,6 +62,7 @@ const StylesPanel: FC<Props> = ({ showCollapseArea, areaRef }) => {
       noPadding
       dataTestid="editor-map-scene-panel"
     >
+      <CollabLockReadOnly resource="layer" id={selectedLayer?.layer?.id}>
       <LayerStyleManager onClick={() => handleSelectLayerStyle(undefined)}>
         <ActionsWrapper>
           <PresetLayerStyle
@@ -98,6 +100,7 @@ const StylesPanel: FC<Props> = ({ showCollapseArea, areaRef }) => {
         selectedLayerStyle={selectedLayerStyle}
         onLayerStyleValueUpdate={handleLayerStyleValueUpdate}
       />
+      </CollabLockReadOnly>
     </Panel>
   );
 };

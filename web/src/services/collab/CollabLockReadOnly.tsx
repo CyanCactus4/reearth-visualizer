@@ -1,10 +1,8 @@
-import {
-  useCollabLockLease,
-  useForeignCollabLock,
-  type LockResource
-} from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { FC, ReactNode } from "react";
+
+import type { LockResource } from "./lockMessages";
+import { useForeignCollabLock } from "./useCollabResourceLock";
 
 type Props = {
   resource: LockResource;
@@ -12,17 +10,21 @@ type Props = {
   children: ReactNode;
 };
 
-/**
- * Holds a collab edit lease for the selected object and dims the inspector when locked by a peer.
- */
-const CollabLockGate: FC<Props> = ({ resource, id, children }) => {
+/** Dims inspector content when another user holds the collab lock (no lease). */
+const CollabLockReadOnly: FC<Props> = ({ resource, id, children }) => {
   const t = useT();
-  const active = !!id;
-  useCollabLockLease(resource, id, active);
   const { readOnly, holderUserId } = useForeignCollabLock(resource, id);
 
   return (
-    <div style={{ position: "relative", minHeight: 0, flex: 1, display: "flex", flexDirection: "column" }}>
+    <div
+      style={{
+        position: "relative",
+        minHeight: 0,
+        flex: 1,
+        display: "flex",
+        flexDirection: "column"
+      }}
+    >
       {readOnly && holderUserId ? (
         <div
           data-testid="collab-lock-banner"
@@ -53,4 +55,4 @@ const CollabLockGate: FC<Props> = ({ resource, id, children }) => {
   );
 };
 
-export default CollabLockGate;
+export default CollabLockReadOnly;

@@ -1,5 +1,6 @@
 import { ColorField, NumberField, SwitchField } from "@reearth/app/ui/fields";
 import { Panel } from "@reearth/app/ui/layout";
+import { CollabLockGate, widgetAreaLockId } from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { WidgetAreaPadding } from "@reearth/services/state";
 import { styled } from "@reearth/services/theme";
@@ -31,6 +32,7 @@ const ContainerSettingsPanel: FC = () => {
       alwaysOpen
       extend
     >
+      <CollabLockGate resource="widget_area" id={widgetAreaLockId(widgetArea)}>
       <FieldsWrapper>
         <NumberField
           data-testid="padding-top-field"
@@ -123,6 +125,7 @@ const ContainerSettingsPanel: FC = () => {
           }}
         />
       </FieldsWrapper>
+      </CollabLockGate>
     </Panel>
   ) : null;
 };

@@ -8,7 +8,7 @@ const mockForeign = vi.fn(() => ({
   holderUserId: undefined as string | undefined
 }));
 
-vi.mock("@reearth/services/collab", () => ({
+vi.mock("./useCollabResourceLock", () => ({
   useCollabLockLease: vi.fn(),
   useForeignCollabLock: () => mockForeign()
 }));

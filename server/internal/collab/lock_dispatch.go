@@ -3,6 +3,7 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"strings"
 	"time"
 
 	"github.com/reearth/reearth/server/pkg/id"
@@ -38,6 +39,16 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 	case "widget":
 		if _, err := id.WidgetIDFrom(lm.ID); err != nil {
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_id", "message": err.Error()}})
+			return nil
+		}
+	case "scene":
+		if _, err := id.SceneIDFrom(lm.ID); err != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_id", "message": err.Error()}})
+			return nil
+		}
+	case "widget_area":
+		if !validWidgetAreaLockID(lm.ID) {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_id", "message": "invalid widget_area id (expected zone:section:area)"}})
 			return nil
 		}
 	default:
@@ -110,6 +121,17 @@ func (h *Hub) broadcastLockChanged(ctx context.Context, projectID, resource, rid
 		return
 	}
 	h.fanoutRoom(ctx, projectID, b)
+}
+
+func validWidgetAreaLockID(id string) bool {
+	parts := strings.Split(id, ":")
+	if len(parts) != 3 {
+		return false
+	}
+	zones := map[string]bool{"inner": true, "outer": true}
+	sections := map[string]bool{"left": true, "center": true, "right": true}
+	areas := map[string]bool{"top": true, "middle": true, "bottom": true}
+	return zones[parts[0]] && sections[parts[1]] && areas[parts[2]]
 }
 
 func (h *Hub) broadcastLockReleased(ctx context.Context, projectID, resource, rid string) {

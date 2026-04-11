@@ -1,7 +1,9 @@
 import { Window, Area, AreaRef } from "@reearth/app/ui/layout";
+import { CollabLockLeaseOnly } from "@reearth/services/collab";
 import { useAtom, useSetAtom } from "jotai";
 import { RESET } from "jotai/utils";
 import { FC, useEffect, useRef } from "react";
+
 
 import { useMapPage } from "./context";
 import InspectorPanel from "./InspectorPanel";
@@ -18,7 +20,7 @@ import {
 } from "./state";
 
 const Map: FC = () => {
-  const { handleVisualizerResize, handleSketchGeometryEditCancel } =
+  const { handleVisualizerResize, handleSketchGeometryEditCancel, selectedLayer } =
     useMapPage();
 
   const windowRef = useRef<HTMLDivElement>(null);
@@ -49,6 +51,11 @@ const Map: FC = () => {
 
   return (
     <Window ref={windowRef}>
+      <CollabLockLeaseOnly
+        resource="layer"
+        id={selectedLayer?.layer?.id}
+        active={!!selectedLayer?.layer?.id}
+      />
       <Area extend asWrapper>
         <Area
           direction="column"

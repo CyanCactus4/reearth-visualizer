@@ -1,4 +1,6 @@
 import { useAuth } from "@reearth/services/auth/useAuth";
+import { useT } from "@reearth/services/i18n/hooks";
+import { useNotification } from "@reearth/services/state";
 import {
   useCallback,
   useEffect,
@@ -17,8 +19,25 @@ import {
   type CollabResourceLock,
   type RemoteCursor
 } from "./collabContext";
-import { collabResourceLockKey } from "./lockMessages";
+import CollabLockConflictModal, {
+  type CollabLockConflictPayload
+} from "./CollabLockConflictModal";
+import {
+  collabResourceLockKey,
+  type LockResource
+} from "./lockMessages";
 import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
+
+const lockResourceKinds = new Set<string>([
+  "layer",
+  "widget",
+  "scene",
+  "widget_area"
+]);
+
+function asLockResource(s: string): LockResource | null {
+  return lockResourceKinds.has(s) ? (s as LockResource) : null;
+}
 
 type Props = {
   projectId?: string;
@@ -57,10 +76,43 @@ export const CollabProvider: FC<Props> = ({
     new Map()
   );
   const lastLocalTypingSent = useRef(0);
+  const [, setNotification] = useNotification();
+  const tCollab = useT();
+  const lastLockDeniedKeyRef = useRef<string | null>(null);
+  const [lockConflict, setLockConflict] =
+    useState<CollabLockConflictPayload | null>(null);
 
   useEffect(() => {
     localUserIdRef.current = localUserId;
   }, [localUserId]);
+
+  useEffect(() => {
+    if (lastMessage?.t !== "lock_denied") return;
+    const d = lastMessage.d as
+      | {
+          resource?: string;
+          id?: string;
+          holderUserId?: string;
+        }
+      | undefined;
+    if (!d?.resource || !d.id || !d.holderUserId) return;
+    const k = `${d.resource}:${d.id}:${d.holderUserId}`;
+    if (lastLockDeniedKeyRef.current === k) return;
+    lastLockDeniedKeyRef.current = k;
+    setNotification({
+      type: "warning",
+      text: tCollab("Collab lock denied toast", {
+        userId: d.holderUserId,
+        resource: d.resource,
+        id: d.id
+      })
+    });
+    setLockConflict({
+      resource: d.resource,
+      id: d.id,
+      holderUserId: d.holderUserId
+    });
+  }, [lastMessage, setNotification, tCollab]);
 
   const removeTypingUser = useCallback((uid: string) => {
     typingTimersRef.current.delete(uid);
@@ -95,8 +147,9 @@ export const CollabProvider: FC<Props> = ({
             }
           | undefined;
         if (!d?.resource || !d.id) return;
-        if (d.resource !== "layer" && d.resource !== "widget") return;
-        const key = collabResourceLockKey(d.resource, d.id);
+        const res = asLockResource(d.resource);
+        if (!res) return;
+        const key = collabResourceLockKey(res, d.id);
         if (d.released) {
           setResourceLocks((prev) => {
             if (!(key in prev)) return prev;
@@ -127,8 +180,9 @@ export const CollabProvider: FC<Props> = ({
             }
           | undefined;
         if (!d?.resource || !d.id || !d.holderUserId) return;
-        if (d.resource !== "layer" && d.resource !== "widget") return;
-        const key = collabResourceLockKey(d.resource, d.id);
+        const resDenied = asLockResource(d.resource);
+        if (!resDenied) return;
+        const key = collabResourceLockKey(resDenied, d.id);
         const holderDenied = d.holderUserId;
         setResourceLocks((prev) => ({
           ...prev,
@@ -332,7 +386,19 @@ export const CollabProvider: FC<Props> = ({
     ]
   );
 
+  const closeLockConflict = useCallback(() => {
+    setLockConflict(null);
+    lastLockDeniedKeyRef.current = null;
+  }, []);
+
   return (
-    <CollabContext.Provider value={value}>{children}</CollabContext.Provider>
+    <>
+      <CollabContext.Provider value={value}>{children}</CollabContext.Provider>
+      <CollabLockConflictModal
+        open={!!lockConflict}
+        payload={lockConflict}
+        onClose={closeLockConflict}
+      />
+    </>
   );
 };
