@@ -43,6 +43,17 @@ func TestBuildUpdateNLSLayerInverseJSON_configWhenOldNil(t *testing.T) {
 	assert.Nil(t, buildUpdateNLSLayerInverseJSON(layer, fwd, false, false, false, true))
 }
 
+func TestReverseUpdateNLSLayerItems(t *testing.T) {
+	a := applyUpdateNLSLayerItem{LayerID: "a"}
+	b := applyUpdateNLSLayerItem{LayerID: "b"}
+	c := applyUpdateNLSLayerItem{LayerID: "c"}
+	s := []applyUpdateNLSLayerItem{a, b, c}
+	reverseUpdateNLSLayerItems(s)
+	assert.Equal(t, "c", s[0].LayerID)
+	assert.Equal(t, "b", s[1].LayerID)
+	assert.Equal(t, "a", s[2].LayerID)
+}
+
 func TestBuildUpdateNLSLayerInverseJSON_indexFromUnset(t *testing.T) {
 	sid := id.MustSceneID("01fbpdqax0ttrftj3gb5gm4rw7")
 	lid := id.NewNLSLayerID()

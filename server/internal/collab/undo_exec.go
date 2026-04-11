@@ -168,6 +168,19 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, errors.New("write not allowed")
 		}
 		return collabRunUpdateNLSLayerFromJSON(ctx, uc, operator, raw)
+	case "update_nls_layers":
+		var p applyUpdateNlsLayers
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		return collabRunUpdateNlsLayersFromJSON(ctx, uc, operator, raw)
 	case "update_story_page":
 		var p applyUpdateStoryPage
 		if err := json.Unmarshal(raw, &p); err != nil {

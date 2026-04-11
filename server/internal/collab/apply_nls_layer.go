@@ -408,8 +408,16 @@ func applyUpdateNlsLayersOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
+
+	wantStack := hub != nil && hub.opStack != nil
+	var invPieces []applyUpdateNLSLayerItem
+
 	for _, row := range p.Layers {
-		lid, _ := id.NLSLayerIDFrom(row.LayerID)
+		lid, errL := id.NLSLayerIDFrom(row.LayerID)
+		if errL != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errL.Error()}})
+			return nil
+		}
 		rowHasCfg := len(row.Config) > 0 && string(row.Config) != "null"
 		if row.Name == nil && row.Visible == nil && row.Index == nil && !rowHasCfg {
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "empty_update", "message": "no layer fields to update"}})
@@ -420,6 +428,42 @@ func applyUpdateNlsLayersOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": errC.Error()}})
 			return nil
 		}
+
+		if wantStack {
+			prevList, errPre := uc.NLSLayer.Fetch(opCtx, id.NLSLayerIDList{lid}, op)
+			if errPre != nil || len(prevList) == 0 || prevList[0] == nil {
+				wantStack = false
+				invPieces = nil
+			} else {
+				prev := *prevList[0]
+				fwd := applyUpdateNLSLayer{
+					SceneID: p.SceneID,
+					LayerID: row.LayerID,
+					Name:    row.Name,
+					Visible: row.Visible,
+					Index:   row.Index,
+					Config:  row.Config,
+				}
+				touchedName := row.Name != nil
+				touchedVis := row.Visible != nil
+				touchedIdx := row.Index != nil
+				touchedCfg := rowHasCfg
+				invRaw := buildUpdateNLSLayerInverseJSON(prev, &fwd, touchedName, touchedVis, touchedIdx, touchedCfg)
+				if len(invRaw) == 0 {
+					wantStack = false
+					invPieces = nil
+				} else {
+					it, errI := itemFromUpdateNLSInverseRaw(invRaw)
+					if errI != nil {
+						wantStack = false
+						invPieces = nil
+					} else {
+						invPieces = append(invPieces, it)
+					}
+				}
+			}
+		}
+
 		_, errU := uc.NLSLayer.Update(opCtx, interfaces.UpdateNLSLayerInput{
 			LayerID: lid,
 			Index:   row.Index,
@@ -428,10 +472,13 @@ func applyUpdateNlsLayersOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 			Config:  cfg,
 		}, op)
 		if errU != nil {
+			wantStack = false
+			invPieces = nil
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": errU.Error()}})
 			return nil
 		}
 	}
+
 	sc := fetchSceneAfterNLSChange(ctx, uc, op, sid, from)
 	if sc == nil {
 		return nil
@@ -444,5 +491,32 @@ func applyUpdateNlsLayersOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 		"sceneId":  p.SceneID,
 		"layerIds": ids,
 	}, sc)
+
+	if wantStack && len(invPieces) == len(p.Layers) {
+		reverseUpdateNLSLayerItems(invPieces)
+		inv := applyUpdateNlsLayers{
+			Kind:    "update_nls_layers",
+			SceneID: p.SceneID,
+			Layers:  invPieces,
+		}
+		binv, errI := json.Marshal(inv)
+		if errI == nil {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "update_nls_layers",
+				Forward:   d,
+				Inverse:   json.RawMessage(binv),
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }

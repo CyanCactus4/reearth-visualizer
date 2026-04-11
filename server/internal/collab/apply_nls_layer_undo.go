@@ -97,3 +97,68 @@ func collabRunUpdateNLSLayerFromJSON(ctx context.Context, uc *interfaces.Contain
 	}
 	return scenes[0], nil
 }
+
+func reverseUpdateNLSLayerItems(s []applyUpdateNLSLayerItem) {
+	for i, j := 0, len(s)-1; i < j; i, j = i+1, j-1 {
+		s[i], s[j] = s[j], s[i]
+	}
+}
+
+func itemFromUpdateNLSInverseRaw(raw json.RawMessage) (applyUpdateNLSLayerItem, error) {
+	var inv applyUpdateNLSLayer
+	if err := json.Unmarshal(raw, &inv); err != nil {
+		return applyUpdateNLSLayerItem{}, err
+	}
+	return applyUpdateNLSLayerItem{
+		LayerID: inv.LayerID,
+		Name:    inv.Name,
+		Visible: inv.Visible,
+		Index:   inv.Index,
+		Config:  inv.Config,
+	}, nil
+}
+
+// collabRunUpdateNlsLayersFromJSON runs a batch of NLSLayer.Update (undo/redo payloads).
+func collabRunUpdateNlsLayersFromJSON(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, raw json.RawMessage) (*scene.Scene, error) {
+	var p applyUpdateNlsLayers
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return nil, err
+	}
+	sid, err := id.SceneIDFrom(p.SceneID)
+	if err != nil {
+		return nil, err
+	}
+	if len(p.Layers) == 0 {
+		return nil, fmt.Errorf("empty layers")
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	for _, row := range p.Layers {
+		lid, err := id.NLSLayerIDFrom(row.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		rowHasCfg := len(row.Config) > 0 && string(row.Config) != "null"
+		if row.Name == nil && row.Visible == nil && row.Index == nil && !rowHasCfg {
+			return nil, fmt.Errorf("empty_update")
+		}
+		cfg, err := parseNLSConfigRaw(row.Config)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := uc.NLSLayer.Update(opCtx, interfaces.UpdateNLSLayerInput{
+			LayerID: lid,
+			Index:   row.Index,
+			Name:    row.Name,
+			Visible: row.Visible,
+			Config:  cfg,
+		}, op); err != nil {
+			return nil, err
+		}
+	}
+	scenes, err := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err != nil || len(scenes) == 0 {
+		return nil, fmt.Errorf("scene reload failed")
+	}
+	return scenes[0], nil
+}
