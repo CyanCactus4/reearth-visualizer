@@ -164,6 +164,22 @@ func handleClientMessage(hub *Hub, from *Conn, raw []byte, maxBytes int) error {
 			return fmt.Errorf("chat requires d")
 		}
 		return dispatchChat(ctx, hub, from, m.D)
+	case "cursor":
+		if len(raw) > maxBytes {
+			return errors.New("message too large")
+		}
+		if len(m.D) == 0 {
+			return fmt.Errorf("cursor requires d")
+		}
+		return dispatchCursor(ctx, hub, from, m.D)
+	case "activity":
+		if len(raw) > maxBytes {
+			return errors.New("message too large")
+		}
+		if len(m.D) == 0 {
+			return fmt.Errorf("activity requires d")
+		}
+		return dispatchActivity(ctx, hub, from, m.D)
 	default:
 		return fmt.Errorf("unknown message type")
 	}

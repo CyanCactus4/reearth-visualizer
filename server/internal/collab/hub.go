@@ -30,6 +30,13 @@ type Hub struct {
 	chatMaxRunes int
 	chatEvery    time.Duration
 	chatLimiters sync.Map // key: projectID + "\x00" + userID -> *rate.Limiter (created lazily)
+
+	cursorEvery    time.Duration
+	cursorLimiters sync.Map // projectID + "\x00" + userID
+
+	activityTypingEvery time.Duration
+	activityMoveEvery   time.Duration
+	activityLimiters    sync.Map // projectID + "\x00" + userID + "\x00" + kind
 }
 
 type room struct {
@@ -50,6 +57,10 @@ func NewHub(o Options) *Hub {
 		lockTTL:      ttl,
 		chatMaxRunes: o.chatMaxRunes(),
 		chatEvery:    o.chatMinInterval(),
+
+		cursorEvery:         o.cursorMinInterval(),
+		activityTypingEvery: o.activityTypingInterval(),
+		activityMoveEvery:   o.activityMoveInterval(),
 	}
 	if o.RedisURL != "" {
 		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {
@@ -67,6 +78,30 @@ func (h *Hub) chatAllow(projectID, userID string) bool {
 	}
 	key := projectID + "\x00" + userID
 	lim, _ := h.chatLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(h.chatEvery), 1))
+	return lim.(*rate.Limiter).Allow()
+}
+
+// cursorAllow limits cursor broadcasts per user per project (burst 1).
+func (h *Hub) cursorAllow(projectID, userID string) bool {
+	if userID == "" {
+		return false
+	}
+	key := projectID + "\x00" + userID
+	lim, _ := h.cursorLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(h.cursorEvery), 1))
+	return lim.(*rate.Limiter).Allow()
+}
+
+// activityAllow limits typing/move hints per user per project and kind (burst 1).
+func (h *Hub) activityAllow(projectID, userID, kind string) bool {
+	if userID == "" {
+		return false
+	}
+	every := h.activityMoveEvery
+	if kind == "typing" {
+		every = h.activityTypingEvery
+	}
+	key := projectID + "\x00" + userID + "\x00" + kind
+	lim, _ := h.activityLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(every), 1))
 	return lim.(*rate.Limiter).Allow()
 }
 

@@ -5,9 +5,12 @@ import CollabPresenceBar from "./CollabPresenceBar";
 
 const collabState = {
   projectId: "proj-1",
+  localUserId: undefined as string | undefined,
   status: "open" as const,
   lastMessage: null as { v: 1; t: string; d?: Record<string, string> } | null,
-  sendRaw: vi.fn()
+  sendRaw: vi.fn(),
+  remoteCursors: {} as Record<string, { x: number; y: number; inside: boolean; ts: number }>,
+  remoteTypingUserIds: [] as string[]
 };
 
 vi.mock("@reearth/services/collab", () => ({
@@ -17,8 +20,11 @@ vi.mock("@reearth/services/collab", () => ({
 describe("CollabPresenceBar", () => {
   beforeEach(() => {
     collabState.projectId = "proj-1";
+    collabState.localUserId = undefined;
     collabState.status = "open";
     collabState.lastMessage = null;
+    collabState.remoteCursors = {};
+    collabState.remoteTypingUserIds = [];
     collabState.sendRaw.mockClear();
   });
 
@@ -38,5 +44,13 @@ describe("CollabPresenceBar", () => {
     };
     render(<CollabPresenceBar />);
     expect(screen.getByTestId("collab-presence-bar")).toHaveTextContent("alice");
+  });
+
+  it("shows typing peers from context", () => {
+    collabState.remoteTypingUserIds = ["bob"];
+    render(<CollabPresenceBar />);
+    expect(screen.getByTestId("collab-presence-bar")).toHaveTextContent(
+      "typing: bob"
+    );
   });
 });

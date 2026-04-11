@@ -24,6 +24,12 @@ const CollabPresenceBar: FC = () => {
 
   const list = useMemo(() => Array.from(userIds).sort(), [userIds]);
 
+  const typingLine = useMemo(() => {
+    const ids = collab?.remoteTypingUserIds ?? [];
+    if (ids.length === 0) return null;
+    return ` · typing: ${ids.join(", ")}`;
+  }, [collab?.remoteTypingUserIds]);
+
   if (!collab?.projectId) {
     return null;
   }
@@ -41,6 +47,7 @@ const CollabPresenceBar: FC = () => {
     >
       Live: {collab.status}
       {list.length > 0 ? ` · ${list.length} active: ${list.join(", ")}` : null}
+      {typingLine}
     </div>
   );
 };

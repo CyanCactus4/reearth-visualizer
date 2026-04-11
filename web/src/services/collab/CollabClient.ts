@@ -6,6 +6,22 @@ export type CollabInbound =
   | { v: 1; t: "lock_changed"; d?: Record<string, unknown> }
   | { v: 1; t: "lock_denied"; d?: Record<string, unknown> }
   | { v: 1; t: "chat"; d?: { userId?: string; text?: string; ts?: number } }
+  | {
+      v: 1;
+      t: "cursor";
+      d?: {
+        userId?: string;
+        x?: number;
+        y?: number;
+        inside?: boolean;
+        ts?: number;
+      };
+    }
+  | {
+      v: 1;
+      t: "activity";
+      d?: { userId?: string; kind?: string; ts?: number };
+    }
   | { v: 1; t: "applied"; d?: Record<string, unknown> }
   | { v: 1; t: "error"; d?: { code?: string; message?: string } }
   | { v: 1; t: string; d?: unknown };

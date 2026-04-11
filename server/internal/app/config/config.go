@@ -102,6 +102,12 @@ type CollabConfig struct {
 	ChatMaxRunes int `envconfig:"REEARTH_COLLAB_CHAT_MAX_RUNES" pp:",omitempty"`
 	// ChatMinIntervalMs is minimum spacing between chat messages per user per project (default 1000).
 	ChatMinIntervalMs int `envconfig:"REEARTH_COLLAB_CHAT_MIN_INTERVAL_MS" pp:",omitempty"`
+	// CursorMinIntervalMs limits cursor message rate per user per project (default 50).
+	CursorMinIntervalMs int `envconfig:"REEARTH_COLLAB_CURSOR_MIN_INTERVAL_MS" pp:",omitempty"`
+	// ActivityTypingMinIntervalMs limits "typing" activity hints (default 2000).
+	ActivityTypingMinIntervalMs int `envconfig:"REEARTH_COLLAB_ACTIVITY_TYPING_MIN_INTERVAL_MS" pp:",omitempty"`
+	// ActivityMoveMinIntervalMs limits "move" activity hints (default 800).
+	ActivityMoveMinIntervalMs int `envconfig:"REEARTH_COLLAB_ACTIVITY_MOVE_MIN_INTERVAL_MS" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

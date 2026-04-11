@@ -1,14 +1,16 @@
 import styled from "@emotion/styled";
+import { useMe } from "@reearth/services/api/user";
 import { CollabProvider } from "@reearth/services/collab";
 import { css } from "@reearth/services/theme/reearthTheme/common";
 import { useAtom } from "jotai";
 import { FC } from "react";
 
 import CursorStatus from "../CursorStatus";
-import CollabPresenceBar from "./CollabPresenceBar";
 import Navbar, { Tab } from "../Navbar";
 
 import { useWidgetsViewDevice, usePublishViewDevice } from "./atoms";
+import CollabPresenceBar from "./CollabPresenceBar";
+import CollabViewportCapture from "./CollabViewportCapture";
 import useHooks from "./hooks";
 import Map from "./Map";
 import { MapPageProvider } from "./Map/context";
@@ -36,6 +38,7 @@ type Props = {
 };
 
 const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
+  const { me } = useMe({ skip: !projectId });
   const {
     visualizerSize,
     isVisualizerResizing,
@@ -87,7 +90,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   };
 
   return (
-    <CollabProvider projectId={projectId}>
+    <CollabProvider projectId={projectId} localUserId={me?.id}>
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />
         <Navbar
@@ -102,6 +105,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
           style={{ ...visualizerSize }}
           data-testid="editor-visualizer-area"
         >
+          <CollabViewportCapture>
           <EditorVisualizer
             inEditor={tab !== "publish"}
             forceDevice={
@@ -132,6 +136,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
             selectWidgetArea={selectWidgetArea}
             data-testid="editor-visualizer"
           />
+          </CollabViewportCapture>
         </VisualizerArea>
         <Workbench data-testid="editor-workbench">
           {tab === "map" && (

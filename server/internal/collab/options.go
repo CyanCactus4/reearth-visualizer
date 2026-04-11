@@ -10,6 +10,13 @@ type Options struct {
 	ChatMinIntervalMs int
 	MaxMessageBytes   int
 	MaxMessagesPerSec int
+
+	// CursorMinIntervalMs: min spacing between cursor broadcasts per user (default 50).
+	CursorMinIntervalMs int
+	// ActivityTypingMinIntervalMs: min spacing for typing activity (default 2000).
+	ActivityTypingMinIntervalMs int
+	// ActivityMoveMinIntervalMs: min spacing for move activity (default 800).
+	ActivityMoveMinIntervalMs int
 }
 
 func (o Options) lockTTL() time.Duration {
@@ -31,6 +38,30 @@ func (o Options) chatMinInterval() time.Duration {
 	ms := o.ChatMinIntervalMs
 	if ms <= 0 {
 		ms = 1000
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+func (o Options) cursorMinInterval() time.Duration {
+	ms := o.CursorMinIntervalMs
+	if ms <= 0 {
+		ms = 50
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+func (o Options) activityTypingInterval() time.Duration {
+	ms := o.ActivityTypingMinIntervalMs
+	if ms <= 0 {
+		ms = 2000
+	}
+	return time.Duration(ms) * time.Millisecond
+}
+
+func (o Options) activityMoveInterval() time.Duration {
+	ms := o.ActivityMoveMinIntervalMs
+	if ms <= 0 {
+		ms = 800
 	}
 	return time.Duration(ms) * time.Millisecond
 }
