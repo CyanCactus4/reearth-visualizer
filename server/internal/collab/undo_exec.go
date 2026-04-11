@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/reearth/reearth/server/internal/adapter"
+	"github.com/reearth/reearth/server/internal/adapter/gql/gqlmodel"
 	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
@@ -105,6 +106,23 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, fmt.Errorf("scene reload failed")
 		}
 		return scenes[0], nil
+	case "update_property_value":
+		p, ptr, val, err := decodeApplyUpdatePropertyValue(raw)
+		if err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		pid, err := gqlmodel.ToID[id.Property](gqlmodel.ID(p.PropertyID))
+		if err != nil {
+			return nil, err
+		}
+		return runPropertyValueUpdate(ctx, uc, operator, pid, ptr, val, sid)
 	default:
 		return nil, fmt.Errorf("unsupported undo kind %q", env.Kind)
 	}

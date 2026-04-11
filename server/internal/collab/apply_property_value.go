@@ -3,6 +3,7 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/adapter/gql/gqlmodel"
@@ -10,6 +11,8 @@ import (
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/property"
+	"github.com/reearth/reearth/server/pkg/scene"
+	"github.com/reearth/reearthx/log"
 )
 
 type applyUpdatePropertyValue struct {
@@ -25,6 +28,9 @@ type applyUpdatePropertyValue struct {
 }
 
 func sceneMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid id.SceneID) bool {
+	if hub == nil {
+		return true
+	}
 	holder, active, err := hub.LockHolder(ctx, from.projectID, "scene", sid.String())
 	if err != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_lookup", "message": err.Error()}})
@@ -40,30 +46,99 @@ func sceneMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid i
 	return false
 }
 
-func propertyBelongsToScene(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, pid id.PropertyID, from *Conn) bool {
+func fetchPropertyForCollabApply(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, pid id.PropertyID, from *Conn) *property.Property {
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
 	list, err := uc.Property.Fetch(opCtx, []id.PropertyID{pid}, op)
 	if err != nil || len(list) == 0 || list[0] == nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "property not found"}})
-		return false
+		return nil
 	}
 	if list[0].Scene() != sid {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "property does not belong to this scene"}})
-		return false
-	}
-	return true
-}
-
-func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
-	var p applyUpdatePropertyValue
-	if err := json.Unmarshal(d, &p); err != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
 		return nil
 	}
+	return list[0]
+}
+
+// decodeApplyUpdatePropertyValue unmarshals the apply body and builds pointer + value for Property.UpdateValue.
+func decodeApplyUpdatePropertyValue(d json.RawMessage) (p applyUpdatePropertyValue, ptr *property.Pointer, val *property.Value, err error) {
+	if err = json.Unmarshal(d, &p); err != nil {
+		return
+	}
+	vt := gqlmodel.ValueType(p.Type)
+	hasValue := len(p.Value) > 0 && string(p.Value) != "null"
+	if hasValue {
+		var valIface interface{}
+		if err = json.Unmarshal(p.Value, &valIface); err != nil {
+			return
+		}
+		val = gqlmodel.FromPropertyValueAndType(valIface, vt)
+		if val == nil {
+			err = errInvalidPropertyApplyValue
+			return
+		}
+	}
+	var schemaGID *gqlmodel.ID
+	if p.SchemaGroupID != nil && *p.SchemaGroupID != "" {
+		g := gqlmodel.ID(*p.SchemaGroupID)
+		schemaGID = &g
+	}
+	var itemGID *gqlmodel.ID
+	if p.ItemID != nil && *p.ItemID != "" {
+		g := gqlmodel.ID(*p.ItemID)
+		itemGID = &g
+	}
+	fid := gqlmodel.ID(p.FieldID)
+	ptr = gqlmodel.FromPointer(
+		gqlmodel.ToStringIDRef[id.PropertySchemaGroup](schemaGID),
+		itemGID,
+		gqlmodel.ToStringIDRef[id.PropertyField](&fid),
+	)
+	if ptr == nil {
+		err = errInvalidPropertyApplyPointer
+	}
+	return
+}
+
+var (
+	errInvalidPropertyApplyValue   = errInvalidPropertyApply("invalid value")
+	errInvalidPropertyApplyPointer = errInvalidPropertyApply("invalid property pointer")
+)
+
+type errInvalidPropertyApply string
+
+func (e errInvalidPropertyApply) Error() string { return string(e) }
+
+func runPropertyValueUpdate(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, pid id.PropertyID, ptr *property.Pointer, val *property.Value, sid id.SceneID) (*scene.Scene, error) {
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, _, _, _, err := uc.Property.UpdateValue(opCtx, interfaces.UpdatePropertyValueParam{
+		PropertyID: pid,
+		Pointer:    ptr,
+		Value:      val,
+	}, op)
+	if err != nil {
+		return nil, err
+	}
+	scenes, err := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err != nil || len(scenes) == 0 {
+		return nil, errSceneReloadFailed
+	}
+	return scenes[0], nil
+}
+
+var errSceneReloadFailed = errInvalidPropertyApply("scene reload failed")
+
+func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
 	op := from.operator
 	if op == nil || !op.IsWritableScene(from.sceneID) {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "forbidden", "message": "write not allowed"}})
+		return nil
+	}
+	p, ptr, val, err := decodeApplyUpdatePropertyValue(d)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
 		return nil
 	}
 	sid, err := id.SceneIDFrom(p.SceneID)
@@ -91,59 +166,17 @@ func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d jso
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
 		return nil
 	}
-	if !propertyBelongsToScene(ctx, uc, op, sid, pid, from) {
+	prop := fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from)
+	if prop == nil {
 		return nil
 	}
-	vt := gqlmodel.ValueType(p.Type)
-	var val *property.Value
-	hasValue := len(p.Value) > 0 && string(p.Value) != "null"
-	if hasValue {
-		var valIface interface{}
-		if err := json.Unmarshal(p.Value, &valIface); err != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
-			return nil
-		}
-		val = gqlmodel.FromPropertyValueAndType(valIface, vt)
-		if val == nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid value"}})
-			return nil
-		}
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		invJSON = buildUpdatePropertyValueInverseJSON(prop, &p, ptr)
 	}
-
-	var schemaGID *gqlmodel.ID
-	if p.SchemaGroupID != nil && *p.SchemaGroupID != "" {
-		g := gqlmodel.ID(*p.SchemaGroupID)
-		schemaGID = &g
-	}
-	var itemGID *gqlmodel.ID
-	if p.ItemID != nil && *p.ItemID != "" {
-		g := gqlmodel.ID(*p.ItemID)
-		itemGID = &g
-	}
-	fid := gqlmodel.ID(p.FieldID)
-	ptr := gqlmodel.FromPointer(
-		gqlmodel.ToStringIDRef[id.PropertySchemaGroup](schemaGID),
-		itemGID,
-		gqlmodel.ToStringIDRef[id.PropertyField](&fid),
-	)
-	if ptr == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid property pointer"}})
-		return nil
-	}
-
-	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
-	defer cancel()
-	_, _, _, _, err2 := uc.Property.UpdateValue(opCtx, interfaces.UpdatePropertyValueParam{
-		PropertyID: pid,
-		Pointer:    ptr,
-		Value:      val,
-	}, op)
+	sc, err2 := runPropertyValueUpdate(ctx, uc, op, pid, ptr, val, sid)
 	if err2 != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
-		return nil
-	}
-	sc := fetchSceneAfterNLSChange(ctx, uc, op, sid, from)
-	if sc == nil {
 		return nil
 	}
 	broadcastApplied(ctx, hub, from, "update_property_value", map[string]any{
@@ -151,5 +184,23 @@ func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d jso
 		"propertyId": p.PropertyID,
 		"fieldId":    p.FieldID,
 	}, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "update_property_value",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
