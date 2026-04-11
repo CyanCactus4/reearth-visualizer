@@ -8,7 +8,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/redis/go-redis/v9"
 	"github.com/reearth/reearthx/log"
+	"golang.org/x/time/rate"
 )
 
 // Hub routes messages between WebSocket clients in the same project room.
@@ -21,8 +23,13 @@ type Hub struct {
 
 	relay *redisRelay
 
-	locks   *lockTable
-	lockTTL time.Duration
+	locks     *lockTable
+	lockTTL   time.Duration
+	lockRedis *redis.Client // same as relay client when Redis is enabled; distributed locks
+
+	chatMaxRunes int
+	chatEvery    time.Duration
+	chatLimiters sync.Map // key: projectID + "\x00" + userID -> *rate.Limiter (created lazily)
 }
 
 type room struct {
@@ -34,23 +41,33 @@ func newRoom() *room {
 	return &room{conns: make(map[*Conn]struct{})}
 }
 
-func NewHub(redisURL string, lockTTLSeconds int) *Hub {
-	ttl := time.Duration(lockTTLSeconds) * time.Second
-	if ttl <= 0 {
-		ttl = 5 * time.Minute
-	}
+func NewHub(o Options) *Hub {
+	ttl := o.lockTTL()
 	h := &Hub{
-		instanceID: uuid.NewString(),
-		rooms:      make(map[string]*room),
-		locks:      newLockTable(),
-		lockTTL:    ttl,
+		instanceID:   uuid.NewString(),
+		rooms:        make(map[string]*room),
+		locks:        newLockTable(),
+		lockTTL:      ttl,
+		chatMaxRunes: o.chatMaxRunes(),
+		chatEvery:    o.chatMinInterval(),
 	}
-	if redisURL != "" {
-		if r := newRedisRelay(redisURL, h.instanceID); r != nil {
+	if o.RedisURL != "" {
+		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {
 			h.relay = r
+			h.lockRedis = r.Client()
 		}
 	}
 	return h
+}
+
+// chatAllow enforces per-user-per-project chat spacing (burst 1).
+func (h *Hub) chatAllow(projectID, userID string) bool {
+	if userID == "" {
+		return false
+	}
+	key := projectID + "\x00" + userID
+	lim, _ := h.chatLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(h.chatEvery), 1))
+	return lim.(*rate.Limiter).Allow()
 }
 
 // Run starts optional Redis subscriber. Call once at process startup.

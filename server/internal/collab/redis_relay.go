@@ -17,6 +17,13 @@ type redisRelay struct {
 	instanceID string
 }
 
+func (r *redisRelay) Client() *redis.Client {
+	if r == nil {
+		return nil
+	}
+	return r.client
+}
+
 func newRedisRelay(url, instanceID string) *redisRelay {
 	opts, err := redis.ParseURL(url)
 	if err != nil {

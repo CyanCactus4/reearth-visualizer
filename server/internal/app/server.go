@@ -76,7 +76,14 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		address: address,
 	}
 
-	hub := collab.NewHub(cfg.Config.Collab.RedisURL, cfg.Config.Collab.LockTTLSeconds)
+	hub := collab.NewHub(collab.Options{
+		RedisURL:          cfg.Config.Collab.RedisURL,
+		LockTTLSeconds:    cfg.Config.Collab.LockTTLSeconds,
+		ChatMaxRunes:      cfg.Config.Collab.ChatMaxRunes,
+		ChatMinIntervalMs: cfg.Config.Collab.ChatMinIntervalMs,
+		MaxMessageBytes:   cfg.Config.Collab.MaxMessageBytes,
+		MaxMessagesPerSec: cfg.Config.Collab.MaxMessagesPerSec,
+	})
 	cfg.CollabHub = hub
 	w.collabHub = hub
 

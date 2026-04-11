@@ -98,6 +98,10 @@ type CollabConfig struct {
 	MaxMessagesPerSec int    `envconfig:"REEARTH_COLLAB_MAX_MESSAGES_PER_SEC" pp:",omitempty"`
 	// LockTTLSeconds is inactivity timeout for object locks (layer/widget) over collab; default 300 (5 minutes).
 	LockTTLSeconds int `envconfig:"REEARTH_COLLAB_LOCK_TTL_SECONDS" pp:",omitempty"`
+	// ChatMaxRunes limits UTF-8 rune length per chat message (default 4000).
+	ChatMaxRunes int `envconfig:"REEARTH_COLLAB_CHAT_MAX_RUNES" pp:",omitempty"`
+	// ChatMinIntervalMs is minimum spacing between chat messages per user per project (default 1000).
+	ChatMinIntervalMs int `envconfig:"REEARTH_COLLAB_CHAT_MIN_INTERVAL_MS" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

@@ -8,7 +8,7 @@ import (
 )
 
 func TestNewHub_NoRedis(t *testing.T) {
-	h := NewHub("", 0)
+	h := NewHub(Options{})
 	require.NotNil(t, h)
 	assert.Nil(t, h.relay)
 }
@@ -25,7 +25,7 @@ func drainConnSend(t *testing.T, c *Conn) {
 }
 
 func TestHubRegisterBroadcastUnregister(t *testing.T) {
-	h := NewHub("", 0)
+	h := NewHub(Options{})
 	c1 := &Conn{hub: h, projectID: "proj-1", send: make(chan []byte, 16)}
 	c2 := &Conn{hub: h, projectID: "proj-1", send: make(chan []byte, 16)}
 

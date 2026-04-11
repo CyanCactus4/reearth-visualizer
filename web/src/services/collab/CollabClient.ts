@@ -5,6 +5,7 @@ export type CollabInbound =
   | { v: 1; t: "presence"; d?: { event?: string; userId?: string } }
   | { v: 1; t: "lock_changed"; d?: Record<string, unknown> }
   | { v: 1; t: "lock_denied"; d?: Record<string, unknown> }
+  | { v: 1; t: "chat"; d?: { userId?: string; text?: string; ts?: number } }
   | { v: 1; t: "applied"; d?: Record<string, unknown> }
   | { v: 1; t: "error"; d?: { code?: string; message?: string } }
   | { v: 1; t: string; d?: unknown };
@@ -42,8 +43,13 @@ export class CollabClient {
     this.ws?.send(JSON.stringify({ v: 1, t: "ping" }));
   }
 
-  sendRaw(json: string): void {
-    this.ws?.send(json);
+  /** Returns false if the socket is not open (caller may queue offline). */
+  sendRaw(json: string): boolean {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      return false;
+    }
+    this.ws.send(json);
+    return true;
   }
 
   onMessage(handler: (msg: CollabInbound) => void): void {

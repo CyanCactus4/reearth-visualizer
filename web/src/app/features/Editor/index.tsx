@@ -5,6 +5,7 @@ import { useAtom } from "jotai";
 import { FC } from "react";
 
 import CursorStatus from "../CursorStatus";
+import CollabPresenceBar from "./CollabPresenceBar";
 import Navbar, { Tab } from "../Navbar";
 
 import { useWidgetsViewDevice, usePublishViewDevice } from "./atoms";
@@ -88,6 +89,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   return (
     <CollabProvider projectId={projectId}>
       <Wrapper data-testid="editor-wrapper">
+        <CollabPresenceBar />
         <Navbar
         sceneId={sceneId}
         projectId={projectId}

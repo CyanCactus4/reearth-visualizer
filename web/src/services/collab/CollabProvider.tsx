@@ -11,6 +11,7 @@ import {
 
 import { CollabClient } from "./CollabClient";
 import { CollabContext, type CollabContextValue } from "./collabContext";
+import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
 
 type Props = {
   projectId?: string;
@@ -76,9 +77,40 @@ export const CollabProvider: FC<Props> = ({ projectId, children }) => {
     };
   }, [projectId, getAccessToken]);
 
-  const sendRaw = useCallback((json: string) => {
-    clientRef.current?.sendRaw(json);
-  }, []);
+  useEffect(() => {
+    if (status !== "open" || !projectId) return;
+    void (async () => {
+      const batch = await collabOfflineDrain(projectId);
+      for (const line of batch) {
+        clientRef.current?.sendRaw(line);
+      }
+    })();
+  }, [status, projectId]);
+
+  useEffect(() => {
+    const onOnline = () => {
+      if (status !== "open" || !projectId) return;
+      void (async () => {
+        const batch = await collabOfflineDrain(projectId);
+        for (const line of batch) {
+          clientRef.current?.sendRaw(line);
+        }
+      })();
+    };
+    window.addEventListener("online", onOnline);
+    return () => window.removeEventListener("online", onOnline);
+  }, [status, projectId]);
+
+  const sendRaw = useCallback(
+    (json: string) => {
+      if (!projectId) return;
+      const sent = clientRef.current?.sendRaw(json) ?? false;
+      if (!sent) {
+        void collabOfflinePush(projectId, json);
+      }
+    },
+    [projectId]
+  );
 
   const value = useMemo<CollabContextValue>(
     () => ({
