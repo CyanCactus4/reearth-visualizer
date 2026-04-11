@@ -1,0 +1,72 @@
+import { WidgetAlignSystemType } from "@reearth/services/gql";
+import { describe, expect, it } from "vitest";
+
+import {
+  alignSystemForCollab,
+  applyAddWidgetPayload,
+  applyRemoveWidgetPayload,
+  applyUpdateWidgetPayload
+} from "./applyMessages";
+
+describe("alignSystemForCollab", () => {
+  it("maps GraphQL enum to server strings", () => {
+    expect(alignSystemForCollab(WidgetAlignSystemType.Desktop)).toBe(
+      "desktop"
+    );
+    expect(alignSystemForCollab(WidgetAlignSystemType.Mobile)).toBe("mobile");
+  });
+});
+
+describe("apply payloads", () => {
+  it("builds update_widget apply envelope", () => {
+    const s = applyUpdateWidgetPayload({
+      sceneId: "sc1",
+      widgetId: "w1",
+      type: WidgetAlignSystemType.Desktop,
+      enabled: true,
+      location: { zone: "outer", section: "left", area: "top" }
+    });
+    expect(JSON.parse(s)).toEqual({
+      v: 1,
+      t: "apply",
+      d: {
+        kind: "update_widget",
+        sceneId: "sc1",
+        alignSystem: "desktop",
+        widgetId: "w1",
+        enabled: true,
+        location: { zone: "outer", section: "left", area: "top" }
+      }
+    });
+  });
+
+  it("builds remove_widget apply envelope", () => {
+    const s = applyRemoveWidgetPayload({
+      sceneId: "sc1",
+      widgetId: "w1",
+      type: WidgetAlignSystemType.Mobile
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "remove_widget",
+      sceneId: "sc1",
+      alignSystem: "mobile",
+      widgetId: "w1"
+    });
+  });
+
+  it("builds add_widget apply envelope", () => {
+    const s = applyAddWidgetPayload({
+      sceneId: "sc1",
+      type: WidgetAlignSystemType.Desktop,
+      pluginId: "plug~1.0.0",
+      extensionId: "ext1"
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "add_widget",
+      sceneId: "sc1",
+      alignSystem: "desktop",
+      pluginId: "plug~1.0.0",
+      extensionId: "ext1"
+    });
+  });
+});

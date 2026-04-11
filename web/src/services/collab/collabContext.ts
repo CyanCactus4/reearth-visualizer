@@ -32,7 +32,8 @@ export type CollabContextValue = {
   /** Current user id (from GraphQL me) — used to ignore self in cursor/typing fan-out. */
   localUserId: string | undefined;
   lastMessage: CollabInbound | null;
-  sendRaw: (json: string) => void;
+  /** Returns true if the frame was sent on the socket; false if queued offline. */
+  sendRaw: (json: string) => boolean;
   remoteCursors: Record<string, RemoteCursor>;
   /** Peers recently reported typing (via activity); cleared on timeout server-side spacing applies too. */
   remoteTypingUserIds: readonly string[];
@@ -41,6 +42,8 @@ export type CollabContextValue = {
   /** Recent collab chat lines (REST history + live WebSocket). */
   chatMessages: readonly CollabChatLine[];
   sendChat: (text: string) => void;
+  /** Monotonic scene stamp from last `applied` collab message (server `scene.UpdatedAt` ms). */
+  remoteSceneRev: number | undefined;
 };
 
 export const CollabContext = createContext<CollabContextValue | null>(null);

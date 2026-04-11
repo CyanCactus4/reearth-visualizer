@@ -36,6 +36,21 @@ func redisLockTTLSeconds(ttl time.Duration) int {
 	return sec
 }
 
+func redisLockGet(ctx context.Context, rdb *redis.Client, projectID, resource, resourceID string) (holder string, active bool, err error) {
+	key := redisLockKey(projectID, resource, resourceID)
+	s, err := rdb.Get(ctx, key).Result()
+	if err == redis.Nil {
+		return "", false, nil
+	}
+	if err != nil {
+		return "", false, err
+	}
+	if s == "" {
+		return "", false, nil
+	}
+	return s, true, nil
+}
+
 // redisLockTryAcquire uses SET NX EX; same holder may refresh with EXPIRE.
 func redisLockTryAcquire(ctx context.Context, rdb *redis.Client, projectID, resource, resourceID, userID string, ttl time.Duration) (granted bool, holder string, until time.Time, err error) {
 	key := redisLockKey(projectID, resource, resourceID)

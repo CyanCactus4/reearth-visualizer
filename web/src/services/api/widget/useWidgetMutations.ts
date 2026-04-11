@@ -13,6 +13,12 @@ import {
   UPDATE_WIDGET,
   UPDATE_WIDGET_ALIGN_SYSTEM
 } from "@reearth/services/gql/queries/widget";
+import {
+  applyAddWidgetPayload,
+  applyRemoveWidgetPayload,
+  applyUpdateWidgetPayload,
+  useCollab
+} from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { WidgetAreaState, useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
@@ -24,6 +30,7 @@ import { WidgetLocation } from "./types";
 export const useWidgetMutations = () => {
   const t = useT();
   const [, setNotification] = useNotification();
+  const collab = useCollab();
 
   const [addWidgetMutation] = useMutation(ADD_WIDGET, {
     refetchQueries: ["GetScene"]
@@ -41,6 +48,19 @@ export const useWidgetMutations = () => {
         };
 
       const [pluginId, extensionId] = id.split("/");
+      if (collab?.status === "open") {
+        const ok = collab.sendRaw(
+          applyAddWidgetPayload({
+            sceneId,
+            type,
+            pluginId,
+            extensionId
+          })
+        );
+        if (ok) {
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await addWidgetMutation({
         variables: { sceneId: sceneId ?? "", pluginId, extensionId, type }
       });
@@ -57,7 +77,7 @@ export const useWidgetMutations = () => {
         status: "success"
       };
     },
-    [addWidgetMutation, setNotification, t]
+    [addWidgetMutation, collab, setNotification, t]
   );
 
   const [updateWidgetMutation] = useMutation(UPDATE_WIDGET, {
@@ -79,6 +99,23 @@ export const useWidgetMutations = () => {
         return {
           status: "error"
         };
+      }
+
+      if (collab?.status === "open") {
+        const ok = collab.sendRaw(
+          applyUpdateWidgetPayload({
+            sceneId,
+            widgetId: id,
+            type,
+            enabled: true,
+            location: update.location,
+            extended: update.extended,
+            index: update.index
+          })
+        );
+        if (ok) {
+          return { status: "success" as const };
+        }
       }
 
       const { data, error } = await updateWidgetMutation({
@@ -112,7 +149,7 @@ export const useWidgetMutations = () => {
         status: "success"
       };
     },
-    [updateWidgetMutation, setNotification, t]
+    [collab, updateWidgetMutation, setNotification, t]
   );
 
   const [removeWidgetMutation] = useMutation(REMOVE_WIDGET, {
@@ -135,6 +172,15 @@ export const useWidgetMutations = () => {
         };
       }
 
+      if (collab?.status === "open") {
+        const ok = collab.sendRaw(
+          applyRemoveWidgetPayload({ sceneId, widgetId, type })
+        );
+        if (ok) {
+          return { status: "success" as const };
+        }
+      }
+
       const { data, error } = await removeWidgetMutation({
         variables: { sceneId: sceneId ?? "", widgetId, type }
       });
@@ -151,7 +197,7 @@ export const useWidgetMutations = () => {
         status: "success"
       };
     },
-    [removeWidgetMutation, setNotification, t]
+    [collab, removeWidgetMutation, setNotification, t]
   );
 
   const [updateWidgetAlignSystemMutation] = useMutation(

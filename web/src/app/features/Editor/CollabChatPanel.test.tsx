@@ -2,14 +2,34 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
+import type { CollabStatus } from "@reearth/services/collab";
+
 import CollabChatPanel from "./CollabChatPanel";
 
-const collabState = {
-  projectId: "proj-1" as string | undefined,
-  localUserId: "me" as string | undefined,
-  status: "open" as const,
+const collabState: {
+  projectId: string | undefined;
+  localUserId: string | undefined;
+  status: CollabStatus;
+  lastMessage: null;
+  sendRaw: ReturnType<typeof vi.fn>;
+  remoteCursors: Record<string, unknown>;
+  remoteTypingUserIds: string[];
+  resourceLocks: Record<string, unknown>;
+  chatMessages: {
+    id: string;
+    userId: string;
+    text: string;
+    ts: number;
+    pending?: boolean;
+  }[];
+  sendChat: ReturnType<typeof vi.fn>;
+  remoteSceneRev: number | undefined;
+} = {
+  projectId: "proj-1",
+  localUserId: "me",
+  status: "open",
   lastMessage: null,
-  sendRaw: vi.fn(),
+  sendRaw: vi.fn(() => true),
   remoteCursors: {} as Record<string, unknown>,
   remoteTypingUserIds: [] as string[],
   resourceLocks: {} as Record<string, unknown>,
@@ -20,7 +40,8 @@ const collabState = {
     ts: number;
     pending?: boolean;
   }[],
-  sendChat: vi.fn()
+  sendChat: vi.fn(),
+  remoteSceneRev: undefined as number | undefined
 };
 
 vi.mock("@reearth/services/collab", () => ({

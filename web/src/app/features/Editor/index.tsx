@@ -11,6 +11,7 @@ import Navbar, { Tab } from "../Navbar";
 import { useWidgetsViewDevice, usePublishViewDevice } from "./atoms";
 import CollabChatPanel from "./CollabChatPanel";
 import CollabPresenceBar from "./CollabPresenceBar";
+import CollabSceneRefetch from "./CollabSceneRefetch";
 import CollabViewportCapture from "./CollabViewportCapture";
 import useHooks from "./hooks";
 import Map from "./Map";
@@ -92,6 +93,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
 
   return (
     <CollabProvider projectId={projectId} localUserId={me?.id}>
+      <CollabSceneRefetch sceneId={sceneId} />
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />
         <CollabChatPanel />

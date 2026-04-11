@@ -78,6 +78,9 @@ export const CollabProvider: FC<Props> = ({
     Record<string, CollabResourceLock>
   >({});
   const [chatMessages, setChatMessages] = useState<CollabChatLine[]>([]);
+  const [remoteSceneRev, setRemoteSceneRev] = useState<number | undefined>(
+    undefined
+  );
   const seenChatIdsRef = useRef<Set<string>>(new Set());
   /** Maps userId+NUL+text → optimistic local id (one in-flight own line per text). */
   const optimisticByKeyRef = useRef<Map<string, string>>(new Map());
@@ -312,6 +315,13 @@ export const CollabProvider: FC<Props> = ({
           next.sort((a, b) => a.ts - b.ts);
           return next;
         });
+        return;
+      }
+      if (msg.t === "applied") {
+        const d = msg.d as { sceneRev?: number } | undefined;
+        if (typeof d?.sceneRev === "number") {
+          setRemoteSceneRev(d.sceneRev);
+        }
       }
     },
     [noteTypingUser]
@@ -324,6 +334,7 @@ export const CollabProvider: FC<Props> = ({
     typingTimersRef.current.clear();
     setRemoteTypingUserIds([]);
     setChatMessages([]);
+    setRemoteSceneRev(undefined);
     seenChatIdsRef.current.clear();
     optimisticByKeyRef.current.clear();
     lastAppliedNotifyAtRef.current.clear();
@@ -452,12 +463,13 @@ export const CollabProvider: FC<Props> = ({
   }, [status, projectId]);
 
   const sendRaw = useCallback(
-    (json: string) => {
-      if (!projectId) return;
+    (json: string): boolean => {
+      if (!projectId) return false;
       const sent = clientRef.current?.sendRaw(json) ?? false;
       if (!sent) {
         void collabOfflinePush(projectId, json);
       }
+      return sent;
     },
     [projectId]
   );
@@ -526,7 +538,8 @@ export const CollabProvider: FC<Props> = ({
       remoteTypingUserIds,
       resourceLocks,
       chatMessages,
-      sendChat
+      sendChat,
+      remoteSceneRev
     }),
     [
       status,
@@ -538,7 +551,8 @@ export const CollabProvider: FC<Props> = ({
       remoteTypingUserIds,
       resourceLocks,
       chatMessages,
-      sendChat
+      sendChat,
+      remoteSceneRev
     ]
   );
 

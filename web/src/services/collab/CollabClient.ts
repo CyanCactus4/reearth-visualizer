@@ -45,7 +45,19 @@ export type CollabInbound =
       t: "activity";
       d?: { userId?: string; kind?: string; ts?: number };
     }
-  | { v: 1; t: "applied"; d?: Record<string, unknown> }
+  | {
+      v: 1;
+      t: "applied";
+      d?: {
+        kind?: string;
+        sceneId?: string;
+        widgetId?: string;
+        userId?: string;
+        sceneRev?: number;
+        pluginId?: string;
+        extensionId?: string;
+      };
+    }
   | { v: 1; t: "error"; d?: { code?: string; message?: string } }
   | { v: 1; t: string; d?: unknown };
 

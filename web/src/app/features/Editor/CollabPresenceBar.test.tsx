@@ -8,12 +8,13 @@ const collabState = {
   localUserId: undefined as string | undefined,
   status: "open" as const,
   lastMessage: null as { v: 1; t: string; d?: Record<string, string> } | null,
-  sendRaw: vi.fn(),
+  sendRaw: vi.fn(() => true),
   remoteCursors: {} as Record<string, { x: number; y: number; inside: boolean; ts: number }>,
   remoteTypingUserIds: [] as string[],
   resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>,
   chatMessages: [] as { id: string; userId: string; text: string; ts: number }[],
-  sendChat: vi.fn()
+  sendChat: vi.fn(),
+  remoteSceneRev: undefined as number | undefined
 };
 
 vi.mock("@reearth/services/collab", () => ({

@@ -58,13 +58,15 @@ Every client message is a JSON object:
 | --- | ---- |
 | `ping` | Keep-alive; server responds with `pong`. |
 | `relay` | Opaque fan-out (escape hatch). |
-| `apply` | Server-authoritative mutation; `d.kind` selects operation (MVP: `update_widget`). |
+| `apply` | Server-authoritative mutation; `d.kind` ∈ `update_widget`, `add_widget`, `remove_widget` (widgets / scene write via interactors). |
 | `lock` | Object lock acquire/release/heartbeat. |
 | `chat` | Room chat; persisted when Mongo store is configured. |
 | `cursor` | Normalized pointer position for presence. |
 | `activity` | Lightweight hints (`typing`, `move`). |
 
 **Outbound types** include: `pong`, `presence`, `lock_changed`, `lock_denied`, `chat`, `cursor`, `activity`, `applied`, `error`.
+
+`applied.d` includes **`sceneRev`** (Unix ms from `scene.UpdatedAt()` after persist) so clients can refetch or reconcile local state after reconnect.
 
 **Future envelope fields** (not required in v1; reserved for Phase 2+): `seq`, `clientId`, explicit `roomId` in body (today room is implied by connection query `projectId`).
 

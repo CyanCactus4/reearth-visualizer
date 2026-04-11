@@ -5,6 +5,15 @@ import (
 	"time"
 )
 
+// LockHolder returns the active lock holder for a resource in the project room, if any.
+func (h *Hub) LockHolder(ctx context.Context, projectID, resource, resourceID string) (holder string, active bool, err error) {
+	if h.lockRedis != nil {
+		return redisLockGet(ctx, h.lockRedis, projectID, resource, resourceID)
+	}
+	hh, ok := h.locks.Lookup(projectID, resource, resourceID)
+	return hh, ok, nil
+}
+
 func (h *Hub) tryLockAcquire(ctx context.Context, projectID, resource, resourceID, userID string, ttl time.Duration) (ok bool, holder string, until time.Time, err error) {
 	if h.lockRedis != nil {
 		return redisLockTryAcquire(ctx, h.lockRedis, projectID, resource, resourceID, userID, ttl)

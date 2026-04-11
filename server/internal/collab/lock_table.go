@@ -51,6 +51,20 @@ func (t *lockTable) TryAcquire(projectID, resource, resourceID, userID string, t
 	return true, userID, until
 }
 
+// Lookup returns the current non-expired lock holder, if any.
+func (t *lockTable) Lookup(projectID, resource, resourceID string) (holder string, active bool) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	now := time.Now()
+	t.pruneLocked(now)
+	k := lockKey(projectID, resource, resourceID)
+	e, ok := t.m[k]
+	if !ok || e == nil || !e.until.After(now) {
+		return "", false
+	}
+	return e.holder, true
+}
+
 func (t *lockTable) Release(projectID, resource, resourceID, userID string) (released bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()

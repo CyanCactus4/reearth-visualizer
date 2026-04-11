@@ -1,3 +1,9 @@
+export {
+  alignSystemForCollab,
+  applyAddWidgetPayload,
+  applyRemoveWidgetPayload,
+  applyUpdateWidgetPayload
+} from "./applyMessages";
 export { activityPayload, type CollabActivityKind } from "./activityMessages";
 export { chatPayload } from "./chatMessages";
 export { collabUserColor, collabUserHue } from "./collabUserColor";
