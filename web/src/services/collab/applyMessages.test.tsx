@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   alignSystemForCollab,
   applyAddWidgetPayload,
+  applyCreateStoryBlockPayload,
   applyMoveStoryBlockPayload,
+  applyRemoveStoryBlockPayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
@@ -113,6 +115,44 @@ describe("apply payloads", () => {
       blockId: "bk1",
       index: 2,
       baseSceneRev: 9
+    });
+  });
+
+  it("builds create_story_block apply envelope", () => {
+    const s = applyCreateStoryBlockPayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      pluginId: "p~1",
+      extensionId: "e1",
+      index: 0,
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "create_story_block",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      pluginId: "p~1",
+      extensionId: "e1",
+      index: 0,
+      baseSceneRev: 3
+    });
+  });
+
+  it("builds remove_story_block apply envelope", () => {
+    const s = applyRemoveStoryBlockPayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      blockId: "bk9"
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "remove_story_block",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      blockId: "bk9"
     });
   });
 });

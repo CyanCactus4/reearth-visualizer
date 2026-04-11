@@ -1,6 +1,11 @@
 import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
-import { applyMoveStoryBlockPayload, useCollab } from "@reearth/services/collab";
+import {
+  applyCreateStoryBlockPayload,
+  applyMoveStoryBlockPayload,
+  applyRemoveStoryBlockPayload,
+  useCollab
+} from "@reearth/services/collab";
 import {
   CreateStoryBlockInput,
   CreateStoryBlockMutation,
@@ -35,6 +40,26 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: CreateStoryBlockInput
     ): Promise<MutationReturn<CreateStoryBlockMutation>> => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyCreateStoryBlockPayload({
+            sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            pluginId: input.pluginId,
+            extensionId: input.extensionId,
+            index: input.index ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully created a block!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await createStoryBlockMutation({
         variables: { input }
       });
@@ -50,7 +75,7 @@ export const useStoryBlockMutations = (sceneId?: string) => {
 
       return { data, status: "success" };
     },
-    [createStoryBlockMutation, setNotification, t]
+    [collab, createStoryBlockMutation, sceneId, setNotification, t]
   );
 
   const [removeStoryBlockMutation] = useMutation<
@@ -62,6 +87,24 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: RemoveStoryBlockInput
     ): Promise<MutationReturn<RemoveStoryBlockMutation>> => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyRemoveStoryBlockPayload({
+            sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            blockId: input.blockId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Block was successfully deleted.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await removeStoryBlockMutation({
         variables: { input }
       });
@@ -77,7 +120,7 @@ export const useStoryBlockMutations = (sceneId?: string) => {
 
       return { data, status: "success" };
     },
-    [removeStoryBlockMutation, setNotification, t]
+    [collab, removeStoryBlockMutation, sceneId, setNotification, t]
   );
 
   const [moveStoryBlockMutation] = useMutation<
@@ -89,6 +132,25 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: MoveStoryBlockInput
     ): Promise<MutationReturn<MoveStoryBlockMutation>> => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyMoveStoryBlockPayload({
+            sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            blockId: input.blockId,
+            index: input.index,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Block was successfully moved.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await moveStoryBlockMutation({
         variables: { input }
       });

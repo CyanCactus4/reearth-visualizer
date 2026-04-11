@@ -65,7 +65,7 @@ export default ({
   forceDevice?: DeviceType;
 }) => {
   const { updateWidget, updateWidgetAlignSystem } = useWidgetMutations();
-  const { createStoryBlock, deleteStoryBlock } = useStoryBlockMutations();
+  const { createStoryBlock, deleteStoryBlock } = useStoryBlockMutations(sceneId);
   const {
     updatePropertyValue,
     addPropertyItem,
@@ -352,7 +352,7 @@ export default ({
         index
       });
     },
-    [storyId, createStoryBlock]
+    [sceneId, storyId, createStoryBlock]
   );
 
   const handleStoryBlockDelete = useCallback(
@@ -360,7 +360,7 @@ export default ({
       if (!blockId || !storyId || !pageId) return;
       await deleteStoryBlock({ blockId, pageId, storyId });
     },
-    [storyId, deleteStoryBlock]
+    [sceneId, storyId, deleteStoryBlock]
   );
 
   const handlePropertyValueUpdate = useCallback(

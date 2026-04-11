@@ -173,8 +173,8 @@
 |------|--------|-------------|
 | 0 Проектирование и контракты | ✅ | Design doc выше; транспорт и v1-протокол зафиксированы. |
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
-| 2 MVP-синхронизация одной сущности | ✅ | `apply`: `update_widget`, `add_widget`, `remove_widget`; `applied` + **`sceneRev`** (ms); Vitest `applyMessages`; Go-тесты `dispatchApply` + `lockTable.Lookup`; фронт: **`CollabSceneRefetch`** (GetScene network-only при новом `sceneRev`), **`useWidgetMutations`** шлёт collab при `status===open` и успешном `sendRaw`, иначе GraphQL. |
-| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling **`move_story_block`**; **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, остальные story ops, слои/стили/сцена. |
+| 2 MVP-синхронизация одной сущности | ✅ | `apply`: `update_widget`, `add_widget`, `remove_widget`, **`move_story_block`**, **`create_story_block`**, **`remove_story_block`**; `applied` + **`sceneRev`** (ms); Vitest `applyMessages`; Go-тесты `dispatchApply` + `lockTable.Lookup`; фронт: **`CollabSceneRefetch`**, **`useWidgetMutations`** / **`useStoryBlockMutations(sceneId)`** — collab при `open` + `sendRaw`, иначе GraphQL. |
+| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling **`move_story_block`**, **`create_story_block`**, **`remove_story_block`**; **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, страницы/дубликаты story, слои/стили/сцена. |
 | 4 Блокировки | 🟡 | Locks + UI + `apply`; модалка: reload + **сравнение двух снимков** (кэш Apollo vs network: счётчики widgets/stories). Полный трёхсторонний merge — вне scope. |
 | 5 Presence | 🟡 | Курсоры (в т.ч. **`title` = полный userId**), typing, полоса presence; без отдельного аватара на курсоре. |
 | 6 История / undo | 🟡 | Mongo + REST + **`CollabApplyHistoryPanel`**; **серверный** undo/redo (`POST /api/collab/undo|redo`) для **`update_widget`** и **`move_story_block`**; **нет** undo add/remove виджета и **нет** админского restore ревизии. |

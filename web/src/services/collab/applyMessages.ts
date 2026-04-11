@@ -96,3 +96,43 @@ export function applyMoveStoryBlockPayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+export function applyCreateStoryBlockPayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  pluginId: string;
+  extensionId: string;
+  index?: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "create_story_block",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId,
+    pluginId: params.pluginId,
+    extensionId: params.extensionId
+  };
+  if (params.index != null) d.index = params.index;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemoveStoryBlockPayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  blockId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_story_block",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId,
+    blockId: params.blockId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
