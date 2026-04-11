@@ -12,6 +12,7 @@ import (
 	accountsInfra "github.com/reearth/reearth-accounts/server/pkg/infrastructure"
 	"github.com/reearth/reearth/server/internal/app/config"
 	"github.com/reearth/reearth/server/internal/app/otel"
+	"github.com/reearth/reearth/server/internal/collab"
 	"github.com/reearth/reearth/server/internal/usecase/gateway"
 	"github.com/reearth/reearth/server/internal/usecase/repo"
 
@@ -40,6 +41,7 @@ type WebServer struct {
 	appServer      *echo.Echo
 	internalPort   string
 	internalServer *grpc.Server
+	collabHub      *collab.Hub
 }
 
 type ServerConfig struct {
@@ -51,6 +53,7 @@ type ServerConfig struct {
 	AccountGateways   *accountsGateway.Container
 	AccountsAPIClient *gqlclient.Client
 	ServiceName       otel.OtelServiceName
+	CollabHub         *collab.Hub
 }
 
 func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
@@ -73,6 +76,10 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		address: address,
 	}
 
+	hub := collab.NewHub(cfg.Config.Collab.RedisURL)
+	cfg.CollabHub = hub
+	w.collabHub = hub
+
 	w.appServer = initEcho(ctx, cfg, cfg.ServiceName)
 
 	if cfg.Config.Visualizer.InternalApi.Active {
@@ -84,6 +91,10 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 
 func (w *WebServer) Run(ctx context.Context) {
 	defer log.Infof("server: shutdown")
+
+	if w.collabHub != nil {
+		go w.collabHub.Run(ctx)
+	}
 
 	debugLog := ""
 	if w.appServer.Debug {

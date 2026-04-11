@@ -86,6 +86,16 @@ type Config struct {
 
 	// Accounts API Configuration
 	AccountsAPI AccountsAPIConfig `pp:",omitempty"`
+
+	// Real-time collaboration (WebSocket + optional Redis pub/sub)
+	Collab CollabConfig `pp:",omitempty"`
+}
+
+// CollabConfig controls the /api/collab/ws endpoint and cross-instance relay.
+type CollabConfig struct {
+	RedisURL          string `envconfig:"REEARTH_COLLAB_REDIS_URL" pp:",omitempty"`
+	MaxMessageBytes   int    `envconfig:"REEARTH_COLLAB_MAX_MESSAGE_BYTES" pp:",omitempty"`
+	MaxMessagesPerSec int    `envconfig:"REEARTH_COLLAB_MAX_MESSAGES_PER_SEC" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

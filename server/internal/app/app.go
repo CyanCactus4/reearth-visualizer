@@ -14,6 +14,7 @@ import (
 	"github.com/reearth/reearth/server/internal/adapter"
 	appmiddleware "github.com/reearth/reearth/server/internal/adapter/middleware"
 	"github.com/reearth/reearth/server/internal/app/otel"
+	"github.com/reearth/reearth/server/internal/collab"
 	"github.com/reearth/reearth/server/internal/usecase/interactor"
 	"github.com/reearth/reearthx/appx"
 	"github.com/reearth/reearthx/log"
@@ -157,6 +158,10 @@ func initEcho(
 
 	// Main backend API
 	apiPrivateRoute.POST("/graphql", GraphqlAPI(cfg.Config.GraphQL, cfg.AccountsAPIClient, gqldev))
+
+	if cfg.CollabHub != nil {
+		apiPrivateRoute.GET("/collab/ws", collab.ServeWS(cfg.CollabHub, &cfg.Config.Collab, allowedOrigins(cfg)))
+	}
 
 	// Registering an initial auth0 user (for local development)
 	apiPrivateRoute.POST("/signup", Signup(cfg))

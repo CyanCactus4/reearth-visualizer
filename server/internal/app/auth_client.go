@@ -98,6 +98,9 @@ func attachOpMiddlewareReearthAccounts(cfg *ServerConfig) echo.MiddlewareFunc {
 
 			// The token is set as is and sent to reearth-accounts for verification.
 			token := strings.TrimPrefix(req.Header.Get("Authorization"), "Bearer ")
+			if token == "" && strings.Contains(req.URL.Path, "/collab/") {
+				token = strings.TrimSpace(strings.TrimPrefix(c.QueryParam("access_token"), "Bearer "))
+			}
 			ctx = adapter.AttachJwtToken(ctx, token)
 
 			var u *accountsUser.User
