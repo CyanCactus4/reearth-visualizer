@@ -136,6 +136,19 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, errors.New("write not allowed")
 		}
 		return collabRunUpdateStyleFromJSON(ctx, uc, operator, raw)
+	case "update_story_page":
+		var p applyUpdateStoryPage
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		return collabRunUpdateStoryPageFromJSON(ctx, uc, operator, raw)
 	default:
 		return nil, fmt.Errorf("unsupported undo kind %q", env.Kind)
 	}

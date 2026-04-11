@@ -3,10 +3,14 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
+	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
+	"github.com/reearth/reearth/server/pkg/storytelling"
+	"github.com/reearth/reearthx/log"
 )
 
 type applyCreateStoryPage struct {
@@ -47,16 +51,16 @@ type applyDuplicateStoryPage struct {
 }
 
 type applyUpdateStoryPage struct {
-	Kind                string          `json:"kind"`
-	SceneID             string          `json:"sceneId"`
-	StoryID             string          `json:"storyId"`
-	PageID              string          `json:"pageId"`
-	Title               *string         `json:"title,omitempty"`
-	Swipeable           *bool           `json:"swipeable,omitempty"`
-	Index               *int            `json:"index,omitempty"`
-	BaseSceneRev        *int64          `json:"baseSceneRev,omitempty"`
-	LayersRaw           json.RawMessage `json:"layers,omitempty"`
-	SwipeableLayersRaw  json.RawMessage `json:"swipeableLayers,omitempty"`
+	Kind               string          `json:"kind"`
+	SceneID            string          `json:"sceneId"`
+	StoryID            string          `json:"storyId"`
+	PageID             string          `json:"pageId"`
+	Title              *string         `json:"title,omitempty"`
+	Swipeable          *bool           `json:"swipeable,omitempty"`
+	Index              *int            `json:"index,omitempty"`
+	BaseSceneRev       *int64          `json:"baseSceneRev,omitempty"`
+	LayersRaw          json.RawMessage `json:"layers,omitempty"`
+	SwipeableLayersRaw json.RawMessage `json:"swipeableLayers,omitempty"`
 }
 
 func parseNLSLayerIDList(ss []string) ([]id.NLSLayerID, error) {
@@ -69,6 +73,67 @@ func parseNLSLayerIDList(ss []string) ([]id.NLSLayerID, error) {
 		out = append(out, lid)
 	}
 	return out, nil
+}
+
+func fetchStoryPageForCollabApply(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, storyID id.StoryID, pageID id.PageID, from *Conn) (*storytelling.Story, *storytelling.Page) {
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	sl, err := uc.StoryTelling.Fetch(opCtx, id.StoryIDList{storyID}, op)
+	if err != nil || sl == nil || len(*sl) == 0 {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "story not found"}})
+		return nil, nil
+	}
+	var st *storytelling.Story
+	for _, s := range *sl {
+		if s != nil && s.Id() == storyID {
+			st = s
+			break
+		}
+	}
+	if st == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "story not found"}})
+		return nil, nil
+	}
+	pg := st.Pages().Page(pageID)
+	if pg == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "page not found"}})
+		return nil, nil
+	}
+	return st, pg
+}
+
+func buildUpdatePageParamFromApply(p *applyUpdateStoryPage, sid id.SceneID, storyID id.StoryID, pageID id.PageID) (interfaces.UpdatePageParam, error) {
+	param := interfaces.UpdatePageParam{
+		SceneID:   sid,
+		StoryID:   storyID,
+		PageID:    pageID,
+		Title:     p.Title,
+		Index:     p.Index,
+		Swipeable: p.Swipeable,
+	}
+	if p.LayersRaw != nil {
+		var ss []string
+		if err := json.Unmarshal(p.LayersRaw, &ss); err != nil {
+			return param, err
+		}
+		layers, errL := parseNLSLayerIDList(ss)
+		if errL != nil {
+			return param, errL
+		}
+		param.Layers = &layers
+	}
+	if p.SwipeableLayersRaw != nil {
+		var ss []string
+		if err := json.Unmarshal(p.SwipeableLayersRaw, &ss); err != nil {
+			return param, err
+		}
+		sl, errS := parseNLSLayerIDList(ss)
+		if errS != nil {
+			return param, errS
+		}
+		param.SwipeableLayers = &sl
+	}
+	return param, nil
 }
 
 func applyCreateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
@@ -318,44 +383,24 @@ func applyUpdateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 		return nil
 	}
 
-	param := interfaces.UpdatePageParam{
-		SceneID:   sid,
-		StoryID:   storyID,
-		PageID:    pageID,
-		Title:     p.Title,
-		Index:     p.Index,
-		Swipeable: p.Swipeable,
-	}
-	if p.LayersRaw != nil {
-		var ss []string
-		if err := json.Unmarshal(p.LayersRaw, &ss); err != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": err.Error()}})
-			return nil
-		}
-		layers, errL := parseNLSLayerIDList(ss)
-		if errL != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errL.Error()}})
-			return nil
-		}
-		param.Layers = &layers
-	}
-	if p.SwipeableLayersRaw != nil {
-		var ss []string
-		if err := json.Unmarshal(p.SwipeableLayersRaw, &ss); err != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": err.Error()}})
-			return nil
-		}
-		sl, errS := parseNLSLayerIDList(ss)
-		if errS != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errS.Error()}})
-			return nil
-		}
-		param.SwipeableLayers = &sl
-	}
-
 	if p.Title == nil && p.Swipeable == nil && p.Index == nil && p.LayersRaw == nil && p.SwipeableLayersRaw == nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "empty_update", "message": "no story page fields to update"}})
 		return nil
+	}
+
+	st, pg := fetchStoryPageForCollabApply(ctx, uc, op, storyID, pageID, from)
+	if st == nil || pg == nil {
+		return nil
+	}
+	param, errP := buildUpdatePageParamFromApply(&p, sid, storyID, pageID)
+	if errP != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errP.Error()}})
+		return nil
+	}
+
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		invJSON = buildUpdateStoryPageInverseJSON(st, pg, &p)
 	}
 
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
@@ -376,6 +421,24 @@ func applyUpdateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 		"storyId": p.StoryID,
 		"pageId":  p.PageID,
 	}, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "update_story_page",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 
