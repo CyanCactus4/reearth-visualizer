@@ -1,0 +1,131 @@
+# Real-Time Collaboration — Protocol & Boundaries (MVP)
+
+## Document Signature
+
+|           |        |
+| --------- | ------ |
+| Creator   | —      |
+| Leader    | —      |
+| Task Link | [TASK.md](../../TASK.md), [PLAN.md](../../PLAN.md) |
+| Developer | —      |
+
+## Background / Problem Statement
+
+Re:Earth Visualizer must support multiple users working on the same project with clear security boundaries and a path toward full TASK.md scope (OT/CRDT, history, GraphQL). **Phase 0** in [PLAN.md](../../PLAN.md) requires a written contract before expanding behavior.
+
+**Facts**
+
+- Collab today uses a **dedicated** authenticated WebSocket: `GET /api/collab/ws?projectId=…` (same private `/api` auth as GraphQL).
+- Messages are **JSON v1** with fields `v`, `t`, `d` (see below).
+- Domain writes go through existing **usecase interactors** (e.g. `Scene.UpdateWidget`), not ad-hoc Mongo patches from the socket layer.
+
+## Goals
+
+1. Record the **transport choice** and rationale (hybrid: collab on dedicated WS; GraphQL subscriptions out of scope for MVP).
+2. Document the **current wire protocol** and extension rules.
+3. State the **synchronization model** for MVP vs later OT/CRDT phase.
+4. Sketch **persistence** for chat (implemented) and for future **operation log** (not implemented).
+5. Provide a **security checklist** aligned with production.
+
+## Non-Goals
+
+- Full OT/CRDT merge semantics for layers/styles/scene/storytelling (Phase 3).
+- GraphQL subscription schema and `graphql-ws` wiring (Phase 8).
+- Multi-user undo journal implementation (Phase 6).
+
+## Solution — Transport
+
+| Option | Description | Decision |
+|--------|-------------|----------|
+| A | Dedicated Echo + `gorilla/websocket` endpoint | **Chosen** — full control over framing, rate limits, and auth at upgrade. |
+| B | GraphQL subscriptions on gqlgen `transport.Websocket` | Deferred — Apollo client today is HTTP-only for GQL; adding subscription transport is a separate client + schema effort. |
+
+**Hybrid (recommended in PLAN):** domain collab + chat on **separate WS**; optional later duplication of thin events via GQL subscription if product requires it.
+
+## Solution — Wire protocol (v1)
+
+Every client message is a JSON object:
+
+| Field | Type | Meaning |
+| ----- | ---- | ------- |
+| `v`   | int  | Protocol version; must be `1`. |
+| `t`   | string | Message type (see table). |
+| `d`   | object | Type-specific payload; may be omitted for types that carry no body. |
+
+**Inbound types (`t`)** (non-exhaustive; unknown types are rejected server-side):
+
+| `t` | Role |
+| --- | ---- |
+| `ping` | Keep-alive; server responds with `pong`. |
+| `relay` | Opaque fan-out (escape hatch). |
+| `apply` | Server-authoritative mutation; `d.kind` selects operation (MVP: `update_widget`). |
+| `lock` | Object lock acquire/release/heartbeat. |
+| `chat` | Room chat; persisted when Mongo store is configured. |
+| `cursor` | Normalized pointer position for presence. |
+| `activity` | Lightweight hints (`typing`, `move`). |
+
+**Outbound types** include: `pong`, `presence`, `lock_changed`, `lock_denied`, `chat`, `cursor`, `activity`, `applied`, `error`.
+
+**Future envelope fields** (not required in v1; reserved for Phase 2+): `seq`, `clientId`, explicit `roomId` in body (today room is implied by connection query `projectId`).
+
+Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config/config.go`): max message bytes, messages/sec per connection, chat runes + min interval, cursor/activity intervals.
+
+## Solution — Synchronization model
+
+| Period | Model |
+| ------ | ----- |
+| **MVP (Phases 1–2)** | **Server-authoritative operations:** client sends `apply` with a small declarative payload; server validates `Operator`, runs one interactor call, persists via existing repos; on success broadcasts `applied` (+ optional UI toasts on peers). |
+| **Later (Phase 3)** | Introduce **OT or CRDT** per entity family after lock integration; rejected ops return structured errors for client rollback. Choice documented here: **decision deferred** until scene JSON size and conflict patterns are measured; default bias in PLAN is tree-shaped **operations** + server normalization, with CRDT evaluation for heavy JSON properties. |
+
+**Atomicity:** One `apply` message maps to one interactor invocation; failure returns `error` to sender and does not broadcast `applied`.
+
+## Solution — Persistence
+
+| Data | Collection / store | Status |
+| ---- | -------------------- | ------ |
+| Chat messages | Default `collabChatMessages` (`REEARTH_COLLAB_CHAT_COLLECTION`); fields `_id`, `projectId`, `userId`, `text`, `ts`; index `{ projectId: 1, ts: -1 }` | Implemented |
+| Collab operation log (undo groups, authors) | TBD collection, e.g. `collabOpLog` with `projectId`, `userId`, `kind`, `payload`, `ts`, `rev` | **Not implemented** (Phase 6) |
+
+REST: `GET /api/collab/chat?projectId=&limit=` — same access checks as WS.
+
+## Security checklist
+
+- [x] JWT / session: token via query `access_token` on WS (browser) or `Authorization` on REST chat; Echo uses same operator middleware as `/api/graphql`.
+- [x] **Project membership:** `Project.FindActiveById` + `IsReadableScene` at WS upgrade; write paths check `IsWritableScene`.
+- [x] **Rate limits:** per-connection messages/sec; chat per-user spacing; cursor/activity throttles.
+- [x] **DoS:** max frame size, read limit on WS.
+- [ ] **Room isolation pentest** — Phase 10 (no cross-project fan-out bugs).
+
+## Sequence — join room → apply → broadcast
+
+```mermaid
+sequenceDiagram
+  participant C as Client
+  participant E as Echo /api
+  participant H as Collab Hub
+  participant U as Usecase (Scene)
+  participant M as Mongo
+
+  C->>E: GET /api/collab/ws?projectId=P&access_token=JWT
+  E->>E: Auth + Project + scene readable
+  E->>H: register(conn)
+  H-->>C: presence join (fan-out)
+
+  C->>H: {"v":1,"t":"apply","d":{...,"kind":"update_widget"}}
+  H->>U: UpdateWidget(...)
+  U->>M: persist scene
+  U-->>H: OK
+  H-->>C: applied (to sender)
+  H-->>C: applied (peers in room P)
+```
+
+## Rollout / References
+
+- Server: `server/internal/collab/`, routes in `server/internal/app/app.go`.
+- Web: `web/src/services/collab/`, editor integration under `web/src/app/features/Editor/`.
+- Agent context: [AGENTS.md](../../AGENTS.md).
+
+## Open Questions
+
+1. When to add **scene `rev`** (or etag) for post-reconnect **diff/snapshot** (Phase 2 §4).
+2. Whether **graphql-ws** subscription path is needed if WS collab stays primary for years.
