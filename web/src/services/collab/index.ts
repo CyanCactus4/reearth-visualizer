@@ -49,6 +49,10 @@ export { default as CollabLockGate } from "./CollabLockGate";
 export { default as CollabLockLeaseOnly } from "./CollabLockLeaseOnly";
 export { default as CollabLockReadOnly } from "./CollabLockReadOnly";
 export { COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES } from "./collabApplyErrorCodes";
+export {
+  parseApplyAuditResponse,
+  type CollabApplyAuditEntry
+} from "./applyAuditApi";
 export { extractChatMentions } from "./chatMentions";
 export { CollabProvider } from "./CollabProvider";
 export {

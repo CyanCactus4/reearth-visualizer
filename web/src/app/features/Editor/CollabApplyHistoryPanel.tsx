@@ -3,31 +3,15 @@ import { useAuth } from "@reearth/services/auth/useAuth";
 import { useMe } from "@reearth/services/api/user/useMeQueries";
 import {
   buildCollabApplyAuditUrl,
+  parseApplyAuditResponse,
   postCollabRedo,
   postCollabUndo,
-  useCollab
+  useCollab,
+  type CollabApplyAuditEntry
 } from "@reearth/services/collab";
 import { GET_SCENE } from "@reearth/services/gql/queries/scene";
 import { useLang, useT } from "@reearth/services/i18n/hooks";
 import { FC, useCallback, useEffect, useState } from "react";
-
-type Entry = {
-  id: string;
-  userId: string;
-  userName?: string;
-  kind: string;
-  sceneRev: number;
-  ts: number;
-  widgetId?: string;
-  storyId?: string;
-  pageId?: string;
-  blockId?: string;
-  propertyId?: string;
-  fieldId?: string;
-  styleId?: string;
-  layerId?: string;
-  layerIds?: string[];
-};
 
 type Props = { sceneId: string };
 
@@ -39,7 +23,7 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
   const { me } = useMe({ skip: !collab?.projectId });
   const apollo = useApolloClient();
   const { getAccessToken } = useAuth();
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<CollabApplyAuditEntry[]>([]);
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [undoMsg, setUndoMsg] = useState<string | null>(null);
@@ -60,8 +44,8 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
         setEntries([]);
         return;
       }
-      const body = (await res.json()) as { entries?: Entry[] };
-      setEntries(Array.isArray(body.entries) ? body.entries : []);
+      const body: unknown = await res.json();
+      setEntries(parseApplyAuditResponse(body));
     } catch {
       setErr(t("Collab history load failed"));
       setEntries([]);
