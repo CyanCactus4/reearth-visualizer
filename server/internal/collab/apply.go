@@ -91,6 +91,12 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyCreateStoryBlockOp(ctx, hub, from, d)
 	case "remove_story_block":
 		return applyRemoveStoryBlockOp(ctx, hub, from, d)
+	case "create_story_page":
+		return applyCreateStoryPageOp(ctx, hub, from, d)
+	case "remove_story_page":
+		return applyRemoveStoryPageOp(ctx, hub, from, d)
+	case "move_story_page":
+		return applyMoveStoryPageOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

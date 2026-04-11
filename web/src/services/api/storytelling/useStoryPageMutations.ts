@@ -1,6 +1,12 @@
 import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
 import {
+  applyCreateStoryPagePayload,
+  applyMoveStoryPagePayload,
+  applyRemoveStoryPagePayload,
+  useCollab
+} from "@reearth/services/collab";
+import {
   CreateStoryPageInput,
   CreateStoryPageMutation,
   DeleteStoryPageInput,
@@ -25,9 +31,11 @@ import { useCallback } from "react";
 
 import { useNotification } from "../../state";
 
-export const useStoryPageMutations = () => {
+/** Pass `sceneId` when the editor is bound to a scene so `moveStoryPage` can use collab WS (input has no sceneId). */
+export const useStoryPageMutations = (sceneIdForCollab?: string) => {
   const [, setNotification] = useNotification();
   const t = useT();
+  const collab = useCollab();
 
   const [createStoryPageMutation] = useMutation<
     CreateStoryPageMutation,
@@ -38,6 +46,29 @@ export const useStoryPageMutations = () => {
     async (
       input: CreateStoryPageInput
     ): Promise<MutationReturn<CreateStoryPageMutation>> => {
+      if (collab?.status === "open" && input.sceneId) {
+        const ok = collab.sendRaw(
+          applyCreateStoryPagePayload({
+            sceneId: input.sceneId,
+            storyId: input.storyId,
+            title: input.title ?? undefined,
+            swipeable: input.swipeable ?? undefined,
+            layers: input.layers?.length ? [...input.layers] : undefined,
+            swipeableLayers: input.swipeableLayers?.length
+              ? [...input.swipeableLayers]
+              : undefined,
+            index: input.index ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully created a page!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await createStoryPageMutation({
         variables: {
           input
@@ -55,7 +86,7 @@ export const useStoryPageMutations = () => {
 
       return { data, status: "success" };
     },
-    [createStoryPageMutation, setNotification, t]
+    [collab, createStoryPageMutation, setNotification, t]
   );
 
   const [deleteStoryPageMutation] = useMutation<
@@ -67,6 +98,23 @@ export const useStoryPageMutations = () => {
     async (
       input: DeleteStoryPageInput
     ): Promise<MutationReturn<DeleteStoryPageMutation>> => {
+      if (collab?.status === "open" && input.sceneId) {
+        const ok = collab.sendRaw(
+          applyRemoveStoryPagePayload({
+            sceneId: input.sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Page was successfully deleted.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await deleteStoryPageMutation({
         variables: {
           input
@@ -84,7 +132,7 @@ export const useStoryPageMutations = () => {
 
       return { data, status: "success" };
     },
-    [deleteStoryPageMutation, setNotification, t]
+    [collab, deleteStoryPageMutation, setNotification, t]
   );
 
   const [moveStoryPageMutation] = useMutation<
@@ -96,6 +144,24 @@ export const useStoryPageMutations = () => {
     async (
       input: MoveStoryPageInput
     ): Promise<MutationReturn<MoveStoryPageMutation>> => {
+      if (collab?.status === "open" && sceneIdForCollab) {
+        const ok = collab.sendRaw(
+          applyMoveStoryPagePayload({
+            sceneId: sceneIdForCollab,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            index: input.index,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Page was successfully moved.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await moveStoryPageMutation({
         variables: {
           input
@@ -113,7 +179,7 @@ export const useStoryPageMutations = () => {
 
       return { data, status: "success" };
     },
-    [moveStoryPageMutation, setNotification, t]
+    [collab, moveStoryPageMutation, sceneIdForCollab, setNotification, t]
   );
 
   const [updateStoryPageMutation] = useMutation<

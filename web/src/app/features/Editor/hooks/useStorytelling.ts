@@ -21,7 +21,7 @@ export default function ({ sceneId }: Props) {
   >(undefined);
 
   const { createStoryPage, deleteStoryPage, moveStoryPage, updateStoryPage } =
-    useStoryPageMutations();
+    useStoryPageMutations(sceneId);
   const { moveStoryBlock } = useStoryBlockMutations(sceneId);
 
   const { stories } = useStories({ sceneId });

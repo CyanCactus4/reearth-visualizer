@@ -2,8 +2,11 @@ export {
   alignSystemForCollab,
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
+  applyCreateStoryPagePayload,
   applyMoveStoryBlockPayload,
+  applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
+  applyRemoveStoryPagePayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";

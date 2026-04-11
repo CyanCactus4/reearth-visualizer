@@ -136,3 +136,63 @@ export function applyRemoveStoryBlockPayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+export function applyCreateStoryPagePayload(params: {
+  sceneId: string;
+  storyId: string;
+  title?: string;
+  swipeable?: boolean;
+  layers?: string[];
+  swipeableLayers?: string[];
+  index?: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "create_story_page",
+    sceneId: params.sceneId,
+    storyId: params.storyId
+  };
+  if (params.title != null) d.title = params.title;
+  if (params.swipeable != null) d.swipeable = params.swipeable;
+  if (params.layers != null && params.layers.length > 0) d.layers = params.layers;
+  if (params.swipeableLayers != null && params.swipeableLayers.length > 0) {
+    d.swipeableLayers = params.swipeableLayers;
+  }
+  if (params.index != null) d.index = params.index;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemoveStoryPagePayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_story_page",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyMoveStoryPagePayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  index: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "move_story_page",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId,
+    index: params.index
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}

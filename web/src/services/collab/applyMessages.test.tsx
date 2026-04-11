@@ -5,8 +5,11 @@ import {
   alignSystemForCollab,
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
+  applyCreateStoryPagePayload,
   applyMoveStoryBlockPayload,
+  applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
+  applyRemoveStoryPagePayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
@@ -153,6 +156,58 @@ describe("apply payloads", () => {
       storyId: "st1",
       pageId: "pg1",
       blockId: "bk9"
+    });
+  });
+
+  it("builds create_story_page apply envelope", () => {
+    const s = applyCreateStoryPagePayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      title: "Intro",
+      swipeable: true,
+      layers: ["ly1"],
+      index: 1,
+      baseSceneRev: 5
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "create_story_page",
+      sceneId: "sc1",
+      storyId: "st1",
+      title: "Intro",
+      swipeable: true,
+      layers: ["ly1"],
+      index: 1,
+      baseSceneRev: 5
+    });
+  });
+
+  it("builds remove_story_page apply envelope", () => {
+    const s = applyRemoveStoryPagePayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg9"
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "remove_story_page",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg9"
+    });
+  });
+
+  it("builds move_story_page apply envelope", () => {
+    const s = applyMoveStoryPagePayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg9",
+      index: 0
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "move_story_page",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg9",
+      index: 0
     });
   });
 });
