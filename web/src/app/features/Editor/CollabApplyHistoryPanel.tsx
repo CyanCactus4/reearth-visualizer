@@ -1,5 +1,6 @@
 import { useApolloClient } from "@apollo/client/react";
 import { useAuth } from "@reearth/services/auth/useAuth";
+import { useMe } from "@reearth/services/api/user/useMeQueries";
 import {
   buildCollabApplyAuditUrl,
   postCollabRedo,
@@ -32,6 +33,7 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
   const collab = useCollab();
   const t = useT();
   const lang = useLang();
+  const { me } = useMe({ skip: !collab?.projectId });
   const apollo = useApolloClient();
   const { getAccessToken } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
@@ -176,7 +178,13 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
               {entries.map((e) => (
                 <li key={e.id} style={{ marginBottom: 4 }}>
                   <code>{e.kind}</code> · rev {e.sceneRev} ·{" "}
-                  <span style={{ opacity: 0.85 }}>{e.userId}</span>
+                  <span style={{ opacity: 0.85 }} title={e.userId}>
+                    {me?.id && e.userId === me.id
+                      ? t("Collab history author you")
+                      : e.userId.length > 10
+                        ? `${e.userId.slice(0, 8)}…`
+                        : e.userId}
+                  </span>
                   {e.widgetId ? ` · w ${e.widgetId.slice(0, 8)}…` : null}
                   {e.storyId ? ` · story` : null}
                   {e.propertyId

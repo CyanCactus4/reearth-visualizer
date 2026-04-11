@@ -39,6 +39,9 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 		if err != nil {
 			return nil, err
 		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
 		wid, err := id.WidgetIDFrom(p.WidgetID)
 		if err != nil {
 			return nil, err
@@ -79,6 +82,9 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 		sid, err := id.SceneIDFrom(p.SceneID)
 		if err != nil {
 			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
 		}
 		storyID, err := id.StoryIDFrom(p.StoryID)
 		if err != nil {
