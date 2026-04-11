@@ -68,6 +68,12 @@ func (s *CollabApplyAudit) Append(ctx context.Context, rec collab.ApplyAuditReco
 	if rec.StyleID != "" {
 		doc["styleId"] = rec.StyleID
 	}
+	if rec.LayerID != "" {
+		doc["layerId"] = rec.LayerID
+	}
+	if len(rec.LayerIDs) > 0 {
+		doc["layerIds"] = rec.LayerIDs
+	}
 	_, err := s.coll.InsertOne(ctx, doc)
 	return err
 }
@@ -121,6 +127,8 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 	propID, _ := d["propertyId"].(string)
 	fieldID, _ := d["fieldId"].(string)
 	styleID, _ := d["styleId"].(string)
+	layerID, _ := d["layerId"].(string)
+	layerIDs := stringsFromBSONSlice(d["layerIds"])
 	sceneRev := int64(0)
 	switch v := d["sceneRev"].(type) {
 	case int32:
@@ -142,6 +150,34 @@ func docToApplyAuditRow(d bson.M) collab.ApplyAuditListRow {
 	return collab.ApplyAuditListRow{
 		ID: id, UserID: uid, Kind: kind, SceneRev: sceneRev,
 		SceneID: sceneID, WidgetID: widgetID, StoryID: storyID, PageID: pageID, BlockID: blockID,
-		PropertyID: propID, FieldID: fieldID, StyleID: styleID, Ts: ts,
+		PropertyID: propID, FieldID: fieldID, StyleID: styleID, LayerID: layerID, LayerIDs: layerIDs, Ts: ts,
+	}
+}
+
+func stringsFromBSONSlice(v any) []string {
+	if v == nil {
+		return nil
+	}
+	switch x := v.(type) {
+	case bson.A:
+		out := make([]string, 0, len(x))
+		for _, e := range x {
+			if s, ok := e.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	case []string:
+		return x
+	case []any:
+		out := make([]string, 0, len(x))
+		for _, e := range x {
+			if s, ok := e.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
 	}
 }

@@ -24,6 +24,8 @@ type Entry = {
   propertyId?: string;
   fieldId?: string;
   styleId?: string;
+  layerId?: string;
+  layerIds?: string[];
 };
 
 type Props = { sceneId: string };
@@ -191,6 +193,11 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
                     ? ` · prop ${e.propertyId.slice(0, 8)}…${e.fieldId ? ` / ${e.fieldId}` : ""}`
                     : null}
                   {e.styleId ? ` · style ${e.styleId.slice(0, 8)}…` : null}
+                  {e.layerIds && e.layerIds.length > 0
+                    ? ` · ${t("Collab history layer batch", { count: e.layerIds.length })}`
+                    : e.layerId
+                      ? ` · ${t("Collab history layer single")} ${e.layerId.slice(0, 8)}…`
+                      : null}
                 </li>
               ))}
             </ul>

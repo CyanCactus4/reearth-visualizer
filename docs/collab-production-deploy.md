@@ -8,7 +8,7 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 |-----------|------|
 | **WebSocket** `GET /api/collab/ws` | Real-time room per `projectId`; JSON v1 protocol (`apply`, `chat`, `lock`, `cursor`, `activity`, …). |
 | **Redis** `REEARTH_COLLAB_REDIS_URL` | Pub/sub between server instances + distributed object locks (Lua). Without Redis, relay and locks are **in-memory only** (single process). |
-| **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` journal), `collabUndoOps` + `collabUndoState` (server undo/redo stacks); names overridable via env (see below). |
+| **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` journal; optional **`layerId`** / **`layerIds`** for NLS kinds), `collabUndoOps` + `collabUndoState` (server undo/redo stacks); names overridable via env (see below). |
 | **SSE** `GET /api/collab/scene-rev/stream?sceneId=` | **Server-Sent Events** stream of `sceneRev` (scene `updatedAt` ms) after each successful collab `apply` on that scene. With **`REEARTH_COLLAB_REDIS_URL`**, revisions are also **fan-out via Redis** (`collab:srev:<sceneId>`) so every API instance updates its local subscribers. |
 | **GraphQL** `POST/GET /api/graphql` | Standard queries/mutations over HTTP; **WebSocket upgrade on GET** serves `graphql-ws` / `graphql-transport-ws` for **`subscription { collabSceneRevision(sceneId) }`** (scene `updatedAt` ms after collab applies). Same Redis fan-out as SSE when Redis is enabled. |
 | **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit`, `POST /api/collab/undo`, `POST /api/collab/redo` — same auth as private `/api`. |

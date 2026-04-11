@@ -187,6 +187,8 @@ Collab history hide: 履歴を隠す
 Collab history empty: まだ apply イベントがありません。
 Collab history load failed: 履歴を読み込めませんでした。
 Collab history author you: あなた
+Collab history layer batch: レイヤー {{count}} 件
+Collab history layer single: レイヤー
 Collab lock conflict compare: キャッシュとサーバーを比較
 Collab lock conflict compare failed: 比較を読み込めませんでした。
 Collab lock conflict widget diff: ウィジェット差分（意味レベル）

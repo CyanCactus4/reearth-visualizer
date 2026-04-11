@@ -181,6 +181,8 @@ Collab history hide: Hide collab history
 Collab history empty: No apply events yet.
 Collab history load failed: Could not load apply history.
 Collab history author you: You
+Collab history layer batch: "{{count}} layers"
+Collab history layer single: layer
 Collab lock conflict compare: Compare cache vs server
 Collab lock conflict compare failed: Could not load comparison.
 Collab lock conflict widget diff: Widget differences (semantic)

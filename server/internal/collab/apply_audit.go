@@ -16,23 +16,27 @@ type ApplyAuditRecord struct {
 	PropertyID string
 	FieldID    string
 	StyleID    string
+	LayerID    string
+	LayerIDs   []string
 }
 
 // ApplyAuditListRow is one row returned by GET /api/collab/apply-audit (newest first).
 type ApplyAuditListRow struct {
-	ID         string `json:"id"`
-	UserID     string `json:"userId"`
-	Kind       string `json:"kind"`
-	SceneRev   int64  `json:"sceneRev"`
-	SceneID    string `json:"sceneId,omitempty"`
-	WidgetID   string `json:"widgetId,omitempty"`
-	StoryID    string `json:"storyId,omitempty"`
-	PageID     string `json:"pageId,omitempty"`
-	BlockID    string `json:"blockId,omitempty"`
-	PropertyID string `json:"propertyId,omitempty"`
-	FieldID    string `json:"fieldId,omitempty"`
-	StyleID    string `json:"styleId,omitempty"`
-	Ts         int64  `json:"ts"`
+	ID         string   `json:"id"`
+	UserID     string   `json:"userId"`
+	Kind       string   `json:"kind"`
+	SceneRev   int64    `json:"sceneRev"`
+	SceneID    string   `json:"sceneId,omitempty"`
+	WidgetID   string   `json:"widgetId,omitempty"`
+	StoryID    string   `json:"storyId,omitempty"`
+	PageID     string   `json:"pageId,omitempty"`
+	BlockID    string   `json:"blockId,omitempty"`
+	PropertyID string   `json:"propertyId,omitempty"`
+	FieldID    string   `json:"fieldId,omitempty"`
+	StyleID    string   `json:"styleId,omitempty"`
+	LayerID    string   `json:"layerId,omitempty"`
+	LayerIDs   []string `json:"layerIds,omitempty"`
+	Ts         int64    `json:"ts"`
 }
 
 // ApplyAuditStore appends successful apply operations for auditing / future undo UI.
