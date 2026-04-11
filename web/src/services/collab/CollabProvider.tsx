@@ -595,29 +595,38 @@ export const CollabProvider: FC<Props> = ({
     return () => clearInterval(id);
   }, [status]);
 
-  useEffect(() => {
-    if (status !== "open" || !projectId) return;
-    void (async () => {
-      const batch = await collabOfflineDrain(projectId);
+  const drainOfflineAndSend = useCallback(() => {
+    if (!projectId) return Promise.resolve();
+    return collabOfflineDrain(projectId).then((batch) => {
       for (const line of batch) {
         clientRef.current?.sendRaw(line);
       }
-    })();
-  }, [status, projectId]);
+    });
+  }, [projectId]);
+
+  useEffect(() => {
+    if (status !== "open" || !projectId) return;
+    void drainOfflineAndSend();
+  }, [status, projectId, drainOfflineAndSend]);
 
   useEffect(() => {
     const onOnline = () => {
       if (status !== "open" || !projectId) return;
-      void (async () => {
-        const batch = await collabOfflineDrain(projectId);
-        for (const line of batch) {
-          clientRef.current?.sendRaw(line);
-        }
-      })();
+      void drainOfflineAndSend();
     };
     window.addEventListener("online", onOnline);
     return () => window.removeEventListener("online", onOnline);
-  }, [status, projectId]);
+  }, [status, projectId, drainOfflineAndSend]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible") return;
+      if (status !== "open" || !projectId) return;
+      void drainOfflineAndSend();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [status, projectId, drainOfflineAndSend]);
 
   const sendRaw = useCallback(
     (json: string): boolean => {
