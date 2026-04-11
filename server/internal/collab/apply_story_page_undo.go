@@ -101,3 +101,36 @@ func collabRunUpdateStoryPageFromJSON(ctx context.Context, uc *interfaces.Contai
 	}
 	return scenes[0], nil
 }
+
+func collabRunMoveStoryPageFromJSON(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, raw json.RawMessage) (*scene.Scene, error) {
+	var p applyMoveStoryPage
+	if err := json.Unmarshal(raw, &p); err != nil {
+		return nil, err
+	}
+	sid, err := id.SceneIDFrom(p.SceneID)
+	if err != nil {
+		return nil, err
+	}
+	storyID, err := id.StoryIDFrom(p.StoryID)
+	if err != nil {
+		return nil, err
+	}
+	pageID, err := id.PageIDFrom(p.PageID)
+	if err != nil {
+		return nil, err
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	if _, _, _, err := uc.StoryTelling.MovePage(opCtx, interfaces.MovePageParam{
+		StoryID: storyID,
+		PageID:  pageID,
+		Index:   p.Index,
+	}, op); err != nil {
+		return nil, err
+	}
+	scenes, err2 := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err2 != nil || len(scenes) == 0 {
+		return nil, fmt.Errorf("scene reload failed")
+	}
+	return scenes[0], nil
+}

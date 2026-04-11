@@ -36,3 +36,19 @@ func TestBuildUpdateStoryPageInverseJSON_title(t *testing.T) {
 	require.NotNil(t, inv.Title)
 	assert.Equal(t, "Old", *inv.Title)
 }
+
+func TestApplyMoveStoryPageInverseJSON_shape(t *testing.T) {
+	inv := applyMoveStoryPage{
+		Kind:    "move_story_page",
+		SceneID: "01fbpdqax0ttrftj3gb5gm4rw7",
+		StoryID: "01fbpdqax0ttrftj3gb5gm4rw8",
+		PageID:  "01fbpdqax0ttrftj3gb5gm4rw9",
+		Index:   2,
+	}
+	b, err := json.Marshal(inv)
+	require.NoError(t, err)
+	var out applyMoveStoryPage
+	require.NoError(t, json.Unmarshal(b, &out))
+	assert.Equal(t, 2, out.Index)
+	assert.Equal(t, "move_story_page", out.Kind)
+}

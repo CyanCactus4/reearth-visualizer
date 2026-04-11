@@ -44,7 +44,7 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 ## Entity clocks (LWW) and undo
 
 - **Per-widget field clocks** (`enabled`, `extended`, `layout`): with **`REEARTH_COLLAB_REDIS_URL`**, values live under Redis keys `collab:wfclk:…` (atomic `INCR`) so **all API replicas share the same LWW sequence**. Without Redis, clocks are **in-memory only** on each process (restart clears them).
-- **Undo/redo** applies inverse JSON through the same interactors as collab; stacks live in Mongo (`collabUndoOps` / `collabUndoState`). Recorded kinds today: **`update_widget`**, **`move_story_block`**. Add/remove widget are **not** on the undo stack (redo would not preserve widget identity without a dedicated restore path).
+- **Undo/redo** applies inverse JSON through the same interactors as collab; stacks live in Mongo (`collabUndoOps` / `collabUndoState`). Recorded kinds today: **`update_widget`**, **`move_story_block`**, **`move_story_page`**, **`update_story_page`**, **`update_property_value`**, **`update_style`**. Add/remove widget are **not** on the undo stack (redo would not preserve widget identity without a dedicated restore path).
 - **Not** a distributed CRDT log — plan stronger consistency for multi-writer undo if needed.
 
 ## Security checklist (ops)

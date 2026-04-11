@@ -106,6 +106,19 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, fmt.Errorf("scene reload failed")
 		}
 		return scenes[0], nil
+	case "move_story_page":
+		var p applyMoveStoryPage
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		return collabRunMoveStoryPageFromJSON(ctx, uc, operator, raw)
 	case "update_property_value":
 		p, ptr, val, err := decodeApplyUpdatePropertyValue(raw)
 		if err != nil {
