@@ -1,6 +1,13 @@
 import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
 import {
+  applyAddNlsLayerSimplePayload,
+  applyRemoveNlsLayerPayload,
+  applyUpdateNlsLayerPayload,
+  applyUpdateNlsLayersPayload,
+  useCollab
+} from "@reearth/services/collab";
+import {
   AddNlsLayerSimpleMutation,
   MutationAddNlsLayerSimpleArgs,
   AddNlsLayerSimpleInput,
@@ -21,9 +28,10 @@ import { useT } from "@reearth/services/i18n/hooks";
 import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
-export const useNLSLayerMutations = () => {
+export const useNLSLayerMutations = (sceneId?: string) => {
   const t = useT();
   const [, setNotification] = useNotification();
+  const collab = useCollab();
 
   const [addNLSLayerSimpleMutation] = useMutation<
     AddNlsLayerSimpleMutation,
@@ -35,6 +43,28 @@ export const useNLSLayerMutations = () => {
     async (
       input: AddNlsLayerSimpleInput
     ): Promise<MutationReturn<AddNlsLayerSimpleMutation>> => {
+      if (collab?.status === "open") {
+        const ok = collab.sendRaw(
+          applyAddNlsLayerSimplePayload({
+            sceneId: input.sceneId,
+            title: input.title,
+            layerType: input.layerType,
+            config: input.config ?? undefined,
+            index: input.index ?? undefined,
+            visible: input.visible ?? undefined,
+            schema: input.schema ?? undefined,
+            dataSourceName: input.dataSourceName ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully added a new layer")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await addNLSLayerSimpleMutation({
         variables: { input }
       });
@@ -50,7 +80,7 @@ export const useNLSLayerMutations = () => {
 
       return { data, status: "success" };
     },
-    [addNLSLayerSimpleMutation, setNotification, t]
+    [addNLSLayerSimpleMutation, collab, setNotification, t]
   );
 
   const [updateNLSLayerMutation] = useMutation(UPDATE_NLSLAYER, {
@@ -61,6 +91,26 @@ export const useNLSLayerMutations = () => {
       input: UpdateNlsLayerInput
     ): Promise<MutationReturn<UpdateNlsLayerMutation>> => {
       if (!input.layerId) return { status: "error" };
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyUpdateNlsLayerPayload({
+            sceneId,
+            layerId: input.layerId,
+            index: input.index ?? undefined,
+            name: input.name ?? undefined,
+            visible: input.visible ?? undefined,
+            config: input.config ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the layer!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await updateNLSLayerMutation({
         variables: { input }
       });
@@ -79,7 +129,7 @@ export const useNLSLayerMutations = () => {
 
       return { data, status: "success" };
     },
-    [updateNLSLayerMutation, t, setNotification]
+    [collab, sceneId, updateNLSLayerMutation, t, setNotification]
   );
 
   const [updateNLSLayersMutation] = useMutation(UPDATE_NLSLAYERS, {
@@ -90,6 +140,28 @@ export const useNLSLayerMutations = () => {
       input: UpdateNlsLayersInput
     ): Promise<MutationReturn<UpdateNlsLayersMutation>> => {
       if (!input) return { status: "error" };
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyUpdateNlsLayersPayload({
+            sceneId,
+            layers: input.layers.map((l) => ({
+              layerId: l.layerId,
+              index: l.index ?? undefined,
+              name: l.name ?? undefined,
+              visible: l.visible ?? undefined,
+              config: l.config ?? undefined
+            })),
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the layer!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await updateNLSLayersMutation({
         variables: { input }
       });
@@ -108,7 +180,7 @@ export const useNLSLayerMutations = () => {
 
       return { data, status: "success" };
     },
-    [updateNLSLayersMutation, setNotification, t]
+    [collab, sceneId, updateNLSLayersMutation, setNotification, t]
   );
 
   const [removeNLSLayerMutation] = useMutation(REMOVE_NLSLAYER, {
@@ -119,6 +191,22 @@ export const useNLSLayerMutations = () => {
       input: RemoveNlsLayerInput
     ): Promise<MutationReturn<RemoveNlsLayerMutation>> => {
       if (!input.layerId) return { status: "error" };
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyRemoveNlsLayerPayload({
+            sceneId,
+            layerId: input.layerId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully removed the layer!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await removeNLSLayerMutation({
         variables: { input }
       });
@@ -137,7 +225,7 @@ export const useNLSLayerMutations = () => {
 
       return { data, status: "success" };
     },
-    [removeNLSLayerMutation, t, setNotification]
+    [collab, sceneId, removeNLSLayerMutation, t, setNotification]
   );
 
   return {

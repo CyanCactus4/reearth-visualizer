@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   alignSystemForCollab,
+  applyAddNlsLayerSimplePayload,
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
@@ -11,6 +12,9 @@ import {
   applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
+  applyRemoveNlsLayerPayload,
+  applyUpdateNlsLayerPayload,
+  applyUpdateNlsLayersPayload,
   applyUpdateStoryPagePayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
@@ -250,6 +254,69 @@ describe("apply payloads", () => {
       layers: [],
       index: 2,
       baseSceneRev: 11
+    });
+  });
+
+  it("builds NLS layer apply envelopes", () => {
+    const add = applyAddNlsLayerSimplePayload({
+      sceneId: "sc1",
+      title: "L1",
+      layerType: "simple",
+      config: { a: 1 },
+      index: 0,
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(add).d).toMatchObject({
+      kind: "add_nls_layer_simple",
+      sceneId: "sc1",
+      title: "L1",
+      layerType: "simple",
+      config: { a: 1 },
+      index: 0,
+      baseSceneRev: 3
+    });
+
+    const rm = applyRemoveNlsLayerPayload({
+      sceneId: "sc1",
+      layerId: "ly1",
+      baseSceneRev: 4
+    });
+    expect(JSON.parse(rm).d).toMatchObject({
+      kind: "remove_nls_layer",
+      sceneId: "sc1",
+      layerId: "ly1",
+      baseSceneRev: 4
+    });
+
+    const upd = applyUpdateNlsLayerPayload({
+      sceneId: "sc1",
+      layerId: "ly1",
+      name: "N",
+      visible: false,
+      baseSceneRev: 5
+    });
+    expect(JSON.parse(upd).d).toMatchObject({
+      kind: "update_nls_layer",
+      sceneId: "sc1",
+      layerId: "ly1",
+      name: "N",
+      visible: false,
+      baseSceneRev: 5
+    });
+
+    const batch = applyUpdateNlsLayersPayload({
+      sceneId: "sc1",
+      layers: [
+        { layerId: "a", index: 0 },
+        { layerId: "b", index: 1 }
+      ],
+      baseSceneRev: 6
+    });
+    expect(JSON.parse(batch).d).toMatchObject({
+      kind: "update_nls_layers",
+      sceneId: "sc1",
+      layers: [{ layerId: "a", index: 0 }, { layerId: "b", index: 1 }],
+      baseSceneRev: 6
     });
   });
 });

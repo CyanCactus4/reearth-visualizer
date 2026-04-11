@@ -91,7 +91,7 @@ export default function ({
 }: LayerProps) {
   const t = useT();
   const { addNLSLayerSimple, removeNLSLayer, updateNLSLayer, updateNLSLayers } =
-    useNLSLayerMutations();
+    useNLSLayerMutations(sceneId);
 
   const {
     updateCustomProperties,

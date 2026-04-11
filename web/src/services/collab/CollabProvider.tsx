@@ -176,14 +176,25 @@ export const CollabProvider: FC<Props> = ({
   useEffect(() => {
     if (lastMessage?.t !== "applied") return;
     const d = lastMessage.d as
-      | { userId?: string; kind?: string; widgetId?: string }
+      | {
+          userId?: string;
+          kind?: string;
+          widgetId?: string;
+          layerId?: string;
+          layerIds?: string[];
+        }
       | undefined;
     const peer = d?.userId;
     if (!peer || peer === "unknown") return;
     if (localUserId && peer === localUserId) return;
     const kind = typeof d?.kind === "string" ? d.kind : "";
     const wid = typeof d?.widgetId === "string" ? d.widgetId : "";
-    const key = `${peer}\0${kind}\0${wid}`;
+    const lid = typeof d?.layerId === "string" ? d.layerId : "";
+    const lids =
+      Array.isArray(d?.layerIds) && d.layerIds.length > 0
+        ? d.layerIds.join(",")
+        : "";
+    const key = `${peer}\0${kind}\0${wid}\0${lid}\0${lids}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
@@ -193,7 +204,7 @@ export const CollabProvider: FC<Props> = ({
       text: tCollab("Collab peer applied toast", {
         userId: peer,
         kind: kind || "edit",
-        widgetId: wid || "—"
+        widgetId: wid || lid || lids || "—"
       })
     });
   }, [lastMessage, localUserId, setNotification, tCollab]);

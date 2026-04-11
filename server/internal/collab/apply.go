@@ -101,6 +101,14 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyUpdateStoryPageOp(ctx, hub, from, d)
 	case "duplicate_story_page":
 		return applyDuplicateStoryPageOp(ctx, hub, from, d)
+	case "add_nls_layer_simple":
+		return applyAddNLSLayerSimpleOp(ctx, hub, from, d)
+	case "remove_nls_layer":
+		return applyRemoveNLSLayerOp(ctx, hub, from, d)
+	case "update_nls_layer":
+		return applyUpdateNLSLayerOp(ctx, hub, from, d)
+	case "update_nls_layers":
+		return applyUpdateNlsLayersOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

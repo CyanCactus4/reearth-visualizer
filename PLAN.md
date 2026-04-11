@@ -59,6 +59,8 @@
 
 Расширить на: **layers / layer styles / scene settings / widgets / storytelling** — итерациями по приоритету продукта, с общим каркасом операций.
 
+**Срез (NLS):** collab-`apply` с `d.kind` **`add_nls_layer_simple`**, **`remove_nls_layer`**, **`update_nls_layer`**, **`update_nls_layers`** (перестановка порядка); клиент — `useNLSLayerMutations(sceneId)` и хелперы в `web/src/services/collab/applyMessages.ts`.
+
 ---
 
 ## Фаза 3 — OT/CRDT и атомарность для всех сущностей из ТЗ (FR-2)

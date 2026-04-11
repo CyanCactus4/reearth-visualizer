@@ -19,6 +19,8 @@ export const COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES = new Set<string>([
   "invalid_story",
   "invalid_page",
   "invalid_block",
+  "invalid_layer",
+  "invalid_layer_type",
   "unknown_kind",
   "lock_lookup",
   "internal"

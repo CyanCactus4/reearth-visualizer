@@ -241,3 +241,85 @@ export function applyUpdateStoryPagePayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+export function applyAddNlsLayerSimplePayload(params: {
+  sceneId: string;
+  title: string;
+  layerType: string;
+  config?: unknown;
+  index?: number;
+  visible?: boolean;
+  schema?: unknown;
+  dataSourceName?: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "add_nls_layer_simple",
+    sceneId: params.sceneId,
+    title: params.title,
+    layerType: params.layerType
+  };
+  if (params.config !== undefined) d.config = params.config;
+  if (params.index !== undefined) d.index = params.index;
+  if (params.visible !== undefined) d.visible = params.visible;
+  if (params.schema !== undefined) d.schema = params.schema;
+  if (params.dataSourceName !== undefined) d.dataSourceName = params.dataSourceName;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemoveNlsLayerPayload(params: {
+  sceneId: string;
+  layerId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_nls_layer",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyUpdateNlsLayerPayload(params: {
+  sceneId: string;
+  layerId: string;
+  index?: number;
+  name?: string;
+  visible?: boolean;
+  config?: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_nls_layer",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.index !== undefined) d.index = params.index;
+  if (params.name !== undefined) d.name = params.name;
+  if (params.visible !== undefined) d.visible = params.visible;
+  if (params.config !== undefined) d.config = params.config;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyUpdateNlsLayersPayload(params: {
+  sceneId: string;
+  layers: Array<{
+    layerId: string;
+    index?: number;
+    name?: string;
+    visible?: boolean;
+    config?: unknown;
+  }>;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_nls_layers",
+    sceneId: params.sceneId,
+    layers: params.layers
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
