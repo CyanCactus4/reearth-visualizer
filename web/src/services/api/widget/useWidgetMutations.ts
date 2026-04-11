@@ -54,7 +54,8 @@ export const useWidgetMutations = () => {
             sceneId,
             type,
             pluginId,
-            extensionId
+            extensionId,
+            baseSceneRev: collab.remoteSceneRev
           })
         );
         if (ok) {
@@ -107,6 +108,7 @@ export const useWidgetMutations = () => {
             sceneId,
             widgetId: id,
             type,
+            baseSceneRev: collab.remoteSceneRev,
             enabled: true,
             location: update.location,
             extended: update.extended,
@@ -174,7 +176,12 @@ export const useWidgetMutations = () => {
 
       if (collab?.status === "open") {
         const ok = collab.sendRaw(
-          applyRemoveWidgetPayload({ sceneId, widgetId, type })
+          applyRemoveWidgetPayload({
+            sceneId,
+            widgetId,
+            type,
+            baseSceneRev: collab.remoteSceneRev
+          })
         );
         if (ok) {
           return { status: "success" as const };

@@ -161,6 +161,7 @@ func initEcho(
 
 	if cfg.CollabHub != nil {
 		apiPrivateRoute.GET("/collab/ws", collab.ServeWS(cfg.CollabHub, &cfg.Config.Collab, allowedOrigins(cfg)))
+		apiPrivateRoute.GET("/collab/scene-rev/stream", collab.ServeSceneRevisionSSE(cfg.CollabHub))
 	}
 	if cfg.CollabChatStore != nil {
 		apiPrivateRoute.GET("/collab/chat", collab.ServeChatHistory(cfg.CollabChatStore))

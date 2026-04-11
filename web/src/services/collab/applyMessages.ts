@@ -11,6 +11,8 @@ export function applyUpdateWidgetPayload(params: {
   sceneId: string;
   widgetId: string;
   type: WidgetAlignSystemType;
+  /** Optional OT guard: must match server `scene.updatedAt` ms when sent. */
+  baseSceneRev?: number;
   enabled?: boolean;
   location?: { zone: string; section: string; area: string };
   extended?: boolean;
@@ -22,6 +24,7 @@ export function applyUpdateWidgetPayload(params: {
     alignSystem: alignSystemForCollab(params.type),
     widgetId: params.widgetId
   };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   if (params.enabled !== undefined) d.enabled = params.enabled;
   if (params.extended !== undefined) d.extended = params.extended;
   if (params.index !== undefined) d.index = params.index;
@@ -39,17 +42,16 @@ export function applyRemoveWidgetPayload(params: {
   sceneId: string;
   widgetId: string;
   type: WidgetAlignSystemType;
+  baseSceneRev?: number;
 }): string {
-  return JSON.stringify({
-    v: 1,
-    t: "apply",
-    d: {
-      kind: "remove_widget",
-      sceneId: params.sceneId,
-      alignSystem: alignSystemForCollab(params.type),
-      widgetId: params.widgetId
-    }
-  });
+  const d: Record<string, unknown> = {
+    kind: "remove_widget",
+    sceneId: params.sceneId,
+    alignSystem: alignSystemForCollab(params.type),
+    widgetId: params.widgetId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
 }
 
 export function applyAddWidgetPayload(params: {
@@ -57,16 +59,35 @@ export function applyAddWidgetPayload(params: {
   type: WidgetAlignSystemType;
   pluginId: string;
   extensionId: string;
+  baseSceneRev?: number;
 }): string {
-  return JSON.stringify({
-    v: 1,
-    t: "apply",
-    d: {
-      kind: "add_widget",
-      sceneId: params.sceneId,
-      alignSystem: alignSystemForCollab(params.type),
-      pluginId: params.pluginId,
-      extensionId: params.extensionId
-    }
-  });
+  const d: Record<string, unknown> = {
+    kind: "add_widget",
+    sceneId: params.sceneId,
+    alignSystem: alignSystemForCollab(params.type),
+    pluginId: params.pluginId,
+    extensionId: params.extensionId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyMoveStoryBlockPayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  blockId: string;
+  index: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "move_story_block",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId,
+    blockId: params.blockId,
+    index: params.index
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
 }

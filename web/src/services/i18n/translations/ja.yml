@@ -177,8 +177,18 @@ Collab lock conflict reload scene: サーバーからシーンを再読み込み
 Collab chat placeholder: コラボレーターへメッセージ…
 Collab chat send: 送信
 Collab peer applied toast: '{{userId}} が共同編集で変更しました（{{kind}} · {{widgetId}}）。'
+Collab apply stale toast: '編集前にサーバー側のシーンが更新されていました（リビジョン不一致）。エディターをサーバー内容で更新しました。'
 Collab apply object locked toast: '他ユーザーがウィジェットの編集ロックを保持しているため、変更は適用されませんでした。シーンをサーバー側の内容で更新しました。'
 Collab apply failed toast: '共同編集の変更が拒否されました: {{message}} シーンをサーバー側の内容で更新しました。'
+Collab chat mention notify: '{{userId}} がチャットであなたに言及: {{preview}}'
+Collab history show: 共同編集履歴を表示
+Collab history hide: 履歴を隠す
+Collab history empty: まだ apply イベントがありません。
+Collab history load failed: 履歴を読み込めませんでした。
+Collab lock conflict compare: キャッシュとサーバーを比較
+Collab lock conflict compare failed: 比較を読み込めませんでした。
+Collab lock conflict col cache: このタブ（キャッシュ）
+Collab lock conflict col network: サーバー（ネットワーク）
 Layer: レイヤー
 Layer Name: レイヤー名
 Format: 形式

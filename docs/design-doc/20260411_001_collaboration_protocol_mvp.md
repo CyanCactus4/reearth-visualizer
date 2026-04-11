@@ -79,6 +79,10 @@ Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config
 | **MVP (Phases 1–2)** | **Server-authoritative operations:** client sends `apply` with a small declarative payload; server validates `Operator`, runs one interactor call, persists via existing repos; on success broadcasts `applied` (+ optional UI toasts on peers). |
 | **Later (Phase 3)** | Introduce **OT or CRDT** per entity family after lock integration; rejected ops return structured errors for client rollback. Choice documented here: **decision deferred** until scene JSON size and conflict patterns are measured; default bias in PLAN is tree-shaped **operations** + server normalization, with CRDT evaluation for heavy JSON properties. |
 | **Now (Phase 3 slice)** | On `apply` failure (`apply_failed`, `object_locked`, validation codes, …), the **sender** should reconcile with the server: the web editor refetches **GetScene** (`network-only`) when the collab channel receives matching `error` frames; optional toasts for `apply_failed` / `object_locked`. Full OT/CRDT for other entities remains future work. |
+| **Coarse revision guard** | Optional `baseSceneRev` on each `apply` body (client = last known `scene.updatedAt` ms). Server rejects with `stale_state` when it does not match current scene row — **not** a CRDT merge; pairs with lock UI and refetch. |
+| **Storytelling** | `apply` kind **`move_story_block`** → `StoryTelling.MoveBlock` (same auth/audit/`applied`/`sceneRev` path as widgets). |
+| **GraphQL-style streaming** | **`GET /api/collab/scene-rev/stream?sceneId=`** (SSE) emits new `sceneRev` after applies (hub-local). See [collab production deploy](../collab-production-deploy.md). |
+| **Mentions “push”** | Outbound WS **`notify`** with `d.kind=chat_mention` to tabs whose `userId` equals a parsed `@handle` (in-room only; not FCM/email). |
 
 **Atomicity:** One `apply` message maps to one interactor invocation; failure returns `error` to sender and does not broadcast `applied`.
 
@@ -139,6 +143,7 @@ sequenceDiagram
 - Server: `server/internal/collab/`, routes in `server/internal/app/app.go`.
 - Web: `web/src/services/collab/`, editor integration under `web/src/app/features/Editor/`.
 - Agent context: [AGENTS.md](../../AGENTS.md).
+- Production: [collab production deploy](../collab-production-deploy.md).
 
 ## Open Questions
 

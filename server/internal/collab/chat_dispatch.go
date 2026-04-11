@@ -60,6 +60,27 @@ func dispatchChat(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 		return nil
 	}
 	hub.fanoutRoom(ctx, from.projectID, b)
+	if len(mentions) > 0 {
+		nb, errN := json.Marshal(serverMessage{
+			V: 1,
+			T: "notify",
+			D: map[string]any{
+				"kind":       "chat_mention",
+				"fromUserId": from.userID,
+				"messageId":  msgID,
+				"text":       m.Text,
+				"mentions":   mentions,
+			},
+		})
+		if errN == nil {
+			for _, uid := range mentions {
+				if uid == from.userID {
+					continue
+				}
+				hub.NotifyUserInRoom(from.projectID, uid, nb)
+			}
+		}
+	}
 	if hub.chatStore != nil {
 		pid, uid, txt, mid := from.projectID, from.userID, m.Text, msgID
 		ment := mentions

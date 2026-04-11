@@ -64,6 +64,17 @@ export type CollabInbound =
         extensionId?: string;
       };
     }
+  | {
+      v: 1;
+      t: "notify";
+      d?: {
+        kind?: string;
+        fromUserId?: string;
+        messageId?: string;
+        text?: string;
+        mentions?: string[];
+      };
+    }
   | { v: 1; t: "error"; d?: { code?: string; message?: string } }
   | { v: 1; t: string; d?: unknown };
 

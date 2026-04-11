@@ -1,6 +1,7 @@
 export {
   alignSystemForCollab,
   applyAddWidgetPayload,
+  applyMoveStoryBlockPayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
@@ -25,7 +26,10 @@ export type {
   RemoteCursor
 } from "./collabContext";
 export { default as CollabLockConflictModal } from "./CollabLockConflictModal";
-export type { CollabLockConflictPayload } from "./CollabLockConflictModal";
+export type {
+  CollabLockConflictPayload,
+  CollabLockConflictSnapshots
+} from "./CollabLockConflictModal";
 export { default as CollabLockGate } from "./CollabLockGate";
 export { default as CollabLockLeaseOnly } from "./CollabLockLeaseOnly";
 export { default as CollabLockReadOnly } from "./CollabLockReadOnly";

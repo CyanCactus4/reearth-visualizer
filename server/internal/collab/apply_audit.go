@@ -10,6 +10,9 @@ type ApplyAuditRecord struct {
 	SceneRev  int64
 	SceneID   string
 	WidgetID  string
+	StoryID   string
+	PageID    string
+	BlockID   string
 }
 
 // ApplyAuditListRow is one row returned by GET /api/collab/apply-audit (newest first).
@@ -20,6 +23,9 @@ type ApplyAuditListRow struct {
 	SceneRev int64  `json:"sceneRev"`
 	SceneID  string `json:"sceneId,omitempty"`
 	WidgetID string `json:"widgetId,omitempty"`
+	StoryID  string `json:"storyId,omitempty"`
+	PageID   string `json:"pageId,omitempty"`
+	BlockID  string `json:"blockId,omitempty"`
 	Ts       int64  `json:"ts"`
 }
 

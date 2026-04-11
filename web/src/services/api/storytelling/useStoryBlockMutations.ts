@@ -1,5 +1,6 @@
 import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
+import { applyMoveStoryBlockPayload, useCollab } from "@reearth/services/collab";
 import {
   CreateStoryBlockInput,
   CreateStoryBlockMutation,
@@ -20,9 +21,10 @@ import { useT } from "@reearth/services/i18n/hooks";
 import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
-export const useStoryBlockMutations = () => {
+export const useStoryBlockMutations = (sceneId?: string) => {
   const [, setNotification] = useNotification();
   const t = useT();
+  const collab = useCollab();
 
   const [createStoryBlockMutation] = useMutation<
     CreateStoryBlockMutation,
@@ -102,7 +104,7 @@ export const useStoryBlockMutations = () => {
 
       return { data, status: "success" };
     },
-    [moveStoryBlockMutation, setNotification, t]
+    [collab, moveStoryBlockMutation, sceneId, setNotification, t]
   );
   return {
     createStoryBlock,

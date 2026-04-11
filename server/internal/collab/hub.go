@@ -40,6 +40,9 @@ type Hub struct {
 
 	chatStore  ChatHistoryStore
 	applyAudit ApplyAuditStore
+
+	sceneRevSubMu sync.Mutex
+	sceneRevSubs  map[string][]chan int64 // scene ID → subscribers (buffered chans)
 }
 
 type room struct {
@@ -66,6 +69,7 @@ func NewHub(o Options) *Hub {
 		activityMoveEvery:   o.activityMoveInterval(),
 		chatStore:           o.ChatHistory,
 		applyAudit:          o.ApplyAudit,
+		sceneRevSubs:        make(map[string][]chan int64),
 	}
 	if o.RedisURL != "" {
 		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {

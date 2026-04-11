@@ -8,10 +8,13 @@ import { css } from "@reearth/services/theme/reearthTheme/common";
 import { useAtom } from "jotai";
 import { FC, useCallback } from "react";
 
+import type { CollabLockConflictSnapshots } from "@reearth/services/collab";
+
 import CursorStatus from "../CursorStatus";
 import Navbar, { Tab } from "../Navbar";
 
 import { useWidgetsViewDevice, usePublishViewDevice } from "./atoms";
+import CollabApplyHistoryPanel from "./CollabApplyHistoryPanel";
 import CollabChatPanel from "./CollabChatPanel";
 import CollabPresenceBar from "./CollabPresenceBar";
 import CollabSceneRefetch from "./CollabSceneRefetch";
@@ -42,6 +45,16 @@ type Props = {
   workspaceId?: string;
 };
 
+function sceneStatsFromGetScene(
+  data: unknown
+): { widgets: number; stories: number } | null {
+  const node = (data as { node?: Record<string, unknown> })?.node;
+  if (!node || node.__typename !== "Scene") return null;
+  const widgets = Array.isArray(node.widgets) ? node.widgets.length : 0;
+  const stories = Array.isArray(node.stories) ? node.stories.length : 0;
+  return { widgets, stories };
+}
+
 const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   const apollo = useApolloClient();
   const lang = useLang();
@@ -52,6 +65,25 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
       variables: { sceneId, lang },
       fetchPolicy: "network-only"
     });
+  }, [apollo, sceneId, lang]);
+
+  const onCollabLockCompare = useCallback(async (): Promise<CollabLockConflictSnapshots | null> => {
+    const [cacheR, netR] = await Promise.all([
+      apollo.query({
+        query: GET_SCENE,
+        variables: { sceneId, lang },
+        fetchPolicy: "cache-first"
+      }),
+      apollo.query({
+        query: GET_SCENE,
+        variables: { sceneId, lang },
+        fetchPolicy: "network-only"
+      })
+    ]);
+    const cache = sceneStatsFromGetScene(cacheR.data);
+    const network = sceneStatsFromGetScene(netR.data);
+    if (!cache || !network) return null;
+    return { cache, network };
   }, [apollo, sceneId, lang]);
   const {
     visualizerSize,
@@ -108,10 +140,12 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
       projectId={projectId}
       localUserId={me?.id}
       onReconcileScene={onCollabReconcileScene}
+      onLockConflictCompare={onCollabLockCompare}
     >
       <CollabSceneRefetch sceneId={sceneId} />
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />
+        <CollabApplyHistoryPanel />
         <CollabChatPanel />
         <Navbar
         sceneId={sceneId}

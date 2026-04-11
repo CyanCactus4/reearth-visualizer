@@ -171,8 +171,18 @@ Collab lock conflict reload scene: Reload scene from server
 Collab chat placeholder: 'Message collaborators…'
 Collab chat send: Send
 Collab peer applied toast: '{{userId}} applied collaborative changes ({{kind}} · {{widgetId}}).'
+Collab apply stale toast: 'The scene changed on the server before your edit (revision mismatch). The editor was refreshed from the server.'
 Collab apply object locked toast: 'Your edit was not applied because another user holds the widget lock. The scene was refreshed from the server.'
 Collab apply failed toast: 'Your collaborative edit was rejected: {{message}} The scene was refreshed from the server.'
+Collab chat mention notify: '{{userId}} mentioned you in chat: {{preview}}'
+Collab history show: Show collab history
+Collab history hide: Hide collab history
+Collab history empty: No apply events yet.
+Collab history load failed: Could not load apply history.
+Collab lock conflict compare: Compare cache vs server
+Collab lock conflict compare failed: Could not load comparison.
+Collab lock conflict col cache: This tab (cache)
+Collab lock conflict col network: Server (network)
 Layer: ''
 Layer Name: ''
 Format: ''

@@ -20,14 +20,15 @@ type applyEnvelope struct {
 }
 
 type applyUpdateWidget struct {
-	Kind        string `json:"kind"`
-	SceneID     string `json:"sceneId"`
-	AlignSystem string `json:"alignSystem"`
-	WidgetID    string `json:"widgetId"`
-	Enabled     *bool  `json:"enabled,omitempty"`
-	Extended    *bool  `json:"extended,omitempty"`
-	Index       *int   `json:"index,omitempty"`
-	Location    *struct {
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	AlignSystem  string `json:"alignSystem"`
+	WidgetID     string `json:"widgetId"`
+	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
+	Enabled      *bool  `json:"enabled,omitempty"`
+	Extended     *bool  `json:"extended,omitempty"`
+	Index        *int   `json:"index,omitempty"`
+	Location     *struct {
 		Zone    string `json:"zone"`
 		Section string `json:"section"`
 		Area    string `json:"area"`
@@ -35,18 +36,20 @@ type applyUpdateWidget struct {
 }
 
 type applyRemoveWidget struct {
-	Kind        string `json:"kind"`
-	SceneID     string `json:"sceneId"`
-	AlignSystem string `json:"alignSystem"`
-	WidgetID    string `json:"widgetId"`
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	AlignSystem  string `json:"alignSystem"`
+	WidgetID     string `json:"widgetId"`
+	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
 type applyAddWidget struct {
-	Kind        string `json:"kind"`
-	SceneID     string `json:"sceneId"`
-	AlignSystem string `json:"alignSystem"`
-	PluginID    string `json:"pluginId"`
-	ExtensionID string `json:"extensionId"`
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	AlignSystem  string `json:"alignSystem"`
+	PluginID     string `json:"pluginId"`
+	ExtensionID  string `json:"extensionId"`
+	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
 type serverMessage struct {
@@ -80,6 +83,8 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyRemoveWidgetOp(ctx, hub, from, d)
 	case "add_widget":
 		return applyAddWidgetOp(ctx, hub, from, d)
+	case "move_story_block":
+		return applyMoveStoryBlockOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil
@@ -106,6 +111,15 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 	}
 	if sid != from.sceneID {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "scene does not belong to this room"}})
+		return nil
+	}
+
+	uc := adapter.Usecases(ctx)
+	if uc == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
+		return nil
+	}
+	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
 		return nil
 	}
 
@@ -139,12 +153,6 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 
 	if p.Enabled == nil && p.Extended == nil && loc == nil && p.Index == nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "empty_update", "message": "no widget fields to update"}})
-		return nil
-	}
-
-	uc := adapter.Usecases(ctx)
-	if uc == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
 		return nil
 	}
 
@@ -194,6 +202,14 @@ func applyRemoveWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "scene does not belong to this room"}})
 		return nil
 	}
+	uc := adapter.Usecases(ctx)
+	if uc == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
+		return nil
+	}
+	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+		return nil
+	}
 	wid, err := id.WidgetIDFrom(p.WidgetID)
 	if err != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_widget", "message": err.Error()}})
@@ -205,11 +221,6 @@ func applyRemoveWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 	align, err := parseAlignSystem(p.AlignSystem)
 	if err != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_align", "message": err.Error()}})
-		return nil
-	}
-	uc := adapter.Usecases(ctx)
-	if uc == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
 		return nil
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
@@ -246,6 +257,14 @@ func applyAddWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessa
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "scene does not belong to this room"}})
 		return nil
 	}
+	uc := adapter.Usecases(ctx)
+	if uc == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
+		return nil
+	}
+	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+		return nil
+	}
 	align, err := parseAlignSystem(p.AlignSystem)
 	if err != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_align", "message": err.Error()}})
@@ -259,11 +278,6 @@ func applyAddWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessa
 	eid := id.PluginExtensionID(p.ExtensionID)
 	if string(eid) == "" {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_extension", "message": "extensionId required"}})
-		return nil
-	}
-	uc := adapter.Usecases(ctx)
-	if uc == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
 		return nil
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
@@ -311,9 +325,26 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 	hub.broadcastLocal(from.projectID, nb, from)
 	from.enqueueJSON(notify)
 
+	sidStr := ""
+	if sc != nil {
+		sidStr = sc.ID().String()
+	}
+	if sidStr == "" {
+		if s, ok := extra["sceneId"].(string); ok {
+			sidStr = s
+		}
+	}
+	rev := sceneRevOf(sc)
+	if sidStr != "" && rev > 0 {
+		hub.publishSceneRevision(sidStr, rev)
+	}
+
 	if hub.applyAudit != nil {
 		sid, _ := extra["sceneId"].(string)
 		wid, _ := extra["widgetId"].(string)
+		storyID, _ := extra["storyId"].(string)
+		pageID, _ := extra["pageId"].(string)
+		blockID, _ := extra["blockId"].(string)
 		rec := ApplyAuditRecord{
 			ProjectID: from.projectID,
 			UserID:    actorUserID(from),
@@ -321,6 +352,9 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 			SceneRev:  sceneRevOf(sc),
 			SceneID:   sid,
 			WidgetID:  wid,
+			StoryID:   storyID,
+			PageID:    pageID,
+			BlockID:   blockID,
 		}
 		go func() {
 			pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

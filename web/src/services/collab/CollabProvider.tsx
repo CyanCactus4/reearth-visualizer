@@ -23,7 +23,8 @@ import {
   type RemoteCursor
 } from "./collabContext";
 import CollabLockConflictModal, {
-  type CollabLockConflictPayload
+  type CollabLockConflictPayload,
+  type CollabLockConflictSnapshots
 } from "./CollabLockConflictModal";
 import {
   collabResourceLockKey,
@@ -49,6 +50,8 @@ type Props = {
   localUserId?: string;
   /** Refetch scene from server (e.g. user chose “reload” after lock conflict). */
   onReconcileScene?: () => void;
+  /** Optional: load two lightweight scene snapshots for merge-compare UI. */
+  onLockConflictCompare?: () => Promise<CollabLockConflictSnapshots | null>;
   children: ReactNode;
 };
 
@@ -64,6 +67,7 @@ export const CollabProvider: FC<Props> = ({
   projectId,
   localUserId,
   onReconcileScene,
+  onLockConflictCompare,
   children
 }) => {
   const { getAccessToken } = useAuth();
@@ -165,7 +169,12 @@ export const CollabProvider: FC<Props> = ({
       | { code?: string; message?: string }
       | undefined;
     const code = typeof d?.code === "string" ? d.code : "";
-    if (code !== "apply_failed" && code !== "object_locked") return;
+    if (
+      code !== "apply_failed" &&
+      code !== "object_locked" &&
+      code !== "stale_state"
+    )
+      return;
     const now = Date.now();
     const prev = lastApplyErrorToastAtRef.current.get(code) ?? 0;
     if (now - prev < 3500) return;
@@ -177,6 +186,13 @@ export const CollabProvider: FC<Props> = ({
       });
       return;
     }
+    if (code === "stale_state") {
+      setNotification({
+        type: "warning",
+        text: tCollab("Collab apply stale toast")
+      });
+      return;
+    }
     setNotification({
       type: "error",
       text: tCollab("Collab apply failed toast", {
@@ -184,6 +200,25 @@ export const CollabProvider: FC<Props> = ({
       })
     });
   }, [lastMessage, setNotification, tCollab]);
+
+  useEffect(() => {
+    if (lastMessage?.t !== "notify") return;
+    const d = lastMessage.d as
+      | { kind?: string; fromUserId?: string; text?: string }
+      | undefined;
+    if (d?.kind !== "chat_mention") return;
+    const from = typeof d.fromUserId === "string" ? d.fromUserId : "";
+    setNotification({
+      type: "info",
+      text: tCollab("Collab chat mention notify", {
+        userId: from || "—",
+        preview:
+          typeof d.text === "string"
+            ? d.text.slice(0, 120)
+            : ""
+      })
+    });
+  }, [lastMessage, localUserId, setNotification, tCollab]);
 
   const removeTypingUser = useCallback((uid: string) => {
     typingTimersRef.current.delete(uid);
@@ -615,6 +650,7 @@ export const CollabProvider: FC<Props> = ({
         payload={lockConflict}
         onClose={closeLockConflict}
         onReconcileScene={onReconcileScene}
+        onCompareSnapshots={onLockConflictCompare}
       />
     </>
   );

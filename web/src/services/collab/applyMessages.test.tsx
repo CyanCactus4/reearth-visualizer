@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   alignSystemForCollab,
   applyAddWidgetPayload,
+  applyMoveStoryBlockPayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
@@ -67,6 +68,36 @@ describe("apply payloads", () => {
       alignSystem: "desktop",
       pluginId: "plug~1.0.0",
       extensionId: "ext1"
+    });
+  });
+
+  it("includes baseSceneRev when provided", () => {
+    const s = applyUpdateWidgetPayload({
+      sceneId: "sc1",
+      widgetId: "w1",
+      type: WidgetAlignSystemType.Desktop,
+      baseSceneRev: 42
+    });
+    expect(JSON.parse(s).d.baseSceneRev).toBe(42);
+  });
+
+  it("builds move_story_block apply envelope", () => {
+    const s = applyMoveStoryBlockPayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      blockId: "bk1",
+      index: 2,
+      baseSceneRev: 9
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "move_story_block",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      blockId: "bk1",
+      index: 2,
+      baseSceneRev: 9
     });
   });
 });
