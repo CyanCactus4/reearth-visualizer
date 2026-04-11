@@ -38,6 +38,19 @@ type applyMoveStoryPage struct {
 	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
+type applyUpdateStoryPage struct {
+	Kind                string          `json:"kind"`
+	SceneID             string          `json:"sceneId"`
+	StoryID             string          `json:"storyId"`
+	PageID              string          `json:"pageId"`
+	Title               *string         `json:"title,omitempty"`
+	Swipeable           *bool           `json:"swipeable,omitempty"`
+	Index               *int            `json:"index,omitempty"`
+	BaseSceneRev        *int64          `json:"baseSceneRev,omitempty"`
+	LayersRaw           json.RawMessage `json:"layers,omitempty"`
+	SwipeableLayersRaw  json.RawMessage `json:"swipeableLayers,omitempty"`
+}
+
 func parseNLSLayerIDList(ss []string) ([]id.NLSLayerID, error) {
 	out := make([]id.NLSLayerID, 0, len(ss))
 	for _, s := range ss {
@@ -251,6 +264,106 @@ func applyMoveStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.RawM
 	}
 	sc := scenes[0]
 	broadcastApplied(ctx, hub, from, "move_story_page", map[string]any{
+		"sceneId": p.SceneID,
+		"storyId": p.StoryID,
+		"pageId":  p.PageID,
+	}, sc)
+	return nil
+}
+
+func applyUpdateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
+	var p applyUpdateStoryPage
+	if err := json.Unmarshal(d, &p); err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
+		return nil
+	}
+	op := from.operator
+	if op == nil || !op.IsWritableScene(from.sceneID) {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "forbidden", "message": "write not allowed"}})
+		return nil
+	}
+	sid, err := id.SceneIDFrom(p.SceneID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_scene", "message": err.Error()}})
+		return nil
+	}
+	if sid != from.sceneID {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "scene does not belong to this room"}})
+		return nil
+	}
+	uc := adapter.Usecases(ctx)
+	if uc == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
+		return nil
+	}
+	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+		return nil
+	}
+	storyID, err := id.StoryIDFrom(p.StoryID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_story", "message": err.Error()}})
+		return nil
+	}
+	pageID, err := id.PageIDFrom(p.PageID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_page", "message": err.Error()}})
+		return nil
+	}
+
+	param := interfaces.UpdatePageParam{
+		SceneID:   sid,
+		StoryID:   storyID,
+		PageID:    pageID,
+		Title:     p.Title,
+		Index:     p.Index,
+		Swipeable: p.Swipeable,
+	}
+	if p.LayersRaw != nil {
+		var ss []string
+		if err := json.Unmarshal(p.LayersRaw, &ss); err != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": err.Error()}})
+			return nil
+		}
+		layers, errL := parseNLSLayerIDList(ss)
+		if errL != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errL.Error()}})
+			return nil
+		}
+		param.Layers = &layers
+	}
+	if p.SwipeableLayersRaw != nil {
+		var ss []string
+		if err := json.Unmarshal(p.SwipeableLayersRaw, &ss); err != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": err.Error()}})
+			return nil
+		}
+		sl, errS := parseNLSLayerIDList(ss)
+		if errS != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_layer", "message": errS.Error()}})
+			return nil
+		}
+		param.SwipeableLayers = &sl
+	}
+
+	if p.Title == nil && p.Swipeable == nil && p.Index == nil && p.LayersRaw == nil && p.SwipeableLayersRaw == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "empty_update", "message": "no story page fields to update"}})
+		return nil
+	}
+
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, _, err2 := uc.StoryTelling.UpdatePage(opCtx, param, op)
+	if err2 != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
+		return nil
+	}
+	scenes, err3 := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err3 != nil || len(scenes) == 0 {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "scene reload failed"}})
+		return nil
+	}
+	sc := scenes[0]
+	broadcastApplied(ctx, hub, from, "update_story_page", map[string]any{
 		"sceneId": p.SceneID,
 		"storyId": p.StoryID,
 		"pageId":  p.PageID,

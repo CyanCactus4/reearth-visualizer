@@ -4,6 +4,7 @@ import {
   applyCreateStoryPagePayload,
   applyMoveStoryPagePayload,
   applyRemoveStoryPagePayload,
+  applyUpdateStoryPagePayload,
   useCollab
 } from "@reearth/services/collab";
 import {
@@ -191,6 +192,32 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: UpdateStoryPageInput
     ): Promise<MutationReturn<UpdateStoryPageMutation>> => {
+      if (collab?.status === "open" && input.sceneId) {
+        const ok = collab.sendRaw(
+          applyUpdateStoryPagePayload({
+            sceneId: input.sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            title: input.title ?? undefined,
+            swipeable: input.swipeable ?? undefined,
+            layers:
+              input.layers == null ? undefined : [...input.layers],
+            swipeableLayers:
+              input.swipeableLayers == null
+                ? undefined
+                : [...input.swipeableLayers],
+            index: input.index ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated a page!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await updateStoryPageMutation({
         variables: {
           input
@@ -208,7 +235,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
 
       return { data, status: "success" };
     },
-    [updateStoryPageMutation, setNotification, t]
+    [collab, updateStoryPageMutation, setNotification, t]
   );
   return {
     createStoryPage,

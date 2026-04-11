@@ -97,6 +97,8 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyRemoveStoryPageOp(ctx, hub, from, d)
 	case "move_story_page":
 		return applyMoveStoryPageOp(ctx, hub, from, d)
+	case "update_story_page":
+		return applyUpdateStoryPageOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

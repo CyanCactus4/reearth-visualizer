@@ -10,6 +10,7 @@ import {
   applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
+  applyUpdateStoryPagePayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
@@ -208,6 +209,30 @@ describe("apply payloads", () => {
       storyId: "st1",
       pageId: "pg9",
       index: 0
+    });
+  });
+
+  it("builds update_story_page apply envelope", () => {
+    const s = applyUpdateStoryPagePayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      title: "T",
+      swipeable: false,
+      layers: [],
+      index: 2,
+      baseSceneRev: 11
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "update_story_page",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      title: "T",
+      swipeable: false,
+      layers: [],
+      index: 2,
+      baseSceneRev: 11
     });
   });
 });

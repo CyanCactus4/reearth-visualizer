@@ -8,6 +8,7 @@ export {
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
   applyRemoveWidgetPayload,
+  applyUpdateStoryPagePayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
 export { activityPayload, type CollabActivityKind } from "./activityMessages";

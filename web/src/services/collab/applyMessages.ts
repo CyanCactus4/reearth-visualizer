@@ -196,3 +196,32 @@ export function applyMoveStoryPagePayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+export function applyUpdateStoryPagePayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  title?: string;
+  swipeable?: boolean;
+  /** When set (including `[]`), replaces page layers. Omit to leave unchanged. */
+  layers?: string[];
+  swipeableLayers?: string[];
+  index?: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_story_page",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId
+  };
+  if (params.title !== undefined) d.title = params.title;
+  if (params.swipeable !== undefined) d.swipeable = params.swipeable;
+  if (params.layers !== undefined) d.layers = params.layers;
+  if (params.swipeableLayers !== undefined) {
+    d.swipeableLayers = params.swipeableLayers;
+  }
+  if (params.index !== undefined) d.index = params.index;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
