@@ -1,7 +1,11 @@
 package collab
 
 import (
+	"context"
+
 	"github.com/gorilla/websocket"
+	"github.com/reearth/reearth/server/internal/usecase"
+	"github.com/reearth/reearth/server/pkg/id"
 	"golang.org/x/time/rate"
 )
 
@@ -10,6 +14,9 @@ type Conn struct {
 	hub       *Hub
 	ws        *websocket.Conn
 	projectID string
+	sceneID   id.SceneID
+	operator  *usecase.Operator
+	bgCtx     context.Context
 	send      chan []byte
 }
 

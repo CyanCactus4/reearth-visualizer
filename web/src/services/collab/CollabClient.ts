@@ -1,0 +1,52 @@
+import { buildCollabWsUrl } from "./collabUrl";
+
+export type CollabInbound =
+  | { v: 1; t: "pong" }
+  | { v: 1; t: "applied"; d?: Record<string, unknown> }
+  | { v: 1; t: "error"; d?: { code?: string; message?: string } }
+  | { v: 1; t: string; d?: unknown };
+
+/** Thin WebSocket helper for /api/collab/ws (ping + optional apply relay). */
+export class CollabClient {
+  private ws: WebSocket | null = null;
+
+  constructor(
+    private readonly apiBase: string,
+    private readonly getAccessToken: () => Promise<string | undefined>
+  ) {}
+
+  get socket(): WebSocket | null {
+    return this.ws;
+  }
+
+  async connect(projectId: string): Promise<void> {
+    const token = await this.getAccessToken();
+    const url = buildCollabWsUrl(this.apiBase, projectId, token);
+    this.ws = new WebSocket(url);
+  }
+
+  disconnect(): void {
+    this.ws?.close();
+    this.ws = null;
+  }
+
+  ping(): void {
+    this.ws?.send(JSON.stringify({ v: 1, t: "ping" }));
+  }
+
+  sendRaw(json: string): void {
+    this.ws?.send(json);
+  }
+
+  onMessage(handler: (msg: CollabInbound) => void): void {
+    if (!this.ws) return;
+    this.ws.onmessage = (ev: MessageEvent<string>) => {
+      try {
+        const data = JSON.parse(ev.data) as CollabInbound;
+        handler(data);
+      } catch {
+        /* ignore malformed */
+      }
+    };
+  }
+}

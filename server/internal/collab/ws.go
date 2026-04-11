@@ -90,11 +90,14 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 			return err
 		}
 
-		reqCtx := c.Request().Context()
+		bgCtx := context.WithoutCancel(c.Request().Context())
 		conn := &Conn{
 			hub:       hub,
 			ws:        ws,
 			projectID: pid.String(),
+			sceneID:   pj.Scene(),
+			operator:  op,
+			bgCtx:     bgCtx,
 			send:      make(chan []byte, sendChannelBuf),
 		}
 		hub.register(conn)
@@ -103,13 +106,14 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 
 		go conn.writePump()
 		conn.readPump(maxBytes, lim, func(raw []byte) error {
-			return handleClientMessage(reqCtx, hub, conn, raw, maxBytes)
+			return handleClientMessage(hub, conn, raw, maxBytes)
 		})
 		return nil
 	}
 }
 
-func handleClientMessage(ctx context.Context, hub *Hub, from *Conn, raw []byte, maxBytes int) error {
+func handleClientMessage(hub *Hub, from *Conn, raw []byte, maxBytes int) error {
+	ctx := from.bgCtx
 	var m ClientMessage
 	if err := json.Unmarshal(raw, &m); err != nil {
 		return err
@@ -131,6 +135,14 @@ func handleClientMessage(ctx context.Context, hub *Hub, from *Conn, raw []byte, 
 		}
 		hub.broadcastFromClient(ctx, from.projectID, raw, from)
 		return nil
+	case "apply":
+		if len(raw) > maxBytes {
+			return errors.New("message too large")
+		}
+		if len(m.D) == 0 {
+			return fmt.Errorf("apply requires d")
+		}
+		return dispatchApply(ctx, hub, from, m.D)
 	default:
 		return fmt.Errorf("unknown message type")
 	}
