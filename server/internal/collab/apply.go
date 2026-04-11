@@ -453,16 +453,20 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 		storyID, _ := extra["storyId"].(string)
 		pageID, _ := extra["pageId"].(string)
 		blockID, _ := extra["blockId"].(string)
+		propID, _ := extra["propertyId"].(string)
+		fieldID, _ := extra["fieldId"].(string)
 		rec := ApplyAuditRecord{
-			ProjectID: from.projectID,
-			UserID:    actorUserID(from),
-			Kind:      kind,
-			SceneRev:  sceneRevOf(sc),
-			SceneID:   sid,
-			WidgetID:  wid,
-			StoryID:   storyID,
-			PageID:    pageID,
-			BlockID:   blockID,
+			ProjectID:  from.projectID,
+			UserID:     actorUserID(from),
+			Kind:       kind,
+			SceneRev:   sceneRevOf(sc),
+			SceneID:    sid,
+			WidgetID:   wid,
+			StoryID:    storyID,
+			PageID:     pageID,
+			BlockID:    blockID,
+			PropertyID: propID,
+			FieldID:    fieldID,
 		}
 		go func() {
 			pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

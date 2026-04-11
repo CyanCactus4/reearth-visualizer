@@ -20,6 +20,8 @@ type Entry = {
   storyId?: string;
   pageId?: string;
   blockId?: string;
+  propertyId?: string;
+  fieldId?: string;
 };
 
 type Props = { sceneId: string };
@@ -176,6 +178,9 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
                   <span style={{ opacity: 0.85 }}>{e.userId}</span>
                   {e.widgetId ? ` · w ${e.widgetId.slice(0, 8)}…` : null}
                   {e.storyId ? ` · story` : null}
+                  {e.propertyId
+                    ? ` · prop ${e.propertyId.slice(0, 8)}…${e.fieldId ? ` / ${e.fieldId}` : ""}`
+                    : null}
                 </li>
               ))}
             </ul>
