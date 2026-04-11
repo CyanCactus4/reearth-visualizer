@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCollabWsUrl } from "./collabUrl";
+import { buildCollabChatUrl, buildCollabWsUrl } from "./collabUrl";
 
 describe("buildCollabWsUrl", () => {
   it("maps http API to ws collab path", () => {
@@ -18,5 +18,13 @@ describe("buildCollabWsUrl", () => {
     expect(u.startsWith("wss://example.com/api/collab/ws?")).toBe(true);
     expect(u).toContain("projectId=p-2");
     expect(u).toContain("access_token=");
+  });
+});
+
+describe("buildCollabChatUrl", () => {
+  it("builds REST collab chat URL with projectId and limit", () => {
+    expect(
+      buildCollabChatUrl("http://localhost:8080/api", "proj1", 50)
+    ).toBe("http://localhost:8080/api/collab/chat?projectId=proj1&limit=50");
   });
 });

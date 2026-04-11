@@ -108,6 +108,8 @@ type CollabConfig struct {
 	ActivityTypingMinIntervalMs int `envconfig:"REEARTH_COLLAB_ACTIVITY_TYPING_MIN_INTERVAL_MS" pp:",omitempty"`
 	// ActivityMoveMinIntervalMs limits "move" activity hints (default 800).
 	ActivityMoveMinIntervalMs int `envconfig:"REEARTH_COLLAB_ACTIVITY_MOVE_MIN_INTERVAL_MS" pp:",omitempty"`
+	// ChatCollection is the MongoDB collection name for persisted collab chat (default collabChatMessages).
+	ChatCollection string `envconfig:"REEARTH_COLLAB_CHAT_COLLECTION" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

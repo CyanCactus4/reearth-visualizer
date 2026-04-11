@@ -17,6 +17,9 @@ type Options struct {
 	ActivityTypingMinIntervalMs int
 	// ActivityMoveMinIntervalMs: min spacing for move activity (default 800).
 	ActivityMoveMinIntervalMs int
+
+	// ChatHistory persists chat lines (Mongo); nil skips persistence and GET /api/collab/chat.
+	ChatHistory ChatHistoryStore
 }
 
 func (o Options) lockTTL() time.Duration {

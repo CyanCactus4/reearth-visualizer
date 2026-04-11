@@ -144,6 +144,10 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		return nil
 	}
 
+	actor := from.userID
+	if actor == "" {
+		actor = "unknown"
+	}
 	notify := serverMessage{
 		V: 1,
 		T: "applied",
@@ -151,6 +155,7 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 			"kind":     "update_widget",
 			"sceneId":  p.SceneID,
 			"widgetId": p.WidgetID,
+			"userId":   actor,
 		},
 	}
 	nb, err := json.Marshal(notify)

@@ -5,6 +5,9 @@ import (
 	"encoding/json"
 	"time"
 	"unicode/utf8"
+
+	"github.com/google/uuid"
+	"github.com/reearth/reearthx/log"
 )
 
 type chatInbound struct {
@@ -34,18 +37,31 @@ func dispatchChat(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "chat_rate", "message": "rate limit exceeded"}})
 		return nil
 	}
+	msgID := uuid.NewString()
+	ts := time.Now().Unix()
 	b, err := json.Marshal(serverMessage{
 		V: 1,
 		T: "chat",
 		D: map[string]any{
+			"id":     msgID,
 			"userId": from.userID,
 			"text":   m.Text,
-			"ts":     time.Now().Unix(),
+			"ts":     ts,
 		},
 	})
 	if err != nil {
 		return nil
 	}
 	hub.fanoutRoom(ctx, from.projectID, b)
+	if hub.chatStore != nil {
+		pid, uid, txt, mid := from.projectID, from.userID, m.Text, msgID
+		go func() {
+			pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := hub.chatStore.Append(pctx, pid, uid, txt, ts, mid); err != nil {
+				log.Warnfc(pctx, "collab: chat persist: %v", err)
+			}
+		}()
+	}
 	return nil
 }

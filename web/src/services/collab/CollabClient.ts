@@ -24,7 +24,11 @@ export type CollabInbound =
         until?: string;
       };
     }
-  | { v: 1; t: "chat"; d?: { userId?: string; text?: string; ts?: number } }
+  | {
+      v: 1;
+      t: "chat";
+      d?: { id?: string; userId?: string; text?: string; ts?: number };
+    }
   | {
       v: 1;
       t: "cursor";

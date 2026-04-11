@@ -14,3 +14,19 @@ export function buildCollabWsUrl(
   }
   return u.toString();
 }
+
+/** HTTP URL for collab chat history (GET /api/collab/chat). */
+export function buildCollabChatUrl(
+  apiBase: string,
+  projectId: string,
+  limit?: number
+): string {
+  const trimmed = apiBase.replace(/\/$/, "");
+  const u = new URL(trimmed, window.location.origin);
+  u.pathname = `${u.pathname.replace(/\/$/, "")}/collab/chat`;
+  u.searchParams.set("projectId", projectId);
+  if (limit != null && limit > 0) {
+    u.searchParams.set("limit", String(limit));
+  }
+  return u.toString();
+}

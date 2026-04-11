@@ -11,6 +11,15 @@ export type RemoteCursor = {
   ts: number;
 };
 
+export type CollabChatLine = {
+  id: string;
+  userId: string;
+  text: string;
+  ts: number;
+  /** True until the server echo replaces this line with a real id. */
+  pending?: boolean;
+};
+
 /** Server-side object lock (layer / widget), from lock_changed / lock_denied. */
 export type CollabResourceLock = {
   holderUserId: string;
@@ -29,6 +38,9 @@ export type CollabContextValue = {
   remoteTypingUserIds: readonly string[];
   /** Map key `layer:id` / `widget:id` → current holder (TASK.md FR-4). */
   resourceLocks: Readonly<Record<string, CollabResourceLock>>;
+  /** Recent collab chat lines (REST history + live WebSocket). */
+  chatMessages: readonly CollabChatLine[];
+  sendChat: (text: string) => void;
 };
 
 export const CollabContext = createContext<CollabContextValue | null>(null);

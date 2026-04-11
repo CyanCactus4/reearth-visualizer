@@ -12,6 +12,7 @@ export {
   type LockResource
 } from "./lockMessages";
 export type {
+  CollabChatLine,
   CollabContextValue,
   CollabResourceLock,
   CollabStatus,
@@ -23,7 +24,7 @@ export { default as CollabLockGate } from "./CollabLockGate";
 export { default as CollabLockLeaseOnly } from "./CollabLockLeaseOnly";
 export { default as CollabLockReadOnly } from "./CollabLockReadOnly";
 export { CollabProvider } from "./CollabProvider";
-export { buildCollabWsUrl } from "./collabUrl";
+export { buildCollabChatUrl, buildCollabWsUrl } from "./collabUrl";
 export { useCollab } from "./useCollab";
 export {
   useCollabLockLease,

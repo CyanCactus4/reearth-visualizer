@@ -12,9 +12,12 @@ import {
 } from "react";
 
 import { activityPayload } from "./activityMessages";
+import { fetchCollabChatHistory } from "./collabChatApi";
 import { CollabClient, type CollabInbound } from "./CollabClient";
+import { chatPayload } from "./chatMessages";
 import {
   CollabContext,
+  type CollabChatLine,
   type CollabContextValue,
   type CollabResourceLock,
   type RemoteCursor
@@ -60,6 +63,10 @@ export const CollabProvider: FC<Props> = ({
   children
 }) => {
   const { getAccessToken } = useAuth();
+  const getAccessTokenRef = useRef(getAccessToken);
+  useEffect(() => {
+    getAccessTokenRef.current = getAccessToken;
+  }, [getAccessToken]);
   const [status, setStatus] = useState<CollabContextValue["status"]>("idle");
   const [lastMessage, setLastMessage] =
     useState<CollabContextValue["lastMessage"]>(null);
@@ -70,6 +77,10 @@ export const CollabProvider: FC<Props> = ({
   const [resourceLocks, setResourceLocks] = useState<
     Record<string, CollabResourceLock>
   >({});
+  const [chatMessages, setChatMessages] = useState<CollabChatLine[]>([]);
+  const seenChatIdsRef = useRef<Set<string>>(new Set());
+  /** Maps userId+NUL+text → optimistic local id (one in-flight own line per text). */
+  const optimisticByKeyRef = useRef<Map<string, string>>(new Map());
   const clientRef = useRef<CollabClient | null>(null);
   const localUserIdRef = useRef(localUserId);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -79,6 +90,7 @@ export const CollabProvider: FC<Props> = ({
   const [, setNotification] = useNotification();
   const tCollab = useT();
   const lastLockDeniedKeyRef = useRef<string | null>(null);
+  const lastAppliedNotifyAtRef = useRef<Map<string, number>>(new Map());
   const [lockConflict, setLockConflict] =
     useState<CollabLockConflictPayload | null>(null);
 
@@ -113,6 +125,31 @@ export const CollabProvider: FC<Props> = ({
       holderUserId: d.holderUserId
     });
   }, [lastMessage, setNotification, tCollab]);
+
+  useEffect(() => {
+    if (lastMessage?.t !== "applied") return;
+    const d = lastMessage.d as
+      | { userId?: string; kind?: string; widgetId?: string }
+      | undefined;
+    const peer = d?.userId;
+    if (!peer || peer === "unknown") return;
+    if (localUserId && peer === localUserId) return;
+    const kind = typeof d?.kind === "string" ? d.kind : "";
+    const wid = typeof d?.widgetId === "string" ? d.widgetId : "";
+    const key = `${peer}\0${kind}\0${wid}`;
+    const now = Date.now();
+    const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
+    if (now - prev < 4000) return;
+    lastAppliedNotifyAtRef.current.set(key, now);
+    setNotification({
+      type: "info",
+      text: tCollab("Collab peer applied toast", {
+        userId: peer,
+        kind: kind || "edit",
+        widgetId: wid || "—"
+      })
+    });
+  }, [lastMessage, localUserId, setNotification, tCollab]);
 
   const removeTypingUser = useCallback((uid: string) => {
     typingTimersRef.current.delete(uid);
@@ -218,6 +255,63 @@ export const CollabProvider: FC<Props> = ({
           | undefined;
         if (!d || d.kind !== "typing" || !d.userId) return;
         noteTypingUser(d.userId);
+        return;
+      }
+      if (msg.t === "chat") {
+        const d = msg.d as
+          | {
+              id?: string;
+              userId?: string;
+              text?: string;
+              ts?: number;
+            }
+          | undefined;
+        if (!d?.userId || d.text == null || d.text === "") return;
+        const cid =
+          d.id && d.id.length > 0
+            ? d.id
+            : `${d.userId}:${d.ts ?? 0}:${d.text}`;
+        const self = localUserIdRef.current;
+        if (self && d.userId === self) {
+          const fp = `${self}\0${d.text}`;
+          const optId = optimisticByKeyRef.current.get(fp);
+          if (optId) {
+            optimisticByKeyRef.current.delete(fp);
+            seenChatIdsRef.current.delete(optId);
+            if (seenChatIdsRef.current.has(cid)) {
+              setChatMessages((prev) => prev.filter((m) => m.id !== optId));
+              return;
+            }
+            seenChatIdsRef.current.add(cid);
+            setChatMessages((prev) =>
+              prev.map((m) =>
+                m.id === optId
+                  ? {
+                      id: cid,
+                      userId: d.userId!,
+                      text: d.text!,
+                      ts: d.ts ?? Math.floor(Date.now() / 1000),
+                      pending: false
+                    }
+                  : m
+              )
+            );
+            return;
+          }
+        }
+        if (seenChatIdsRef.current.has(cid)) return;
+        seenChatIdsRef.current.add(cid);
+        setChatMessages((prev) => {
+          const line: CollabChatLine = {
+            id: cid,
+            userId: d.userId!,
+            text: d.text!,
+            ts: d.ts ?? Math.floor(Date.now() / 1000)
+          };
+          const next = [...prev, line];
+          next.sort((a, b) => a.ts - b.ts);
+          return next;
+        });
       }
     },
     [noteTypingUser]
@@ -229,6 +323,33 @@ export const CollabProvider: FC<Props> = ({
     for (const t of typingTimersRef.current.values()) clearTimeout(t);
     typingTimersRef.current.clear();
     setRemoteTypingUserIds([]);
+    setChatMessages([]);
+    seenChatIdsRef.current.clear();
+    optimisticByKeyRef.current.clear();
+    lastAppliedNotifyAtRef.current.clear();
+
+    if (!projectId) return;
+
+    let cancelled = false;
+    const apiBase = window.REEARTH_CONFIG?.api || "/api";
+    void (async () => {
+      const rows = await fetchCollabChatHistory(
+        apiBase,
+        projectId,
+        () => getAccessTokenRef.current(),
+        200
+      );
+      if (cancelled) return;
+      const sorted = rows.slice().sort((a, b) => a.ts - b.ts);
+      for (const r of sorted) {
+        seenChatIdsRef.current.add(r.id);
+      }
+      setChatMessages(sorted);
+    })();
+
+    return () => {
+      cancelled = true;
+    };
   }, [projectId]);
 
   useEffect(() => {
@@ -341,6 +462,37 @@ export const CollabProvider: FC<Props> = ({
     [projectId]
   );
 
+  const sendChat = useCallback(
+    (text: string) => {
+      const t = text.trim();
+      if (!t) return;
+      const uid = localUserIdRef.current;
+      if (uid) {
+        const fp = `${uid}\0${t}`;
+        const prevOpt = optimisticByKeyRef.current.get(fp);
+        if (prevOpt) {
+          seenChatIdsRef.current.delete(prevOpt);
+          optimisticByKeyRef.current.delete(fp);
+          setChatMessages((arr) => arr.filter((m) => m.id !== prevOpt));
+        }
+        const optId = `local:${crypto.randomUUID()}`;
+        optimisticByKeyRef.current.set(fp, optId);
+        seenChatIdsRef.current.add(optId);
+        const ts = Math.floor(Date.now() / 1000);
+        setChatMessages((prev) => {
+          const next = [
+            ...prev,
+            { id: optId, userId: uid, text: t, ts, pending: true }
+          ];
+          next.sort((a, b) => a.ts - b.ts);
+          return next;
+        });
+      }
+      sendRaw(chatPayload(t));
+    },
+    [sendRaw]
+  );
+
   useEffect(() => {
     if (status !== "open" || !projectId) return;
     const onKey = (e: KeyboardEvent) => {
@@ -372,7 +524,9 @@ export const CollabProvider: FC<Props> = ({
       sendRaw,
       remoteCursors,
       remoteTypingUserIds,
-      resourceLocks
+      resourceLocks,
+      chatMessages,
+      sendChat
     }),
     [
       status,
@@ -382,7 +536,9 @@ export const CollabProvider: FC<Props> = ({
       sendRaw,
       remoteCursors,
       remoteTypingUserIds,
-      resourceLocks
+      resourceLocks,
+      chatMessages,
+      sendChat
     ]
   );
 

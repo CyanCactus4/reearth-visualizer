@@ -11,7 +11,9 @@ const collabState = {
   sendRaw: vi.fn(),
   remoteCursors: {} as Record<string, { x: number; y: number; inside: boolean; ts: number }>,
   remoteTypingUserIds: [] as string[],
-  resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>
+  resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>,
+  chatMessages: [] as { id: string; userId: string; text: string; ts: number }[],
+  sendChat: vi.fn()
 };
 
 vi.mock("@reearth/services/collab", () => ({
@@ -27,7 +29,9 @@ describe("CollabPresenceBar", () => {
     collabState.remoteCursors = {};
     collabState.remoteTypingUserIds = [];
     collabState.resourceLocks = {};
+    collabState.chatMessages = [];
     collabState.sendRaw.mockClear();
+    collabState.sendChat.mockClear();
   });
 
   it("renders status when project is set", () => {

@@ -9,6 +9,7 @@ import CursorStatus from "../CursorStatus";
 import Navbar, { Tab } from "../Navbar";
 
 import { useWidgetsViewDevice, usePublishViewDevice } from "./atoms";
+import CollabChatPanel from "./CollabChatPanel";
 import CollabPresenceBar from "./CollabPresenceBar";
 import CollabViewportCapture from "./CollabViewportCapture";
 import useHooks from "./hooks";
@@ -93,6 +94,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
     <CollabProvider projectId={projectId} localUserId={me?.id}>
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />
+        <CollabChatPanel />
         <Navbar
         sceneId={sceneId}
         projectId={projectId}

@@ -13,6 +13,7 @@ import (
 	"github.com/reearth/reearth/server/internal/app/config"
 	"github.com/reearth/reearth/server/internal/app/otel"
 	"github.com/reearth/reearth/server/internal/collab"
+	mongoinfra "github.com/reearth/reearth/server/internal/infrastructure/mongo"
 	"github.com/reearth/reearth/server/internal/usecase/gateway"
 	"github.com/reearth/reearth/server/internal/usecase/repo"
 
@@ -22,7 +23,23 @@ import (
 )
 
 func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.OtelServiceName, debug bool) {
-	repos, gateways, acRepos, acGateways, accountsAPIClient := initReposAndGateways(ctx, conf, debug)
+	repos, gateways, acRepos, acGateways, accountsAPIClient, mongoClient := initReposAndGateways(ctx, conf, debug)
+	var collabChat collab.ChatHistoryStore
+	if mongoClient != nil && conf.DB_Vis != "" {
+		cname := conf.Collab.ChatCollection
+		if cname == "" {
+			cname = "collabChatMessages"
+		}
+		ch := mongoinfra.NewCollabChatHistory(
+			mongoClient.Database(conf.DB_Vis).Collection(cname),
+		)
+		if ch != nil {
+			if err := ch.EnsureIndexes(ctx); err != nil {
+				log.Warnfc(ctx, "collab chat indexes: %v", err)
+			}
+			collabChat = ch
+		}
+	}
 	// Start web server
 	NewServer(ctx, &ServerConfig{
 		Config:            conf,
@@ -33,6 +50,7 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 		AccountGateways:   acGateways,
 		AccountsAPIClient: accountsAPIClient,
 		ServiceName:       otelServiceName,
+		CollabChatStore:   collabChat,
 	}).Run(ctx)
 }
 
@@ -54,6 +72,7 @@ type ServerConfig struct {
 	AccountsAPIClient *gqlclient.Client
 	ServiceName       otel.OtelServiceName
 	CollabHub         *collab.Hub
+	CollabChatStore   collab.ChatHistoryStore
 }
 
 func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
@@ -86,6 +105,7 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		CursorMinIntervalMs:         cfg.Config.Collab.CursorMinIntervalMs,
 		ActivityTypingMinIntervalMs: cfg.Config.Collab.ActivityTypingMinIntervalMs,
 		ActivityMoveMinIntervalMs:   cfg.Config.Collab.ActivityMoveMinIntervalMs,
+		ChatHistory:                 cfg.CollabChatStore,
 	})
 	cfg.CollabHub = hub
 	w.collabHub = hub

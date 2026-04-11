@@ -162,6 +162,9 @@ func initEcho(
 	if cfg.CollabHub != nil {
 		apiPrivateRoute.GET("/collab/ws", collab.ServeWS(cfg.CollabHub, &cfg.Config.Collab, allowedOrigins(cfg)))
 	}
+	if cfg.CollabChatStore != nil {
+		apiPrivateRoute.GET("/collab/chat", collab.ServeChatHistory(cfg.CollabChatStore))
+	}
 
 	// Registering an initial auth0 user (for local development)
 	apiPrivateRoute.POST("/signup", Signup(cfg))
