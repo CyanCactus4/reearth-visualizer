@@ -721,6 +721,8 @@ Failed to move page.: ページの移動に失敗しました。
 Page was successfully moved.: ページの移動に成功しました。
 Failed to update page.: ページの更新に失敗しました。
 Successfully updated a page!: ページの更新に成功しました！
+Failed to duplicate page.: ページの複製に失敗しました。
+Successfully duplicated the page!: ページの複製に成功しました！
 Failed to update user password.: ユーザーパスワードの更新に失敗しました。
 Successfully updated user password!: ユーザーパスワードの更新に成功しました！
 Failed to change language.: 言語の変更に失敗しました。

@@ -80,6 +80,7 @@ type Documents = {
     "\n  mutation UpdateStoryPage($input: UpdateStoryPageInput!) {\n    updateStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": typeof types.UpdateStoryPageDocument,
     "\n  mutation DeleteStoryPage($input: DeleteStoryPageInput!) {\n    removeStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": typeof types.DeleteStoryPageDocument,
     "\n  mutation MoveStoryPage($input: MoveStoryPageInput!) {\n    moveStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": typeof types.MoveStoryPageDocument,
+    "\n  mutation DuplicateStoryPage($input: DuplicateStoryPageInput!) {\n    duplicateStoryPage(input: $input) {\n      story {\n        id\n      }\n      page {\n        id\n      }\n    }\n  }\n": typeof types.DuplicateStoryPageDocument,
     "\n  mutation CreateStoryBlock($input: CreateStoryBlockInput!){\n    createStoryBlock(input: $input) {\n      index\n      block {\n        id\n      }\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": typeof types.CreateStoryBlockDocument,
     "\n  mutation MoveStoryBlock($input: MoveStoryBlockInput!){\n    moveStoryBlock(input: $input) {\n      index\n      blockId\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": typeof types.MoveStoryBlockDocument,
     "\n  mutation RemoveStoryBlock($input: RemoveStoryBlockInput!){\n    removeStoryBlock(input: $input) {\n      blockId\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": typeof types.RemoveStoryBlockDocument,
@@ -166,6 +167,7 @@ const documents: Documents = {
     "\n  mutation UpdateStoryPage($input: UpdateStoryPageInput!) {\n    updateStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": types.UpdateStoryPageDocument,
     "\n  mutation DeleteStoryPage($input: DeleteStoryPageInput!) {\n    removeStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": types.DeleteStoryPageDocument,
     "\n  mutation MoveStoryPage($input: MoveStoryPageInput!) {\n    moveStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n": types.MoveStoryPageDocument,
+    "\n  mutation DuplicateStoryPage($input: DuplicateStoryPageInput!) {\n    duplicateStoryPage(input: $input) {\n      story {\n        id\n      }\n      page {\n        id\n      }\n    }\n  }\n": types.DuplicateStoryPageDocument,
     "\n  mutation CreateStoryBlock($input: CreateStoryBlockInput!){\n    createStoryBlock(input: $input) {\n      index\n      block {\n        id\n      }\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": types.CreateStoryBlockDocument,
     "\n  mutation MoveStoryBlock($input: MoveStoryBlockInput!){\n    moveStoryBlock(input: $input) {\n      index\n      blockId\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": types.MoveStoryBlockDocument,
     "\n  mutation RemoveStoryBlock($input: RemoveStoryBlockInput!){\n    removeStoryBlock(input: $input) {\n      blockId\n      page {\n        id\n      }\n      story {\n        id\n      }\n    }\n  }\n": types.RemoveStoryBlockDocument,
@@ -464,6 +466,10 @@ export function gql(source: "\n  mutation DeleteStoryPage($input: DeleteStoryPag
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function gql(source: "\n  mutation MoveStoryPage($input: MoveStoryPageInput!) {\n    moveStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation MoveStoryPage($input: MoveStoryPageInput!) {\n    moveStoryPage(input: $input) {\n      story {\n        id\n      }\n    }\n  }\n"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  mutation DuplicateStoryPage($input: DuplicateStoryPageInput!) {\n    duplicateStoryPage(input: $input) {\n      story {\n        id\n      }\n      page {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation DuplicateStoryPage($input: DuplicateStoryPageInput!) {\n    duplicateStoryPage(input: $input) {\n      story {\n        id\n      }\n      page {\n        id\n      }\n    }\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

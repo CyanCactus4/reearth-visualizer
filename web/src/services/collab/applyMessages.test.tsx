@@ -6,6 +6,7 @@ import {
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
+  applyDuplicateStoryPagePayload,
   applyMoveStoryBlockPayload,
   applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
@@ -209,6 +210,22 @@ describe("apply payloads", () => {
       storyId: "st1",
       pageId: "pg9",
       index: 0
+    });
+  });
+
+  it("builds duplicate_story_page apply envelope", () => {
+    const s = applyDuplicateStoryPagePayload({
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      baseSceneRev: 7
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "duplicate_story_page",
+      sceneId: "sc1",
+      storyId: "st1",
+      pageId: "pg1",
+      baseSceneRev: 7
     });
   });
 

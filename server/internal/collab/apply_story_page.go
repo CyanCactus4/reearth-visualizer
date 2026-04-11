@@ -38,6 +38,14 @@ type applyMoveStoryPage struct {
 	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
+type applyDuplicateStoryPage struct {
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	StoryID      string `json:"storyId"`
+	PageID       string `json:"pageId"`
+	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
+}
+
 type applyUpdateStoryPage struct {
 	Kind                string          `json:"kind"`
 	SceneID             string          `json:"sceneId"`
@@ -368,5 +376,72 @@ func applyUpdateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 		"storyId": p.StoryID,
 		"pageId":  p.PageID,
 	}, sc)
+	return nil
+}
+
+func applyDuplicateStoryPageOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
+	var p applyDuplicateStoryPage
+	if err := json.Unmarshal(d, &p); err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
+		return nil
+	}
+	op := from.operator
+	if op == nil || !op.IsWritableScene(from.sceneID) {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "forbidden", "message": "write not allowed"}})
+		return nil
+	}
+	sid, err := id.SceneIDFrom(p.SceneID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_scene", "message": err.Error()}})
+		return nil
+	}
+	if sid != from.sceneID {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "scene_mismatch", "message": "scene does not belong to this room"}})
+		return nil
+	}
+	uc := adapter.Usecases(ctx)
+	if uc == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
+		return nil
+	}
+	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+		return nil
+	}
+	storyID, err := id.StoryIDFrom(p.StoryID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_story", "message": err.Error()}})
+		return nil
+	}
+	pageID, err := id.PageIDFrom(p.PageID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_page", "message": err.Error()}})
+		return nil
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, dupPage, err2 := uc.StoryTelling.DuplicatePage(opCtx, interfaces.DuplicatePageParam{
+		SceneID: sid,
+		StoryID: storyID,
+		PageID:  pageID,
+	}, op)
+	if err2 != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
+		return nil
+	}
+	scenes, err3 := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err3 != nil || len(scenes) == 0 {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "scene reload failed"}})
+		return nil
+	}
+	sc := scenes[0]
+	extra := map[string]any{
+		"sceneId": p.SceneID,
+		"storyId": p.StoryID,
+		"pageId":  p.PageID,
+	}
+	if dupPage != nil {
+		extra["duplicatedPageId"] = dupPage.Id().String()
+	}
+	broadcastApplied(ctx, hub, from, "duplicate_story_page", extra, sc)
 	return nil
 }

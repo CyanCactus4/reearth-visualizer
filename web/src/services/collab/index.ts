@@ -3,6 +3,7 @@ export {
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
+  applyDuplicateStoryPagePayload,
   applyMoveStoryBlockPayload,
   applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,

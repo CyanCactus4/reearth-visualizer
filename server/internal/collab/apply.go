@@ -99,6 +99,8 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyMoveStoryPageOp(ctx, hub, from, d)
 	case "update_story_page":
 		return applyUpdateStoryPageOp(ctx, hub, from, d)
+	case "duplicate_story_page":
+		return applyDuplicateStoryPageOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

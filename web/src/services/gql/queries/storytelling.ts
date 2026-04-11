@@ -80,6 +80,19 @@ export const MOVE_STORY_PAGE = gql(`
   }
 `);
 
+export const DUPLICATE_STORY_PAGE = gql(`
+  mutation DuplicateStoryPage($input: DuplicateStoryPageInput!) {
+    duplicateStoryPage(input: $input) {
+      story {
+        id
+      }
+      page {
+        id
+      }
+    }
+  }
+`);
+
 export const CREATE_STORY_BLOCK = gql(`
   mutation CreateStoryBlock($input: CreateStoryBlockInput!){
     createStoryBlock(input: $input) {

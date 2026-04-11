@@ -197,6 +197,22 @@ export function applyMoveStoryPagePayload(params: {
   return JSON.stringify({ v: 1, t: "apply", d });
 }
 
+export function applyDuplicateStoryPagePayload(params: {
+  sceneId: string;
+  storyId: string;
+  pageId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "duplicate_story_page",
+    sceneId: params.sceneId,
+    storyId: params.storyId,
+    pageId: params.pageId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
 export function applyUpdateStoryPagePayload(params: {
   sceneId: string;
   storyId: string;

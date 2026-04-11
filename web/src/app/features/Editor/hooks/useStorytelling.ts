@@ -20,8 +20,13 @@ export default function ({ sceneId }: Props) {
     string | undefined
   >(undefined);
 
-  const { createStoryPage, deleteStoryPage, moveStoryPage, updateStoryPage } =
-    useStoryPageMutations(sceneId);
+  const {
+    createStoryPage,
+    deleteStoryPage,
+    duplicateStoryPage,
+    moveStoryPage,
+    updateStoryPage
+  } = useStoryPageMutations(sceneId);
   const { moveStoryBlock } = useStoryBlockMutations(sceneId);
 
   const { stories } = useStories({ sceneId });
@@ -50,13 +55,17 @@ export default function ({ sceneId }: Props) {
     [selectedStoryPageId, selectedStory?.pages]
   );
 
-  const handleStoryPageDuplicate = useCallback(async (pageId: string) => {
-    // TODO: Implement page duplication functionality
-    console.warn(
-      "Story page duplication not yet implemented for page:",
-      pageId
-    );
-  }, []);
+  const handleStoryPageDuplicate = useCallback(
+    async (pageId: string) => {
+      if (!selectedStory) return;
+      await duplicateStoryPage({
+        sceneId,
+        storyId: selectedStory.id,
+        pageId
+      });
+    },
+    [duplicateStoryPage, sceneId, selectedStory]
+  );
 
   const handleStoryPageDelete = useCallback(
     async (pageId: string) => {

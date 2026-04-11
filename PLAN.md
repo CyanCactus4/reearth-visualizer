@@ -173,8 +173,8 @@
 |------|--------|-------------|
 | 0 Проектирование и контракты | ✅ | Design doc выше; транспорт и v1-протокол зафиксированы. |
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
-| 2 MVP-синхронизация одной сущности | ✅ | `apply`: виджеты + story **blocks** + story **pages** (`create`/`remove`/`move`/`update` страницы); `applied` + **`sceneRev`**; Vitest `applyMessages`; фронт: **`useStoryPageMutations(sceneId)`**, **`useStoryBlockMutations(sceneId)`**, **`useWidgetMutations`**. |
-| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling blocks + **pages** (`create`/`remove`/`move`/`update`); **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, дубликат страницы, слои/стили/сцена. |
+| 2 MVP-синхронизация одной сущности | ✅ | `apply`: виджеты + story **blocks** + story **pages** (`create`/`remove`/`move`/`update`/`duplicate` страницы); `applied` + **`sceneRev`**; Vitest `applyMessages`; фронт: **`useStoryPageMutations(sceneId)`**, **`useStoryBlockMutations(sceneId)`**, **`useWidgetMutations`**. |
+| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling blocks + **pages** (в т.ч. duplicate); **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, слои/стили/сцена. |
 | 4 Блокировки | 🟡 | Locks + UI + `apply`; модалка: reload + **сравнение двух снимков** (кэш Apollo vs network: счётчики widgets/stories). Полный трёхсторонний merge — вне scope. |
 | 5 Presence | 🟡 | Курсоры (в т.ч. **`title` = полный userId**), typing, полоса presence; без отдельного аватара на курсоре. |
 | 6 История / undo | 🟡 | Mongo + REST + **`CollabApplyHistoryPanel`**; **серверный** undo/redo (`POST /api/collab/undo|redo`) для **`update_widget`** и **`move_story_block`**; **нет** undo add/remove виджета и **нет** админского restore ревизии. |

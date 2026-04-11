@@ -2,6 +2,7 @@ import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
 import {
   applyCreateStoryPagePayload,
+  applyDuplicateStoryPagePayload,
   applyMoveStoryPagePayload,
   applyRemoveStoryPagePayload,
   applyUpdateStoryPagePayload,
@@ -12,9 +13,12 @@ import {
   CreateStoryPageMutation,
   DeleteStoryPageInput,
   DeleteStoryPageMutation,
+  DuplicateStoryPageInput,
+  DuplicateStoryPageMutation,
   MoveStoryPageInput,
   MoveStoryPageMutation,
   MutationCreateStoryPageArgs,
+  MutationDuplicateStoryPageArgs,
   MutationMoveStoryPageArgs,
   MutationRemoveStoryPageArgs,
   MutationUpdateStoryPageArgs,
@@ -24,6 +28,7 @@ import {
 import {
   CREATE_STORY_PAGE,
   DELETE_STORY_PAGE,
+  DUPLICATE_STORY_PAGE,
   MOVE_STORY_PAGE,
   UPDATE_STORY_PAGE
 } from "@reearth/services/gql/queries/storytelling";
@@ -237,9 +242,56 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     },
     [collab, updateStoryPageMutation, setNotification, t]
   );
+
+  const [duplicateStoryPageMutation] = useMutation<
+    DuplicateStoryPageMutation,
+    MutationDuplicateStoryPageArgs
+  >(DUPLICATE_STORY_PAGE, { refetchQueries: ["GetScene"] });
+
+  const duplicateStoryPage = useCallback(
+    async (
+      input: DuplicateStoryPageInput
+    ): Promise<MutationReturn<DuplicateStoryPageMutation>> => {
+      if (collab?.status === "open" && input.sceneId) {
+        const ok = collab.sendRaw(
+          applyDuplicateStoryPagePayload({
+            sceneId: input.sceneId,
+            storyId: input.storyId,
+            pageId: input.pageId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully duplicated the page!")
+          });
+          return { status: "success" as const };
+        }
+      }
+      const { data, error } = await duplicateStoryPageMutation({
+        variables: { input }
+      });
+      if (error || !data?.duplicateStoryPage?.story?.id) {
+        setNotification({
+          type: "error",
+          text: t("Failed to duplicate page.")
+        });
+        return { status: "error", error };
+      }
+      setNotification({
+        type: "success",
+        text: t("Successfully duplicated the page!")
+      });
+      return { data, status: "success" };
+    },
+    [collab, duplicateStoryPageMutation, setNotification, t]
+  );
+
   return {
     createStoryPage,
     deleteStoryPage,
+    duplicateStoryPage,
     moveStoryPage,
     updateStoryPage
   };
