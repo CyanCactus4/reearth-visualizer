@@ -51,6 +51,11 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_id", "message": "invalid widget_area id (expected zone:section:area)"}})
 			return nil
 		}
+	case "style":
+		if _, err := id.StyleIDFrom(lm.ID); err != nil {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_id", "message": err.Error()}})
+			return nil
+		}
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_resource", "message": lm.Resource}})
 		return nil

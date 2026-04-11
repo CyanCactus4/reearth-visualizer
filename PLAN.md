@@ -61,6 +61,8 @@
 
 **Срез (NLS):** collab-`apply` с `d.kind` **`add_nls_layer_simple`**, **`remove_nls_layer`**, **`update_nls_layer`**, **`update_nls_layers`** (перестановка порядка); клиент — `useNLSLayerMutations(sceneId)` и хелперы в `web/src/services/collab/applyMessages.ts`.
 
+**Срез (стили слоёв / `Style`):** **`add_style`**, **`update_style`**, **`remove_style`**; клиент — `useLayerStyleMutations(sceneId)`; блокировка **`resource: "style"`** на сервере и в типе `LockResource`.
+
 ---
 
 ## Фаза 3 — OT/CRDT и атомарность для всех сущностей из ТЗ (FR-2)
@@ -175,8 +177,8 @@
 |------|--------|-------------|
 | 0 Проектирование и контракты | ✅ | Design doc выше; транспорт и v1-протокол зафиксированы. |
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
-| 2 MVP-синхронизация одной сущности | ✅ | `apply`: виджеты + story **blocks** + story **pages** (`create`/`remove`/`move`/`update`/`duplicate` страницы); `applied` + **`sceneRev`**; Vitest `applyMessages`; фронт: **`useStoryPageMutations(sceneId)`**, **`useStoryBlockMutations(sceneId)`**, **`useWidgetMutations`**. |
-| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling blocks + **pages** (в т.ч. duplicate); **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, слои/стили/сцена. |
+| 2 MVP-синхронизация одной сущности | ✅ | `apply`: виджеты + story **blocks** + story **pages**; **NLS-слои**; **стили слоя (`Style`)**; `applied` + **`sceneRev`**; Vitest `applyMessages`; фронт: **`useStoryPageMutations(sceneId)`**, **`useStoryBlockMutations(sceneId)`**, **`useWidgetMutations`**, **`useNLSLayerMutations(sceneId)`**, **`useLayerStyleMutations(sceneId)`**. |
+| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling blocks + **pages** (в т.ч. duplicate); **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`); NLS-слои и **стили слоя (`Style`)** через `apply`. **→ дальше:** CRDT/merge по JSON property, настройки **сцены** (property), прочие NLS-подоперации. |
 | 4 Блокировки | 🟡 | Locks + UI + `apply`; модалка: reload + **сравнение двух снимков** (кэш Apollo vs network: счётчики widgets/stories). Полный трёхсторонний merge — вне scope. |
 | 5 Presence | 🟡 | Курсоры (в т.ч. **`title` = полный userId**), typing, полоса presence; без отдельного аватара на курсоре. |
 | 6 История / undo | 🟡 | Mongo + REST + **`CollabApplyHistoryPanel`**; **серверный** undo/redo (`POST /api/collab/undo|redo`) для **`update_widget`** и **`move_story_block`**; **нет** undo add/remove виджета и **нет** админского restore ревизии. |

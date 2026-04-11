@@ -28,7 +28,7 @@ export type LayerStyleValueUpdateProps = {
 export default function ({ sceneId }: LayerStyleProps) {
   const t = useT();
   const { addLayerStyle, removeLayerStyle, updateLayerStyle } =
-    useLayerStyleMutations();
+    useLayerStyleMutations(sceneId);
   const [selectedLayerStyleId, setSelectedLayerStyleId] = useState<
     string | undefined
   >(undefined);

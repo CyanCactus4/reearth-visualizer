@@ -323,3 +323,51 @@ export function applyUpdateNlsLayersPayload(params: {
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
   return JSON.stringify({ v: 1, t: "apply", d });
 }
+
+export function applyAddStylePayload(params: {
+  sceneId: string;
+  name: string;
+  value: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "add_style",
+    sceneId: params.sceneId,
+    name: params.name,
+    value: params.value
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyUpdateStylePayload(params: {
+  sceneId: string;
+  styleId: string;
+  name?: string;
+  value?: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_style",
+    sceneId: params.sceneId,
+    styleId: params.styleId
+  };
+  if (params.name !== undefined) d.name = params.name;
+  if (params.value !== undefined) d.value = params.value;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemoveStylePayload(params: {
+  sceneId: string;
+  styleId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_style",
+    sceneId: params.sceneId,
+    styleId: params.styleId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}

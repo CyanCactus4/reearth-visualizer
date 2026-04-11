@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 import {
   alignSystemForCollab,
   applyAddNlsLayerSimplePayload,
+  applyAddStylePayload,
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
@@ -13,8 +14,10 @@ import {
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
   applyRemoveNlsLayerPayload,
+  applyRemoveStylePayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyRemoveWidgetPayload,
   applyUpdateWidgetPayload
@@ -317,6 +320,48 @@ describe("apply payloads", () => {
       sceneId: "sc1",
       layers: [{ layerId: "a", index: 0 }, { layerId: "b", index: 1 }],
       baseSceneRev: 6
+    });
+  });
+
+  it("builds layer style (scene style) apply envelopes", () => {
+    const add = applyAddStylePayload({
+      sceneId: "sc1",
+      name: "S1",
+      value: { fillColor: "#fff" },
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(add).d).toMatchObject({
+      kind: "add_style",
+      sceneId: "sc1",
+      name: "S1",
+      value: { fillColor: "#fff" },
+      baseSceneRev: 1
+    });
+
+    const upd = applyUpdateStylePayload({
+      sceneId: "sc1",
+      styleId: "st1",
+      name: "Renamed",
+      baseSceneRev: 2
+    });
+    expect(JSON.parse(upd).d).toMatchObject({
+      kind: "update_style",
+      sceneId: "sc1",
+      styleId: "st1",
+      name: "Renamed",
+      baseSceneRev: 2
+    });
+
+    const rm = applyRemoveStylePayload({
+      sceneId: "sc1",
+      styleId: "st1",
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(rm).d).toMatchObject({
+      kind: "remove_style",
+      sceneId: "sc1",
+      styleId: "st1",
+      baseSceneRev: 3
     });
   });
 });

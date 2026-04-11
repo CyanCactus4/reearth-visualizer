@@ -1,6 +1,12 @@
 import { useMutation } from "@apollo/client/react";
 import { MutationReturn } from "@reearth/services/api/types";
 import {
+  applyAddStylePayload,
+  applyRemoveStylePayload,
+  applyUpdateStylePayload,
+  useCollab
+} from "@reearth/services/collab";
+import {
   AddStyleMutation,
   MutationAddStyleArgs,
   AddStyleInput,
@@ -18,9 +24,10 @@ import { useT } from "@reearth/services/i18n/hooks";
 import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
-export const useLayerStyleMutations = () => {
+export const useLayerStyleMutations = (sceneId?: string) => {
   const t = useT();
   const [, setNotification] = useNotification();
+  const collab = useCollab();
 
   const [addLayerStyleMutation] = useMutation<
     AddStyleMutation,
@@ -30,6 +37,23 @@ export const useLayerStyleMutations = () => {
   });
   const addLayerStyle = useCallback(
     async (input: AddStyleInput): Promise<MutationReturn<AddStyleMutation>> => {
+      if (collab?.status === "open") {
+        const ok = collab.sendRaw(
+          applyAddStylePayload({
+            sceneId: input.sceneId,
+            name: input.name,
+            value: input.value,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully added a new layer style!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await addLayerStyleMutation({
         variables: { input }
       });
@@ -48,7 +72,7 @@ export const useLayerStyleMutations = () => {
 
       return { data, status: "success" };
     },
-    [addLayerStyleMutation, setNotification, t]
+    [addLayerStyleMutation, collab, setNotification, t]
   );
 
   const [updateLayerStyleMutation] = useMutation(UPDATE_LAYERSTYLE, {
@@ -59,6 +83,24 @@ export const useLayerStyleMutations = () => {
       input: UpdateStyleInput
     ): Promise<MutationReturn<UpdateStyleMutation>> => {
       if (!input.styleId) return { status: "error" };
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyUpdateStylePayload({
+            sceneId,
+            styleId: input.styleId,
+            name: input.name ?? undefined,
+            value: input.value ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated a the layerStyle!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await updateLayerStyleMutation({
         variables: { input }
       });
@@ -77,7 +119,7 @@ export const useLayerStyleMutations = () => {
 
       return { data, status: "success" };
     },
-    [updateLayerStyleMutation, setNotification, t]
+    [collab, sceneId, updateLayerStyleMutation, setNotification, t]
   );
 
   const [removeLayerStyleMutation] = useMutation(REMOVE_LAYERSTYLE, {
@@ -88,6 +130,22 @@ export const useLayerStyleMutations = () => {
       input: RemoveStyleInput
     ): Promise<MutationReturn<RemoveStyleMutation>> => {
       if (!input.styleId) return { status: "error" };
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyRemoveStylePayload({
+            sceneId,
+            styleId: input.styleId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully deleted the layer style!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await removeLayerStyleMutation({
         variables: { input }
       });
@@ -106,7 +164,7 @@ export const useLayerStyleMutations = () => {
 
       return { data, status: "success" };
     },
-    [removeLayerStyleMutation, setNotification, t]
+    [collab, sceneId, removeLayerStyleMutation, setNotification, t]
   );
 
   return {

@@ -46,7 +46,8 @@ const lockResourceKinds = new Set<string>([
   "layer",
   "widget",
   "scene",
-  "widget_area"
+  "widget_area",
+  "style"
 ]);
 
 function asLockResource(s: string): LockResource | null {
@@ -182,6 +183,7 @@ export const CollabProvider: FC<Props> = ({
           widgetId?: string;
           layerId?: string;
           layerIds?: string[];
+          styleId?: string;
         }
       | undefined;
     const peer = d?.userId;
@@ -194,7 +196,8 @@ export const CollabProvider: FC<Props> = ({
       Array.isArray(d?.layerIds) && d.layerIds.length > 0
         ? d.layerIds.join(",")
         : "";
-    const key = `${peer}\0${kind}\0${wid}\0${lid}\0${lids}`;
+    const stid = typeof d?.styleId === "string" ? d.styleId : "";
+    const key = `${peer}\0${kind}\0${wid}\0${lid}\0${lids}\0${stid}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
@@ -204,7 +207,7 @@ export const CollabProvider: FC<Props> = ({
       text: tCollab("Collab peer applied toast", {
         userId: peer,
         kind: kind || "edit",
-        widgetId: wid || lid || lids || "—"
+        widgetId: wid || lid || lids || stid || "—"
       })
     });
   }, [lastMessage, localUserId, setNotification, tCollab]);

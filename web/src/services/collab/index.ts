@@ -1,6 +1,7 @@
 export {
   alignSystemForCollab,
   applyAddNlsLayerSimplePayload,
+  applyAddStylePayload,
   applyAddWidgetPayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
@@ -10,9 +11,11 @@ export {
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
   applyRemoveNlsLayerPayload,
+  applyRemoveStylePayload,
   applyRemoveWidgetPayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
