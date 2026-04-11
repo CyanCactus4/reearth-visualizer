@@ -96,6 +96,8 @@ type CollabConfig struct {
 	RedisURL          string `envconfig:"REEARTH_COLLAB_REDIS_URL" pp:",omitempty"`
 	MaxMessageBytes   int    `envconfig:"REEARTH_COLLAB_MAX_MESSAGE_BYTES" pp:",omitempty"`
 	MaxMessagesPerSec int    `envconfig:"REEARTH_COLLAB_MAX_MESSAGES_PER_SEC" pp:",omitempty"`
+	// LockTTLSeconds is inactivity timeout for object locks (layer/widget) over collab; default 300 (5 minutes).
+	LockTTLSeconds int `envconfig:"REEARTH_COLLAB_LOCK_TTL_SECONDS" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

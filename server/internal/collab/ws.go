@@ -148,6 +148,14 @@ func handleClientMessage(hub *Hub, from *Conn, raw []byte, maxBytes int) error {
 			return fmt.Errorf("apply requires d")
 		}
 		return dispatchApply(ctx, hub, from, m.D)
+	case "lock":
+		if len(raw) > maxBytes {
+			return errors.New("message too large")
+		}
+		if len(m.D) == 0 {
+			return fmt.Errorf("lock requires d")
+		}
+		return dispatchLock(ctx, hub, from, m.D)
 	default:
 		return fmt.Errorf("unknown message type")
 	}

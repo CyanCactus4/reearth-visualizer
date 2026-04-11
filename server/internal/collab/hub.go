@@ -5,6 +5,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"sync"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/reearth/reearthx/log"
@@ -19,6 +20,9 @@ type Hub struct {
 	rooms      map[string]*room // key: project ID string
 
 	relay *redisRelay
+
+	locks   *lockTable
+	lockTTL time.Duration
 }
 
 type room struct {
@@ -30,10 +34,16 @@ func newRoom() *room {
 	return &room{conns: make(map[*Conn]struct{})}
 }
 
-func NewHub(redisURL string) *Hub {
+func NewHub(redisURL string, lockTTLSeconds int) *Hub {
+	ttl := time.Duration(lockTTLSeconds) * time.Second
+	if ttl <= 0 {
+		ttl = 5 * time.Minute
+	}
 	h := &Hub{
 		instanceID: uuid.NewString(),
 		rooms:      make(map[string]*room),
+		locks:      newLockTable(),
+		lockTTL:    ttl,
 	}
 	if redisURL != "" {
 		if r := newRedisRelay(redisURL, h.instanceID); r != nil {
