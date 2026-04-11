@@ -14,8 +14,10 @@ import { CollabClient, type CollabInbound } from "./CollabClient";
 import {
   CollabContext,
   type CollabContextValue,
+  type CollabResourceLock,
   type RemoteCursor
 } from "./collabContext";
+import { collabResourceLockKey } from "./lockMessages";
 import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
 
 type Props = {
@@ -46,6 +48,9 @@ export const CollabProvider: FC<Props> = ({
     Record<string, RemoteCursor>
   >({});
   const [remoteTypingUserIds, setRemoteTypingUserIds] = useState<string[]>([]);
+  const [resourceLocks, setResourceLocks] = useState<
+    Record<string, CollabResourceLock>
+  >({});
   const clientRef = useRef<CollabClient | null>(null);
   const localUserIdRef = useRef(localUserId);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
@@ -79,6 +84,58 @@ export const CollabProvider: FC<Props> = ({
 
   const applyInbound = useCallback(
     (msg: CollabInbound) => {
+      if (msg.t === "lock_changed") {
+        const d = msg.d as
+          | {
+              released?: boolean;
+              resource?: string;
+              id?: string;
+              holderUserId?: string;
+              until?: string;
+            }
+          | undefined;
+        if (!d?.resource || !d.id) return;
+        if (d.resource !== "layer" && d.resource !== "widget") return;
+        const key = collabResourceLockKey(d.resource, d.id);
+        if (d.released) {
+          setResourceLocks((prev) => {
+            if (!(key in prev)) return prev;
+            const rest: Record<string, CollabResourceLock> = {};
+            for (const [k, v] of Object.entries(prev)) {
+              if (k !== key) rest[k] = v;
+            }
+            return rest;
+          });
+          return;
+        }
+        const holder = d.holderUserId;
+        if (holder) {
+          setResourceLocks((prev) => ({
+            ...prev,
+            [key]: { holderUserId: holder, until: d.until }
+          }));
+        }
+        return;
+      }
+      if (msg.t === "lock_denied") {
+        const d = msg.d as
+          | {
+              resource?: string;
+              id?: string;
+              holderUserId?: string;
+              until?: string;
+            }
+          | undefined;
+        if (!d?.resource || !d.id || !d.holderUserId) return;
+        if (d.resource !== "layer" && d.resource !== "widget") return;
+        const key = collabResourceLockKey(d.resource, d.id);
+        const holderDenied = d.holderUserId;
+        setResourceLocks((prev) => ({
+          ...prev,
+          [key]: { holderUserId: holderDenied, until: d.until }
+        }));
+        return;
+      }
       if (msg.t === "cursor") {
         const d = msg.d as
           | {
@@ -114,10 +171,17 @@ export const CollabProvider: FC<Props> = ({
 
   useEffect(() => {
     setRemoteCursors({});
+    setResourceLocks({});
     for (const t of typingTimersRef.current.values()) clearTimeout(t);
     typingTimersRef.current.clear();
     setRemoteTypingUserIds([]);
   }, [projectId]);
+
+  useEffect(() => {
+    if (status === "closed" || status === "error") {
+      setResourceLocks({});
+    }
+  }, [status]);
 
   useEffect(() => {
     if (!projectId) {
@@ -253,7 +317,8 @@ export const CollabProvider: FC<Props> = ({
       lastMessage,
       sendRaw,
       remoteCursors,
-      remoteTypingUserIds
+      remoteTypingUserIds,
+      resourceLocks
     }),
     [
       status,
@@ -262,7 +327,8 @@ export const CollabProvider: FC<Props> = ({
       lastMessage,
       sendRaw,
       remoteCursors,
-      remoteTypingUserIds
+      remoteTypingUserIds,
+      resourceLocks
     ]
   );
 

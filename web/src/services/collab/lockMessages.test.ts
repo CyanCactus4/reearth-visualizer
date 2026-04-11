@@ -1,6 +1,13 @@
 import { describe, expect, it } from "vitest";
 
-import { lockPayload } from "./lockMessages";
+import { collabResourceLockKey, lockPayload } from "./lockMessages";
+
+describe("collabResourceLockKey", () => {
+  it("builds stable keys", () => {
+    expect(collabResourceLockKey("layer", "x")).toBe("layer:x");
+    expect(collabResourceLockKey("widget", "w")).toBe("widget:w");
+  });
+});
 
 describe("lockPayload", () => {
   it("serializes acquire for layer", () => {

@@ -2,6 +2,10 @@ export type LockResource = "layer" | "widget";
 
 export type LockAction = "acquire" | "release" | "heartbeat";
 
+export function collabResourceLockKey(resource: LockResource, id: string): string {
+  return `${resource}:${id}`;
+}
+
 export function lockPayload(
   action: LockAction,
   resource: LockResource,

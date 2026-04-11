@@ -1,3 +1,4 @@
+import CollabLockGate from "@reearth/app/features/Editor/CollabLockGate";
 import {
   LayerConfigUpdateProps,
   LayerNameUpdateProps,
@@ -149,12 +150,14 @@ const InspectorTabs: FC<Props> = ({
   }, []);
 
   return (
-    <Tabs
-      tabs={tabItems}
-      currentTab={currentTab}
-      position="left"
-      onChange={handleTabChange}
-    />
+    <CollabLockGate resource="layer" id={selectedLayer?.layer?.id}>
+      <Tabs
+        tabs={tabItems}
+        currentTab={currentTab}
+        position="left"
+        onChange={handleTabChange}
+      />
+    </CollabLockGate>
   );
 };
 

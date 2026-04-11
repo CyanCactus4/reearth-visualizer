@@ -13,7 +13,8 @@ const collabState = {
     string,
     { x: number; y: number; inside: boolean; ts: number }
   >,
-  remoteTypingUserIds: [] as string[]
+  remoteTypingUserIds: [] as string[],
+  resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>
 };
 
 vi.mock("@reearth/services/collab", () => ({

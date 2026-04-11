@@ -3,8 +3,27 @@ import { buildCollabWsUrl } from "./collabUrl";
 export type CollabInbound =
   | { v: 1; t: "pong" }
   | { v: 1; t: "presence"; d?: { event?: string; userId?: string } }
-  | { v: 1; t: "lock_changed"; d?: Record<string, unknown> }
-  | { v: 1; t: "lock_denied"; d?: Record<string, unknown> }
+  | {
+      v: 1;
+      t: "lock_changed";
+      d?: {
+        resource?: string;
+        id?: string;
+        holderUserId?: string;
+        until?: string;
+        released?: boolean;
+      };
+    }
+  | {
+      v: 1;
+      t: "lock_denied";
+      d?: {
+        resource?: string;
+        id?: string;
+        holderUserId?: string;
+        until?: string;
+      };
+    }
   | { v: 1; t: "chat"; d?: { userId?: string; text?: string; ts?: number } }
   | {
       v: 1;

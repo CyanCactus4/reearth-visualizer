@@ -1,3 +1,4 @@
+import CollabLockGate from "@reearth/app/features/Editor/CollabLockGate";
 import { Collapse } from "@reearth/app/lib/reearth-ui";
 import PropertyItem from "@reearth/app/ui/fields/Properties";
 import { Panel } from "@reearth/app/ui/layout";
@@ -24,18 +25,20 @@ const WidgetInspectorPanel: FC = () => {
       alwaysOpen
     >
       {selectedWidget && (
-        <Wrapper>
-          {visibleItems?.map((i, idx) => (
-            <Collapse title={i.title ?? t("Settings")} key={idx}>
-              <PropertyItem
-                key={i.id}
-                propertyId={selectedWidget.propertyId}
-                item={i}
-                onFlyTo={handleFlyTo}
-              />
-            </Collapse>
-          ))}
-        </Wrapper>
+        <CollabLockGate resource="widget" id={selectedWidget.id}>
+          <Wrapper>
+            {visibleItems?.map((i, idx) => (
+              <Collapse title={i.title ?? t("Settings")} key={idx}>
+                <PropertyItem
+                  key={i.id}
+                  propertyId={selectedWidget.propertyId}
+                  item={i}
+                  onFlyTo={handleFlyTo}
+                />
+              </Collapse>
+            ))}
+          </Wrapper>
+        </CollabLockGate>
       )}
     </Panel>
   );
