@@ -3,6 +3,7 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/usecase"
@@ -10,6 +11,7 @@ import (
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/nlslayer"
 	"github.com/reearth/reearth/server/pkg/scene"
+	"github.com/reearth/reearthx/log"
 )
 
 type applyAddNLSLayerSimple struct {
@@ -305,6 +307,20 @@ func applyUpdateNLSLayerOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
+
+	touchedName := p.Name != nil
+	touchedVis := p.Visible != nil
+	touchedIdx := p.Index != nil
+	touchedCfg := hasConfig
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		prevList, errPre := uc.NLSLayer.Fetch(opCtx, id.NLSLayerIDList{lid}, op)
+		if errPre == nil && len(prevList) > 0 && prevList[0] != nil {
+			prev := *prevList[0]
+			invJSON = buildUpdateNLSLayerInverseJSON(prev, &p, touchedName, touchedVis, touchedIdx, touchedCfg)
+		}
+	}
+
 	_, err2 := uc.NLSLayer.Update(opCtx, interfaces.UpdateNLSLayerInput{
 		LayerID: lid,
 		Index:   p.Index,
@@ -324,6 +340,24 @@ func applyUpdateNLSLayerOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 		"sceneId": p.SceneID,
 		"layerId": p.LayerID,
 	}, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "update_nls_layer",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 
