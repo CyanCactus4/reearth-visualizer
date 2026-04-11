@@ -180,6 +180,7 @@ export const CollabProvider: FC<Props> = ({
       | {
           userId?: string;
           kind?: string;
+          opKind?: string;
           widgetId?: string;
           layerId?: string;
           layerIds?: string[];
@@ -192,6 +193,11 @@ export const CollabProvider: FC<Props> = ({
     if (!peer || peer === "unknown") return;
     if (localUserId && peer === localUserId) return;
     const kind = typeof d?.kind === "string" ? d.kind : "";
+    const opKind = typeof d?.opKind === "string" ? d.opKind : "";
+    const kindLabel =
+      (kind === "collab_undo" || kind === "collab_redo") && opKind
+        ? `${kind} · ${opKind}`
+        : kind;
     const wid = typeof d?.widgetId === "string" ? d.widgetId : "";
     const lid = typeof d?.layerId === "string" ? d.layerId : "";
     const lids =
@@ -201,7 +207,7 @@ export const CollabProvider: FC<Props> = ({
     const stid = typeof d?.styleId === "string" ? d.styleId : "";
     const propId = typeof d?.propertyId === "string" ? d.propertyId : "";
     const fldId = typeof d?.fieldId === "string" ? d.fieldId : "";
-    const key = `${peer}\0${kind}\0${wid}\0${lid}\0${lids}\0${stid}\0${propId}\0${fldId}`;
+    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${stid}\0${propId}\0${fldId}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
@@ -210,7 +216,7 @@ export const CollabProvider: FC<Props> = ({
       type: "info",
       text: tCollab("Collab peer applied toast", {
         userId: peer,
-        kind: kind || "edit",
+        kind: kindLabel || "edit",
         widgetId: wid || lid || lids || stid || propId || fldId || "—"
       })
     });

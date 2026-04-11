@@ -86,15 +86,19 @@ func serveCollabUndoRedo(hub *Hub, undo bool) echo.HandlerFunc {
 		if undo {
 			kind = "collab_undo"
 		}
+		appliedD := map[string]any{
+			"kind":     kind,
+			"userId":   userID,
+			"sceneRev": rev,
+			"sceneId":  sc.ID().String(),
+		}
+		if rec.Kind != "" {
+			appliedD["opKind"] = rec.Kind
+		}
 		nb, errM := json.Marshal(serverMessage{
 			V: 1,
 			T: "applied",
-			D: map[string]any{
-				"kind":     kind,
-				"userId":   userID,
-				"sceneRev": rev,
-				"sceneId":  sc.ID().String(),
-			},
+			D: appliedD,
 		})
 		if errM == nil {
 			hub.fanoutRoom(c.Request().Context(), pid, nb)
