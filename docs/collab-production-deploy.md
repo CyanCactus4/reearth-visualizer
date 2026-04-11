@@ -9,8 +9,8 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 | **WebSocket** `GET /api/collab/ws` | Real-time room per `projectId`; JSON v1 protocol (`apply`, `chat`, `lock`, `cursor`, `activity`, …). |
 | **Redis** `REEARTH_COLLAB_REDIS_URL` | Pub/sub between server instances + distributed object locks (Lua). Without Redis, relay and locks are **in-memory only** (single process). |
 | **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` journal), `collabUndoOps` + `collabUndoState` (server undo/redo stacks); names overridable via env (see below). |
-| **SSE** `GET /api/collab/scene-rev/stream?sceneId=` | **Server-Sent Events** stream of `sceneRev` (scene `updatedAt` ms) after each successful collab `apply` on that scene (**in-process hub only**; other API replicas do not receive those events unless extended to Redis). Use when you want HTTP-based consumers without GraphQL subscriptions. |
-| **GraphQL** `POST/GET /api/graphql` | Standard queries/mutations over HTTP; **WebSocket upgrade on GET** serves `graphql-ws` / `graphql-transport-ws` for **`subscription { collabSceneRevision(sceneId) }`** (scene `updatedAt` ms after collab applies). |
+| **SSE** `GET /api/collab/scene-rev/stream?sceneId=` | **Server-Sent Events** stream of `sceneRev` (scene `updatedAt` ms) after each successful collab `apply` on that scene. With **`REEARTH_COLLAB_REDIS_URL`**, revisions are also **fan-out via Redis** (`collab:srev:<sceneId>`) so every API instance updates its local subscribers. |
+| **GraphQL** `POST/GET /api/graphql` | Standard queries/mutations over HTTP; **WebSocket upgrade on GET** serves `graphql-ws` / `graphql-transport-ws` for **`subscription { collabSceneRevision(sceneId) }`** (scene `updatedAt` ms after collab applies). Same Redis fan-out as SSE when Redis is enabled. |
 | **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit`, `POST /api/collab/undo`, `POST /api/collab/redo` — same auth as private `/api`. |
 
 ## Environment variables (collab-related)
@@ -43,8 +43,9 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 
 ## Entity clocks (LWW) and undo
 
-- **Per-widget field clocks** (`enabled`, `extended`, `layout`) are kept **in-memory on each API process**; clients may send `entityClocks` on `update_widget` applies to merge non-stale fields without a global `baseSceneRev` (see design doc).
-- **Undo/redo** applies inverse JSON through the same interactors as collab; stacks live in Mongo (`collabUndoOps` / `collabUndoState`). **Not** a distributed CRDT log — plan Redis or stronger consistency for multi-writer undo if needed.
+- **Per-widget field clocks** (`enabled`, `extended`, `layout`): with **`REEARTH_COLLAB_REDIS_URL`**, values live under Redis keys `collab:wfclk:…` (atomic `INCR`) so **all API replicas share the same LWW sequence**. Without Redis, clocks are **in-memory only** on each process (restart clears them).
+- **Undo/redo** applies inverse JSON through the same interactors as collab; stacks live in Mongo (`collabUndoOps` / `collabUndoState`). Recorded kinds today: **`update_widget`**, **`move_story_block`**. Add/remove widget are **not** on the undo stack (redo would not preserve widget identity without a dedicated restore path).
+- **Not** a distributed CRDT log — plan stronger consistency for multi-writer undo if needed.
 
 ## Security checklist (ops)
 

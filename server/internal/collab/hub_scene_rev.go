@@ -1,5 +1,10 @@
 package collab
 
+import (
+	"context"
+	"time"
+)
+
 // SubscribeSceneRevision receives scene updatedAt (Unix ms) after each successful collab apply on that scene.
 // Caller must call cancel when done to avoid leaks.
 func (h *Hub) SubscribeSceneRevision(sceneID string) (ch <-chan int64, cancel func()) {
@@ -30,7 +35,7 @@ func (h *Hub) SubscribeSceneRevision(sceneID string) (ch <-chan int64, cancel fu
 	}
 }
 
-func (h *Hub) publishSceneRevision(sceneID string, rev int64) {
+func (h *Hub) deliverSceneRevisionSubscribers(sceneID string, rev int64) {
 	if h == nil || sceneID == "" || rev == 0 {
 		return
 	}
@@ -42,6 +47,20 @@ func (h *Hub) publishSceneRevision(sceneID string, rev int64) {
 		case ch <- rev:
 		default:
 		}
+	}
+}
+
+// publishSceneRevision notifies local GraphQL/SSE subscribers and, when Redis relay is configured,
+// other API instances (which deliver to their own local subscribers only).
+func (h *Hub) publishSceneRevision(sceneID string, rev int64) {
+	if h == nil || sceneID == "" || rev == 0 {
+		return
+	}
+	h.deliverSceneRevisionSubscribers(sceneID, rev)
+	if h.relay != nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		_ = h.relay.publishSceneRev(ctx, sceneID, rev, h.instanceID)
 	}
 }
 

@@ -12,6 +12,12 @@ import (
 
 const collabChannelPrefix = "collab:"
 
+// sceneRevWire is published on channel collab:srev:<sceneID> for cross-instance scene revision fan-out.
+type sceneRevWire struct {
+	I string `json:"i"` // publisher instance id (skip echo to same instance)
+	R int64  `json:"r"` // scene updatedAt unix ms
+}
+
 type redisRelay struct {
 	client     *redis.Client
 	instanceID string
@@ -43,6 +49,18 @@ func (r *redisRelay) publish(ctx context.Context, projectID string, body []byte)
 	return r.client.Publish(ctx, r.channel(projectID), body).Err()
 }
 
+func (r *redisRelay) publishSceneRev(ctx context.Context, sceneID string, rev int64, instanceID string) error {
+	if r == nil || r.client == nil || sceneID == "" || rev == 0 {
+		return nil
+	}
+	b, err := json.Marshal(sceneRevWire{I: instanceID, R: rev})
+	if err != nil {
+		return nil
+	}
+	ch := collabChannelPrefix + "srev:" + sceneID
+	return r.client.Publish(ctx, ch, b).Err()
+}
+
 func (r *redisRelay) startSubscriber(ctx context.Context, h *Hub) error {
 	if r == nil || r.client == nil {
 		return nil
@@ -64,6 +82,21 @@ func (r *redisRelay) startSubscriber(ctx context.Context, h *Hub) error {
 					return
 				}
 				if msg == nil {
+					continue
+				}
+				if strings.HasPrefix(msg.Channel, collabChannelPrefix+"srev:") {
+					sceneID := strings.TrimPrefix(msg.Channel, collabChannelPrefix+"srev:")
+					if sceneID == "" {
+						continue
+					}
+					var sv sceneRevWire
+					if err := json.Unmarshal([]byte(msg.Payload), &sv); err != nil {
+						continue
+					}
+					if sv.I == r.instanceID {
+						continue
+					}
+					h.deliverSceneRevisionSubscribers(sceneID, sv.R)
 					continue
 				}
 				var w relayWire
