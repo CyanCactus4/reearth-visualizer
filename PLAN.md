@@ -174,11 +174,11 @@
 | 0 Проектирование и контракты | ✅ | Design doc выше; транспорт и v1-протокол зафиксированы. |
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
 | 2 MVP-синхронизация одной сущности | ✅ | `apply`: `update_widget`, `add_widget`, `remove_widget`; `applied` + **`sceneRev`** (ms); Vitest `applyMessages`; Go-тесты `dispatchApply` + `lockTable.Lookup`; фронт: **`CollabSceneRefetch`** (GetScene network-only при новом `sceneRev`), **`useWidgetMutations`** шлёт collab при `status===open` и успешном `sendRaw`, иначе GraphQL. |
-| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling **`move_story_block`**; lock + refetch/toasts. **→ дальше:** полноценный CRDT/merge по JSON property, остальные story ops. |
+| 3 OT/CRDT | 🟡 | **`baseSceneRev`** + `stale_state`; storytelling **`move_story_block`**; **LWW `entityClocks`** (+ Redis при `REEARTH_COLLAB_REDIS_URL`). **→ дальше:** CRDT/merge по JSON property, остальные story ops, слои/стили/сцена. |
 | 4 Блокировки | 🟡 | Locks + UI + `apply`; модалка: reload + **сравнение двух снимков** (кэш Apollo vs network: счётчики widgets/stories). Полный трёхсторонний merge — вне scope. |
 | 5 Presence | 🟡 | Курсоры (в т.ч. **`title` = полный userId**), typing, полоса presence; без отдельного аватара на курсоре. |
-| 6 История / undo | 🟡 | Mongo + REST + **`CollabApplyHistoryPanel`** (список apply); **без** серверного undo/redo стека. |
-| 7 Уведомления и чат | 🟡 | Чат + Mongo + toasts по `applied`; **`@mentions`**: парсинг, Mongo/WS, подсветка; **WS `notify`** `chat_mention` целевым сокетам при совпадении `userId` с handle (in-room). |
-| 8 GraphQL | 🟡 | Нативных GQL **Subscription** в схеме нет; **SSE** `GET /api/collab/scene-rev/stream?sceneId=` как stream rev; REST chat/audit. См. **`docs/collab-production-deploy.md`**. |
+| 6 История / undo | 🟡 | Mongo + REST + **`CollabApplyHistoryPanel`**; **серверный** undo/redo (`POST /api/collab/undo|redo`) для **`update_widget`** и **`move_story_block`**; **нет** undo add/remove виджета и **нет** админского restore ревизии. |
+| 7 Уведомления и чат | 🟡 | Чат + Mongo + toasts по `applied`; **`@mentions`**: парсинг, Mongo/WS, подсветка; **WS `notify`** `chat_mention`; опционально **webhook** `REEARTH_COLLAB_MENTION_WEBHOOK_URL`. |
+| 8 GraphQL | 🟡 | **`subscription { collabSceneRevision(sceneId) }`**, GET+POST `/api/graphql` + WebSocket; **SSE** scene-rev; fan-out rev по Redis между инстансами. См. **`docs/collab-production-deploy.md`**. |
 | 9 Фронт Apollo/offline | 🟡 | Provider + **`localforage`** offline queue (`offlineQueue.ts`); reconcile сцены из редактора при lock-conflict. |
 | 10 Hardening | 🟡 | Чеклист в design doc + **[docs/collab-production-deploy.md](docs/collab-production-deploy.md)** (прод: Redis, Mongo, SSE, безопасность). |

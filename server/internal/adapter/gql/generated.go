@@ -49,7 +49,6 @@ type ResolverRoot interface {
 	MergedPropertyField() MergedPropertyFieldResolver
 	MergedPropertyGroup() MergedPropertyGroupResolver
 	Mutation() MutationResolver
-	Subscription() SubscriptionResolver
 	NLSInfobox() NLSInfoboxResolver
 	NLSLayerGroup() NLSLayerGroupResolver
 	NLSLayerSimple() NLSLayerSimpleResolver
@@ -73,6 +72,7 @@ type ResolverRoot interface {
 	StoryBlock() StoryBlockResolver
 	StoryPage() StoryPageResolver
 	Style() StyleResolver
+	Subscription() SubscriptionResolver
 	Workspace() WorkspaceResolver
 	WorkspaceMember() WorkspaceMemberResolver
 }
@@ -330,10 +330,6 @@ type ComplexityRoot struct {
 	MultiPolygon struct {
 		MultiPolygonCoordinates func(childComplexity int) int
 		Type                    func(childComplexity int) int
-	}
-
-	Subscription struct {
-		CollabSceneRevision func(childComplexity int, sceneID gqlmodel.ID) int
 	}
 
 	Mutation struct {
@@ -908,6 +904,10 @@ type ComplexityRoot struct {
 		Value   func(childComplexity int) int
 	}
 
+	Subscription struct {
+		CollabSceneRevision func(childComplexity int, sceneID gqlmodel.ID) int
+	}
+
 	Timeline struct {
 		CurrentTime func(childComplexity int) int
 		EndTime     func(childComplexity int) int
@@ -1169,9 +1169,6 @@ type MutationResolver interface {
 	RemoveMemberFromWorkspace(ctx context.Context, input gqlmodel.RemoveMemberFromWorkspaceInput) (*gqlmodel.RemoveMemberFromWorkspacePayload, error)
 	UpdateMemberOfWorkspace(ctx context.Context, input gqlmodel.UpdateMemberOfWorkspaceInput) (*gqlmodel.UpdateMemberOfWorkspacePayload, error)
 }
-type SubscriptionResolver interface {
-	CollabSceneRevision(ctx context.Context, sceneID gqlmodel.ID) (<-chan int, error)
-}
 type NLSInfoboxResolver interface {
 	Property(ctx context.Context, obj *gqlmodel.NLSInfobox) (*gqlmodel.Property, error)
 	Scene(ctx context.Context, obj *gqlmodel.NLSInfobox) (*gqlmodel.Scene, error)
@@ -1290,6 +1287,9 @@ type StoryPageResolver interface {
 }
 type StyleResolver interface {
 	Scene(ctx context.Context, obj *gqlmodel.Style) (*gqlmodel.Scene, error)
+}
+type SubscriptionResolver interface {
+	CollabSceneRevision(ctx context.Context, sceneID gqlmodel.ID) (<-chan int, error)
 }
 type WorkspaceResolver interface {
 	Assets(ctx context.Context, obj *gqlmodel.Workspace, projectID *gqlmodel.ID, first *int, last *int, after *usecasex.Cursor, before *usecasex.Cursor) (*gqlmodel.AssetConnection, error)
@@ -5131,6 +5131,18 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 
 		return e.complexity.Style.Value(childComplexity), true
 
+	case "Subscription.collabSceneRevision":
+		if e.complexity.Subscription.CollabSceneRevision == nil {
+			break
+		}
+
+		args, err := ec.field_Subscription_collabSceneRevision_args(ctx, rawArgs)
+		if err != nil {
+			return 0, false
+		}
+
+		return e.complexity.Subscription.CollabSceneRevision(childComplexity, args["sceneId"].(gqlmodel.ID)), true
+
 	case "Timeline.currentTime":
 		if e.complexity.Timeline.CurrentTime == nil {
 			break
@@ -5617,18 +5629,6 @@ func (e *executableSchema) Complexity(ctx context.Context, typeName, field strin
 		}
 
 		return e.complexity.WorkspaceMember.UserID(childComplexity), true
-
-	case "Subscription.collabSceneRevision":
-		if e.complexity.Subscription.CollabSceneRevision == nil {
-			break
-		}
-
-		args, err := ec.field_Subscription_collabSceneRevision_args(ctx, rawArgs)
-		if err != nil {
-			return 0, false
-		}
-
-		return e.complexity.Subscription.CollabSceneRevision(childComplexity, args["sceneId"].(gqlmodel.ID)), true
 
 	}
 	return 0, false
@@ -8878,6 +8878,17 @@ func (ec *executionContext) field_Query_workspacePolicyCheck_args(ctx context.Co
 		return nil, err
 	}
 	args["input"] = arg0
+	return args, nil
+}
+
+func (ec *executionContext) field_Subscription_collabSceneRevision_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
+	var err error
+	args := map[string]any{}
+	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "sceneId", ec.unmarshalNID2githubᚗcomᚋreearthᚋreearthᚋserverᚋinternalᚋadapterᚋgqlᚋgqlmodelᚐID)
+	if err != nil {
+		return nil, err
+	}
+	args["sceneId"] = arg0
 	return args, nil
 }
 
@@ -29596,6 +29607,47 @@ func (ec *executionContext) fieldContext_Style_scene(_ context.Context, field gr
 	return fc, nil
 }
 
+func (ec *executionContext) _Subscription_collabSceneRevision(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
+	return graphql.ResolveFieldStream(
+		ctx,
+		ec.OperationContext,
+		field,
+		ec.fieldContext_Subscription_collabSceneRevision,
+		func(ctx context.Context) (any, error) {
+			fc := graphql.GetFieldContext(ctx)
+			return ec.resolvers.Subscription().CollabSceneRevision(ctx, fc.Args["sceneId"].(gqlmodel.ID))
+		},
+		nil,
+		ec.marshalNInt2int,
+		true,
+		true,
+	)
+}
+
+func (ec *executionContext) fieldContext_Subscription_collabSceneRevision(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
+	fc = &graphql.FieldContext{
+		Object:     "Subscription",
+		Field:      field,
+		IsMethod:   true,
+		IsResolver: true,
+		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
+			return nil, errors.New("field of type Int does not have child fields")
+		},
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			err = ec.Recover(ctx, r)
+			ec.Error(ctx, err)
+		}
+	}()
+	ctx = graphql.WithFieldContext(ctx, fc)
+	if fc.Args, err = ec.field_Subscription_collabSceneRevision_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
+		ec.Error(ctx, err)
+		return fc, err
+	}
+	return fc, nil
+}
+
 func (ec *executionContext) _Timeline_currentTime(ctx context.Context, field graphql.CollectedField, obj *gqlmodel.Timeline) (ret graphql.Marshaler) {
 	return graphql.ResolveField(
 		ctx,
@@ -40305,80 +40357,6 @@ func (ec *executionContext) _Mutation(ctx context.Context, sel ast.SelectionSet)
 	return out
 }
 
-var subscriptionImplementors = []string{"Subscription"}
-
-func (ec *executionContext) field_Subscription_collabSceneRevision_args(ctx context.Context, rawArgs map[string]any) (map[string]any, error) {
-	var err error
-	args := map[string]any{}
-	arg0, err := graphql.ProcessArgField(ctx, rawArgs, "sceneId", ec.unmarshalNID2githubᚗcomᚋreearthᚋreearthᚋserverᚋinternalᚋadapterᚋgqlᚋgqlmodelᚐID)
-	if err != nil {
-		return nil, err
-	}
-	args["sceneId"] = arg0
-	return args, nil
-}
-
-func (ec *executionContext) _Subscription_collabSceneRevision(ctx context.Context, field graphql.CollectedField) (ret func(ctx context.Context) graphql.Marshaler) {
-	return graphql.ResolveFieldStream(
-		ctx,
-		ec.OperationContext,
-		field,
-		ec.fieldContext_Subscription_collabSceneRevision,
-		func(ctx context.Context) (any, error) {
-			fc := graphql.GetFieldContext(ctx)
-			return ec.resolvers.Subscription().CollabSceneRevision(ctx, fc.Args["sceneId"].(gqlmodel.ID))
-		},
-		func(ctx context.Context, next graphql.Resolver) graphql.Resolver {
-			return next
-		},
-		ec.marshalNInt2int,
-		true,
-		true,
-	)
-}
-
-func (ec *executionContext) fieldContext_Subscription_collabSceneRevision(ctx context.Context, field graphql.CollectedField) (fc *graphql.FieldContext, err error) {
-	fc = &graphql.FieldContext{
-		Object:     "Subscription",
-		Field:      field,
-		IsMethod:   true,
-		IsResolver: true,
-		Child: func(ctx context.Context, field graphql.CollectedField) (*graphql.FieldContext, error) {
-			return nil, errors.New("field of type Int does not have child fields")
-		},
-	}
-	defer func() {
-		if r := recover(); r != nil {
-			err = ec.Recover(ctx, r)
-			ec.Error(ctx, err)
-		}
-	}()
-	ctx = graphql.WithFieldContext(ctx, fc)
-	if fc.Args, err = ec.field_Subscription_collabSceneRevision_args(ctx, field.ArgumentMap(ec.Variables)); err != nil {
-		ec.Error(ctx, err)
-		return fc, err
-	}
-	return fc, nil
-}
-
-func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
-	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
-	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
-		Object: "Subscription",
-	})
-	if len(fields) != 1 {
-		graphql.AddErrorf(ctx, "must subscribe to exactly one stream")
-		return nil
-	}
-
-	switch fields[0].Name {
-	case "collabSceneRevision":
-		return ec._Subscription_collabSceneRevision(ctx, fields[0])
-	default:
-		panic("unknown field " + strconv.Quote(fields[0].Name))
-	}
-}
-
 var nLSInfoboxImplementors = []string{"NLSInfobox"}
 
 func (ec *executionContext) _NLSInfobox(ctx context.Context, sel ast.SelectionSet, obj *gqlmodel.NLSInfobox) graphql.Marshaler {
@@ -45474,6 +45452,26 @@ func (ec *executionContext) _Style(ctx context.Context, sel ast.SelectionSet, ob
 	}
 
 	return out
+}
+
+var subscriptionImplementors = []string{"Subscription"}
+
+func (ec *executionContext) _Subscription(ctx context.Context, sel ast.SelectionSet) func(ctx context.Context) graphql.Marshaler {
+	fields := graphql.CollectFields(ec.OperationContext, sel, subscriptionImplementors)
+	ctx = graphql.WithFieldContext(ctx, &graphql.FieldContext{
+		Object: "Subscription",
+	})
+	if len(fields) != 1 {
+		graphql.AddErrorf(ctx, "must subscribe to exactly one stream")
+		return nil
+	}
+
+	switch fields[0].Name {
+	case "collabSceneRevision":
+		return ec._Subscription_collabSceneRevision(ctx, fields[0])
+	default:
+		panic("unknown field " + strconv.Quote(fields[0].Name))
+	}
 }
 
 var timelineImplementors = []string{"Timeline"}

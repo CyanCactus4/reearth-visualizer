@@ -1149,6 +1149,9 @@ type Style struct {
 	Scene   *Scene `json:"scene,omitempty"`
 }
 
+type Subscription struct {
+}
+
 type Timeline struct {
 	CurrentTime *string `json:"currentTime,omitempty"`
 	StartTime   *string `json:"startTime,omitempty"`
