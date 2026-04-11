@@ -1,6 +1,46 @@
+import type { CollabChatLine } from "@reearth/services/collab";
 import { useCollab } from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
-import { FC, useCallback, useEffect, useRef, useState } from "react";
+import { type FC, type ReactNode, useCallback, useEffect, useRef, useState } from "react";
+
+const mentionSplit = /@([a-zA-Z0-9_-]+)/g;
+
+function ChatLineText({
+  text,
+  mentions
+}: Pick<CollabChatLine, "text" | "mentions">) {
+  const mentionSet = new Set(mentions ?? []);
+  const parts: ReactNode[] = [];
+  let last = 0;
+  let partKey = 0;
+  mentionSplit.lastIndex = 0;
+  let m: RegExpExecArray | null;
+  while ((m = mentionSplit.exec(text)) !== null) {
+    if (m.index > last) {
+      parts.push(text.slice(last, m.index));
+    }
+    const handle = m[1] ?? "";
+    const full = m[0];
+    const isKnown = mentionSet.has(handle);
+    partKey += 1;
+    parts.push(
+      <span
+        key={`m${partKey}`}
+        style={{
+          color: isKnown ? "rgba(120,200,255,0.95)" : "rgba(255,255,255,0.75)",
+          fontWeight: isKnown ? 600 : 400
+        }}
+      >
+        {full}
+      </span>
+    );
+    last = m.index + full.length;
+  }
+  if (last < text.length) {
+    parts.push(text.slice(last));
+  }
+  return <>{parts.length ? parts : text}</>;
+}
 
 const CollabChatPanel: FC = () => {
   const collab = useCollab();
@@ -51,7 +91,8 @@ const CollabChatPanel: FC = () => {
             data-testid={`collab-chat-line-${m.id}`}
             style={{ opacity: m.pending ? 0.55 : 0.9 }}
           >
-            <strong style={{ fontWeight: 600 }}>{m.userId}</strong>: {m.text}
+            <strong style={{ fontWeight: 600 }}>{m.userId}</strong>:{" "}
+            <ChatLineText text={m.text} mentions={m.mentions} />
             {m.pending ? " …" : null}
           </div>
         ))}

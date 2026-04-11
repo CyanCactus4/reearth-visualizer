@@ -10,6 +10,7 @@ import (
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/scene"
+	"github.com/reearth/reearthx/log"
 )
 
 const applyOpTimeout = 45 * time.Second
@@ -277,9 +278,9 @@ func applyAddWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessa
 		widStr = w.ID().String()
 	}
 	broadcastApplied(ctx, hub, from, "add_widget", map[string]any{
-		"sceneId":   p.SceneID,
-		"widgetId":  widStr,
-		"pluginId":  p.PluginID,
+		"sceneId":     p.SceneID,
+		"widgetId":    widStr,
+		"pluginId":    p.PluginID,
 		"extensionId": p.ExtensionID,
 	}, sc)
 	return nil
@@ -309,6 +310,26 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 	}
 	hub.broadcastLocal(from.projectID, nb, from)
 	from.enqueueJSON(notify)
+
+	if hub.applyAudit != nil {
+		sid, _ := extra["sceneId"].(string)
+		wid, _ := extra["widgetId"].(string)
+		rec := ApplyAuditRecord{
+			ProjectID: from.projectID,
+			UserID:    actorUserID(from),
+			Kind:      kind,
+			SceneRev:  sceneRevOf(sc),
+			SceneID:   sid,
+			WidgetID:  wid,
+		}
+		go func() {
+			pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			if err := hub.applyAudit.Append(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: apply audit: %v", err)
+			}
+		}()
+	}
 }
 
 func actorUserID(from *Conn) string {

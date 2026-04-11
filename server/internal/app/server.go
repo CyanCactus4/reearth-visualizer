@@ -25,32 +25,44 @@ import (
 func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.OtelServiceName, debug bool) {
 	repos, gateways, acRepos, acGateways, accountsAPIClient, mongoClient := initReposAndGateways(ctx, conf, debug)
 	var collabChat collab.ChatHistoryStore
+	var collabApplyAudit collab.ApplyAuditStore
 	if mongoClient != nil && conf.DB_Vis != "" {
+		db := mongoClient.Database(conf.DB_Vis)
 		cname := conf.Collab.ChatCollection
 		if cname == "" {
 			cname = "collabChatMessages"
 		}
-		ch := mongoinfra.NewCollabChatHistory(
-			mongoClient.Database(conf.DB_Vis).Collection(cname),
-		)
+		ch := mongoinfra.NewCollabChatHistory(db.Collection(cname))
 		if ch != nil {
 			if err := ch.EnsureIndexes(ctx); err != nil {
 				log.Warnfc(ctx, "collab chat indexes: %v", err)
 			}
 			collabChat = ch
 		}
+		aname := conf.Collab.ApplyAuditCollection
+		if aname == "" {
+			aname = "collabApplyAudit"
+		}
+		au := mongoinfra.NewCollabApplyAudit(db.Collection(aname))
+		if au != nil {
+			if err := au.EnsureIndexes(ctx); err != nil {
+				log.Warnfc(ctx, "collab apply audit indexes: %v", err)
+			}
+			collabApplyAudit = au
+		}
 	}
 	// Start web server
 	NewServer(ctx, &ServerConfig{
-		Config:            conf,
-		Debug:             debug,
-		Repos:             repos,
-		Gateways:          gateways,
-		AccountRepos:      acRepos,
-		AccountGateways:   acGateways,
-		AccountsAPIClient: accountsAPIClient,
-		ServiceName:       otelServiceName,
-		CollabChatStore:   collabChat,
+		Config:                conf,
+		Debug:                 debug,
+		Repos:                 repos,
+		Gateways:              gateways,
+		AccountRepos:          acRepos,
+		AccountGateways:       acGateways,
+		AccountsAPIClient:     accountsAPIClient,
+		ServiceName:           otelServiceName,
+		CollabChatStore:       collabChat,
+		CollabApplyAuditStore: collabApplyAudit,
 	}).Run(ctx)
 }
 
@@ -63,16 +75,17 @@ type WebServer struct {
 }
 
 type ServerConfig struct {
-	Config            *config.Config
-	Debug             bool
-	Repos             *repo.Container
-	Gateways          *gateway.Container
-	AccountRepos      *accountsInfra.Container
-	AccountGateways   *accountsGateway.Container
-	AccountsAPIClient *gqlclient.Client
-	ServiceName       otel.OtelServiceName
-	CollabHub         *collab.Hub
-	CollabChatStore   collab.ChatHistoryStore
+	Config                *config.Config
+	Debug                 bool
+	Repos                 *repo.Container
+	Gateways              *gateway.Container
+	AccountRepos          *accountsInfra.Container
+	AccountGateways       *accountsGateway.Container
+	AccountsAPIClient     *gqlclient.Client
+	ServiceName           otel.OtelServiceName
+	CollabHub             *collab.Hub
+	CollabChatStore       collab.ChatHistoryStore
+	CollabApplyAuditStore collab.ApplyAuditStore
 }
 
 func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
@@ -106,6 +119,7 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		ActivityTypingMinIntervalMs: cfg.Config.Collab.ActivityTypingMinIntervalMs,
 		ActivityMoveMinIntervalMs:   cfg.Config.Collab.ActivityMoveMinIntervalMs,
 		ChatHistory:                 cfg.CollabChatStore,
+		ApplyAudit:                  cfg.CollabApplyAuditStore,
 	})
 	cfg.CollabHub = hub
 	w.collabHub = hub

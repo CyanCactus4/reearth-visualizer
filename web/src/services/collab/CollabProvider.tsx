@@ -29,6 +29,7 @@ import {
   collabResourceLockKey,
   type LockResource
 } from "./lockMessages";
+import { extractChatMentions } from "./chatMentions";
 import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
 
 const lockResourceKinds = new Set<string>([
@@ -94,6 +95,7 @@ export const CollabProvider: FC<Props> = ({
   const tCollab = useT();
   const lastLockDeniedKeyRef = useRef<string | null>(null);
   const lastAppliedNotifyAtRef = useRef<Map<string, number>>(new Map());
+  const lastApplyErrorToastAtRef = useRef<Map<string, number>>(new Map());
   const [lockConflict, setLockConflict] =
     useState<CollabLockConflictPayload | null>(null);
 
@@ -153,6 +155,32 @@ export const CollabProvider: FC<Props> = ({
       })
     });
   }, [lastMessage, localUserId, setNotification, tCollab]);
+
+  useEffect(() => {
+    if (lastMessage?.t !== "error") return;
+    const d = lastMessage.d as
+      | { code?: string; message?: string }
+      | undefined;
+    const code = typeof d?.code === "string" ? d.code : "";
+    if (code !== "apply_failed" && code !== "object_locked") return;
+    const now = Date.now();
+    const prev = lastApplyErrorToastAtRef.current.get(code) ?? 0;
+    if (now - prev < 3500) return;
+    lastApplyErrorToastAtRef.current.set(code, now);
+    if (code === "object_locked") {
+      setNotification({
+        type: "warning",
+        text: tCollab("Collab apply object locked toast")
+      });
+      return;
+    }
+    setNotification({
+      type: "error",
+      text: tCollab("Collab apply failed toast", {
+        message: typeof d?.message === "string" ? d.message : ""
+      })
+    });
+  }, [lastMessage, setNotification, tCollab]);
 
   const removeTypingUser = useCallback((uid: string) => {
     typingTimersRef.current.delete(uid);
@@ -267,9 +295,14 @@ export const CollabProvider: FC<Props> = ({
               userId?: string;
               text?: string;
               ts?: number;
+              mentions?: string[];
             }
           | undefined;
         if (!d?.userId || d.text == null || d.text === "") return;
+        const mentions =
+          Array.isArray(d.mentions) && d.mentions.length > 0
+            ? d.mentions.filter((x): x is string => typeof x === "string" && x !== "")
+            : undefined;
         const cid =
           d.id && d.id.length > 0
             ? d.id
@@ -294,6 +327,7 @@ export const CollabProvider: FC<Props> = ({
                       userId: d.userId!,
                       text: d.text!,
                       ts: d.ts ?? Math.floor(Date.now() / 1000),
+                      mentions,
                       pending: false
                     }
                   : m
@@ -309,7 +343,8 @@ export const CollabProvider: FC<Props> = ({
             id: cid,
             userId: d.userId!,
             text: d.text!,
-            ts: d.ts ?? Math.floor(Date.now() / 1000)
+            ts: d.ts ?? Math.floor(Date.now() / 1000),
+            mentions
           };
           const next = [...prev, line];
           next.sort((a, b) => a.ts - b.ts);
@@ -491,10 +526,18 @@ export const CollabProvider: FC<Props> = ({
         optimisticByKeyRef.current.set(fp, optId);
         seenChatIdsRef.current.add(optId);
         const ts = Math.floor(Date.now() / 1000);
+        const ment = extractChatMentions(t, 20);
         setChatMessages((prev) => {
           const next = [
             ...prev,
-            { id: optId, userId: uid, text: t, ts, pending: true }
+            {
+              id: optId,
+              userId: uid,
+              text: t,
+              ts,
+              mentions: ment.length ? ment : undefined,
+              pending: true
+            }
           ];
           next.sort((a, b) => a.ts - b.ts);
           return next;

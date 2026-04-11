@@ -38,7 +38,8 @@ type Hub struct {
 	activityMoveEvery   time.Duration
 	activityLimiters    sync.Map // projectID + "\x00" + userID + "\x00" + kind
 
-	chatStore ChatHistoryStore
+	chatStore  ChatHistoryStore
+	applyAudit ApplyAuditStore
 }
 
 type room struct {
@@ -64,6 +65,7 @@ func NewHub(o Options) *Hub {
 		activityTypingEvery: o.activityTypingInterval(),
 		activityMoveEvery:   o.activityMoveInterval(),
 		chatStore:           o.ChatHistory,
+		applyAudit:          o.ApplyAudit,
 	}
 	if o.RedisURL != "" {
 		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {

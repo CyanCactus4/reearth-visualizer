@@ -37,14 +37,18 @@ func (s *CollabChatHistory) EnsureIndexes(ctx context.Context) error {
 	return err
 }
 
-func (s *CollabChatHistory) Append(ctx context.Context, projectID, userID, text string, tsUnix int64, messageID string) error {
-	_, err := s.coll.InsertOne(ctx, bson.M{
+func (s *CollabChatHistory) Append(ctx context.Context, projectID, userID, text string, tsUnix int64, messageID string, mentions []string) error {
+	doc := bson.M{
 		"_id":       messageID,
 		"projectId": projectID,
 		"userId":    userID,
 		"text":      text,
 		"ts":        tsUnix,
-	})
+	}
+	if len(mentions) > 0 {
+		doc["mentions"] = mentions
+	}
+	_, err := s.coll.InsertOne(ctx, doc)
 	return err
 }
 
@@ -99,5 +103,15 @@ func docToChatRecord(d bson.M) collab.ChatMessageRecord {
 	case float64:
 		ts = int64(v)
 	}
-	return collab.ChatMessageRecord{ID: id, UserID: uid, Text: txt, Ts: ts}
+	var mentions []string
+	if raw, ok := d["mentions"]; ok && raw != nil {
+		if arr, ok := raw.(bson.A); ok {
+			for _, it := range arr {
+				if s, ok := it.(string); ok && s != "" {
+					mentions = append(mentions, s)
+				}
+			}
+		}
+	}
+	return collab.ChatMessageRecord{ID: id, UserID: uid, Text: txt, Ts: ts, Mentions: mentions}
 }

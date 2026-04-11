@@ -24,7 +24,7 @@ Re:Earth Visualizer must support multiple users working on the same project with
 1. Record the **transport choice** and rationale (hybrid: collab on dedicated WS; GraphQL subscriptions out of scope for MVP).
 2. Document the **current wire protocol** and extension rules.
 3. State the **synchronization model** for MVP vs later OT/CRDT phase.
-4. Sketch **persistence** for chat (implemented) and for future **operation log** (not implemented).
+4. Sketch **persistence** for chat (implemented), **apply audit** append-only (implemented), and future **operation log / undo** (partial).
 5. Provide a **security checklist** aligned with production.
 
 ## Non-Goals
@@ -78,6 +78,7 @@ Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config
 | ------ | ----- |
 | **MVP (Phases 1–2)** | **Server-authoritative operations:** client sends `apply` with a small declarative payload; server validates `Operator`, runs one interactor call, persists via existing repos; on success broadcasts `applied` (+ optional UI toasts on peers). |
 | **Later (Phase 3)** | Introduce **OT or CRDT** per entity family after lock integration; rejected ops return structured errors for client rollback. Choice documented here: **decision deferred** until scene JSON size and conflict patterns are measured; default bias in PLAN is tree-shaped **operations** + server normalization, with CRDT evaluation for heavy JSON properties. |
+| **Now (Phase 3 slice)** | On `apply` failure (`apply_failed`, `object_locked`, validation codes, …), the **sender** should reconcile with the server: the web editor refetches **GetScene** (`network-only`) when the collab channel receives matching `error` frames; optional toasts for `apply_failed` / `object_locked`. Full OT/CRDT for other entities remains future work. |
 
 **Atomicity:** One `apply` message maps to one interactor invocation; failure returns `error` to sender and does not broadcast `applied`.
 
@@ -85,8 +86,9 @@ Limits (configurable via `REEARTH_COLLAB_*` env, see `server/internal/app/config
 
 | Data | Collection / store | Status |
 | ---- | -------------------- | ------ |
-| Chat messages | Default `collabChatMessages` (`REEARTH_COLLAB_CHAT_COLLECTION`); fields `_id`, `projectId`, `userId`, `text`, `ts`; index `{ projectId: 1, ts: -1 }` | Implemented |
-| Collab operation log (undo groups, authors) | TBD collection, e.g. `collabOpLog` with `projectId`, `userId`, `kind`, `payload`, `ts`, `rev` | **Not implemented** (Phase 6) |
+| Chat messages | Default `collabChatMessages` (`REEARTH_COLLAB_CHAT_COLLECTION`); fields `_id`, `projectId`, `userId`, `text`, `ts`, optional `mentions` (string array, parsed from `@handle`); index `{ projectId: 1, ts: -1 }` | Implemented |
+| Apply audit (successful `apply` journal) | Default `collabApplyAudit` (`REEARTH_COLLAB_APPLY_AUDIT_COLLECTION`); fields `_id`, `projectId`, `userId`, `kind`, `sceneRev`, `sceneId`, `widgetId`, `ts` (ms); index `{ projectId: 1, ts: -1 }` | **Append-only slice** (Phase 6); no public REST list yet |
+| Collab operation log (undo groups, compensating ops, UI history) | TBD / extension of apply audit | **Not implemented** (full Phase 6) |
 
 REST: `GET /api/collab/chat?projectId=&limit=` — same access checks as WS.
 

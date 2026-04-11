@@ -110,6 +110,8 @@ type CollabConfig struct {
 	ActivityMoveMinIntervalMs int `envconfig:"REEARTH_COLLAB_ACTIVITY_MOVE_MIN_INTERVAL_MS" pp:",omitempty"`
 	// ChatCollection is the MongoDB collection name for persisted collab chat (default collabChatMessages).
 	ChatCollection string `envconfig:"REEARTH_COLLAB_CHAT_COLLECTION" pp:",omitempty"`
+	// ApplyAuditCollection stores successful collab apply events (default collabApplyAudit).
+	ApplyAuditCollection string `envconfig:"REEARTH_COLLAB_APPLY_AUDIT_COLLECTION" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

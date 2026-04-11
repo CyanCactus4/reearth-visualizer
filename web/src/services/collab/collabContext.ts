@@ -16,6 +16,8 @@ export type CollabChatLine = {
   userId: string;
   text: string;
   ts: number;
+  /** Parsed @handles (no @), from server or local mirror of server rules. */
+  mentions?: readonly string[];
   /** True until the server echo replaces this line with a real id. */
   pending?: boolean;
 };

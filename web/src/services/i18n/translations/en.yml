@@ -170,6 +170,8 @@ Collab lock conflict description: 'Another user ({{userId}}) holds the edit lock
 Collab chat placeholder: 'Message collaborators…'
 Collab chat send: Send
 Collab peer applied toast: '{{userId}} applied collaborative changes ({{kind}} · {{widgetId}}).'
+Collab apply object locked toast: 'Your edit was not applied because another user holds the widget lock. The scene was refreshed from the server.'
+Collab apply failed toast: 'Your collaborative edit was rejected: {{message}} The scene was refreshed from the server.'
 Layer: ''
 Layer Name: ''
 Format: ''

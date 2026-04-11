@@ -27,7 +27,13 @@ export type CollabInbound =
   | {
       v: 1;
       t: "chat";
-      d?: { id?: string; userId?: string; text?: string; ts?: number };
+      d?: {
+        id?: string;
+        userId?: string;
+        text?: string;
+        ts?: number;
+        mentions?: string[];
+      };
     }
   | {
       v: 1;

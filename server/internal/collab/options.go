@@ -20,6 +20,8 @@ type Options struct {
 
 	// ChatHistory persists chat lines (Mongo); nil skips persistence and GET /api/collab/chat.
 	ChatHistory ChatHistoryStore
+	// ApplyAudit appends successful apply ops (Mongo); nil skips journaling.
+	ApplyAudit ApplyAuditStore
 }
 
 func (o Options) lockTTL() time.Duration {

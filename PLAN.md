@@ -174,11 +174,11 @@
 | 0 Проектирование и контракты | ✅ | Design doc выше; транспорт и v1-протокол зафиксированы. |
 | 1 WS и комнаты | ✅ | Hub, `projectId`, JWT, Redis relay, лимиты. |
 | 2 MVP-синхронизация одной сущности | ✅ | `apply`: `update_widget`, `add_widget`, `remove_widget`; `applied` + **`sceneRev`** (ms); Vitest `applyMessages`; Go-тесты `dispatchApply` + `lockTable.Lookup`; фронт: **`CollabSceneRefetch`** (GetScene network-only при новом `sceneRev`), **`useWidgetMutations`** шлёт collab при `status===open` и успешном `sendRaw`, иначе GraphQL. |
-| 3 OT/CRDT | 🟡 | **`apply`** по виджету проверяет collab-lock: чужой держатель → `error` `object_locked`. **→ дальше:** откат optimistic на клиенте, OT/CRDT по остальным сущностям. |
+| 3 OT/CRDT | 🟡 | Lock + ошибки `apply` на клиенте: **`CollabSceneRefetch`** делает GetScene при кодах ошибки из `COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES`; toasts **`apply_failed`** / **`object_locked`**. **→ дальше:** настоящий OT/CRDT / остальные сущности. |
 | 4 Блокировки | 🟡 | В коде: locks + UI + связь с `apply` (виджет); без merge-диалога полного уровня. |
 | 5 Presence | 🟡 | Курсоры, typing, полоса presence; без имён/аватаров на курсоре. |
-| 6 История / undo | ⬜ | |
-| 7 Уведомления и чат | 🟡 | Чат + Mongo + toasts по `applied`; без @mentions и `chat:typing` как отдельного типа. |
+| 6 История / undo | 🟡 | Журнал успешных **`apply`** в Mongo (`collabApplyAudit` / `REEARTH_COLLAB_APPLY_AUDIT_COLLECTION`), индекс при старте; без undo/UI списка. |
+| 7 Уведомления и чат | 🟡 | Чат + Mongo + toasts по `applied`; **`@mentions`**: парсинг на сервере, поле `mentions` в Mongo/WS, подсветка в **`CollabChatPanel`**; отдельного типа `chat:typing` нет (есть `activity`). |
 | 8 GraphQL | ⬜ | Подписок в схеме нет. |
 | 9 Фронт Apollo/offline | 🟡 | Provider + offline queue collab; без Apollo-merge. |
 | 10 Hardening | ⬜ | |

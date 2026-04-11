@@ -176,6 +176,8 @@ Collab lock conflict description: 'ユーザー {{userId}} が {{resource}} {{id
 Collab chat placeholder: コラボレーターへメッセージ…
 Collab chat send: 送信
 Collab peer applied toast: '{{userId}} が共同編集で変更しました（{{kind}} · {{widgetId}}）。'
+Collab apply object locked toast: '他ユーザーがウィジェットの編集ロックを保持しているため、変更は適用されませんでした。シーンをサーバー側の内容で更新しました。'
+Collab apply failed toast: '共同編集の変更が拒否されました: {{message}} シーンをサーバー側の内容で更新しました。'
 Layer: レイヤー
 Layer Name: レイヤー名
 Format: 形式
