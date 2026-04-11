@@ -9,6 +9,27 @@ describe("parseApplyAuditResponse", () => {
     expect(parseApplyAuditResponse({ entries: "x" })).toEqual([]);
   });
 
+  it("parses collab_undo with opKind", () => {
+    const rows = parseApplyAuditResponse({
+      entries: [
+        {
+          id: "01",
+          userId: "u1",
+          userName: "Bob",
+          kind: "collab_undo",
+          opKind: "update_widget",
+          sceneRev: 9,
+          ts: 1
+        }
+      ]
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "collab_undo",
+      opKind: "update_widget"
+    });
+  });
+
   it("parses rows with userName, layerId, and layerIds", () => {
     const rows = parseApplyAuditResponse({
       v: 1,

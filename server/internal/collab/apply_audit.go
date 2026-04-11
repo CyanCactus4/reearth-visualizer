@@ -8,6 +8,8 @@ type ApplyAuditRecord struct {
 	UserID     string
 	UserName   string
 	Kind       string
+	// OpKind is the domain apply kind from the undo stack (e.g. update_widget) when Kind is collab_undo / collab_redo.
+	OpKind     string
 	SceneRev   int64
 	SceneID    string
 	WidgetID   string
@@ -27,6 +29,7 @@ type ApplyAuditListRow struct {
 	UserID     string   `json:"userId"`
 	UserName   string   `json:"userName,omitempty"`
 	Kind       string   `json:"kind"`
+	OpKind     string   `json:"opKind,omitempty"`
 	SceneRev   int64    `json:"sceneRev"`
 	SceneID    string   `json:"sceneId,omitempty"`
 	WidgetID   string   `json:"widgetId,omitempty"`

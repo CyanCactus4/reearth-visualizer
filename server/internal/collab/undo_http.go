@@ -1,12 +1,16 @@
 package collab
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
+	"strings"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/pkg/id"
+	"github.com/reearth/reearthx/log"
 )
 
 type undoRedoBody struct {
@@ -94,6 +98,29 @@ func serveCollabUndoRedo(hub *Hub, undo bool) echo.HandlerFunc {
 		})
 		if errM == nil {
 			hub.fanoutRoom(c.Request().Context(), pid, nb)
+		}
+
+		if hub.applyAudit != nil {
+			userName := ""
+			if usr := adapter.User(c.Request().Context()); usr != nil {
+				userName = strings.TrimSpace(usr.Name())
+			}
+			audit := ApplyAuditRecord{
+				ProjectID: pid,
+				UserID:    userID,
+				UserName:  userName,
+				Kind:      kind,
+				OpKind:    rec.Kind,
+				SceneRev:  rev,
+				SceneID:   sc.ID().String(),
+			}
+			go func() {
+				pctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel()
+				if err := hub.applyAudit.Append(pctx, audit); err != nil {
+					log.Warnfc(pctx, "collab: apply audit: %v", err)
+				}
+			}()
 		}
 		return c.JSON(http.StatusOK, map[string]any{"v": 1, "sceneRev": rev, "sceneId": sc.ID().String()})
 	}

@@ -4,6 +4,8 @@ export type CollabApplyAuditEntry = {
   userId: string;
   userName?: string;
   kind: string;
+  /** Domain stack kind when kind is collab_undo / collab_redo (e.g. update_widget). */
+  opKind?: string;
   sceneRev: number;
   ts: number;
   sceneId?: string;
@@ -49,12 +51,18 @@ function parseEntry(raw: unknown): CollabApplyAuditEntry | null {
     userNameRaw !== undefined && userNameRaw.trim() !== ""
       ? userNameRaw.trim()
       : undefined;
+  const opKindRaw = str(o.opKind);
+  const opKind =
+    opKindRaw !== undefined && opKindRaw.trim() !== ""
+      ? opKindRaw.trim()
+      : undefined;
   const layerIds = strList(o.layerIds);
   return {
     id,
     userId,
     ...(userName !== undefined ? { userName } : {}),
     kind,
+    ...(opKind !== undefined ? { opKind } : {}),
     sceneRev: num(o.sceneRev),
     ts: num(o.ts),
     ...(str(o.sceneId) ? { sceneId: str(o.sceneId) } : {}),

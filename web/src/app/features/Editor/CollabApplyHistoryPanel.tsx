@@ -164,7 +164,14 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
             <ul style={{ margin: 0, paddingLeft: 16 }}>
               {entries.map((e) => (
                 <li key={e.id} style={{ marginBottom: 4 }}>
-                  <code>{e.kind}</code> · rev {e.sceneRev} ·{" "}
+                  <code>{e.kind}</code>
+                  {e.opKind ? (
+                    <>
+                      {" "}
+                      · <code>{e.opKind}</code>
+                    </>
+                  ) : null}{" "}
+                  · rev {e.sceneRev} ·{" "}
                   <span
                     style={{ opacity: 0.85 }}
                     title={e.userId + (e.userName ? ` (${e.userName})` : "")}
