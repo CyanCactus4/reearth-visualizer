@@ -13,6 +13,8 @@ export function applyUpdateWidgetPayload(params: {
   type: WidgetAlignSystemType;
   /** Optional OT guard: must match server `scene.updatedAt` ms when sent. */
   baseSceneRev?: number;
+  /** Optional per-field LWW clocks (`enabled`, `extended`, `layout`) from last `applied.entityClocks`. */
+  entityClocks?: Record<string, number>;
   enabled?: boolean;
   location?: { zone: string; section: string; area: string };
   extended?: boolean;
@@ -25,6 +27,9 @@ export function applyUpdateWidgetPayload(params: {
     widgetId: params.widgetId
   };
   if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  if (params.entityClocks && Object.keys(params.entityClocks).length > 0) {
+    d.entityClocks = params.entityClocks;
+  }
   if (params.enabled !== undefined) d.enabled = params.enabled;
   if (params.extended !== undefined) d.extended = params.extended;
   if (params.index !== undefined) d.index = params.index;

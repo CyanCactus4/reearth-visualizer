@@ -26,6 +26,7 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 	repos, gateways, acRepos, acGateways, accountsAPIClient, mongoClient := initReposAndGateways(ctx, conf, debug)
 	var collabChat collab.ChatHistoryStore
 	var collabApplyAudit collab.ApplyAuditStore
+	var collabOpStack collab.CollabOpStack
 	if mongoClient != nil && conf.DB_Vis != "" {
 		db := mongoClient.Database(conf.DB_Vis)
 		cname := conf.Collab.ChatCollection
@@ -50,6 +51,20 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 			}
 			collabApplyAudit = au
 		}
+		opName := conf.Collab.OpLogCollection
+		if opName == "" {
+			opName = "collabUndoOps"
+		}
+		stName := conf.Collab.UndoStateCollection
+		if stName == "" {
+			stName = "collabUndoState"
+		}
+		if os := mongoinfra.NewCollabOpStack(db.Collection(opName), db.Collection(stName)); os != nil {
+			if err := os.EnsureIndexes(ctx); err != nil {
+				log.Warnfc(ctx, "collab undo indexes: %v", err)
+			}
+			collabOpStack = os
+		}
 	}
 	// Start web server
 	NewServer(ctx, &ServerConfig{
@@ -63,6 +78,7 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 		ServiceName:           otelServiceName,
 		CollabChatStore:       collabChat,
 		CollabApplyAuditStore: collabApplyAudit,
+		CollabOpStackStore:    collabOpStack,
 	}).Run(ctx)
 }
 
@@ -86,6 +102,7 @@ type ServerConfig struct {
 	CollabHub             *collab.Hub
 	CollabChatStore       collab.ChatHistoryStore
 	CollabApplyAuditStore collab.ApplyAuditStore
+	CollabOpStackStore    collab.CollabOpStack
 }
 
 func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
@@ -120,6 +137,8 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		ActivityMoveMinIntervalMs:   cfg.Config.Collab.ActivityMoveMinIntervalMs,
 		ChatHistory:                 cfg.CollabChatStore,
 		ApplyAudit:                  cfg.CollabApplyAuditStore,
+		OpStack:                     cfg.CollabOpStackStore,
+		MentionWebhookURL:           cfg.Config.Collab.MentionWebhookURL,
 	})
 	cfg.CollabHub = hub
 	w.collabHub = hub

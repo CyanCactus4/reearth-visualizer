@@ -6,6 +6,7 @@ export const COLLAB_APPLY_FAILURE_SCENE_REFETCH_CODES = new Set<string>([
   "apply_failed",
   "object_locked",
   "stale_state",
+  "stale_entity_field",
   "invalid_payload",
   "invalid_scene",
   "scene_mismatch",

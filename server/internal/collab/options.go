@@ -22,6 +22,10 @@ type Options struct {
 	ChatHistory ChatHistoryStore
 	// ApplyAudit appends successful apply ops (Mongo); nil skips journaling.
 	ApplyAudit ApplyAuditStore
+	// OpStack persists undo/redo for collab (Mongo); nil disables POST /api/collab/undo|redo.
+	OpStack CollabOpStack
+	// MentionWebhookURL optional HTTPS endpoint for out-of-room @mention delivery (POST JSON).
+	MentionWebhookURL string
 }
 
 func (o Options) lockTTL() time.Duration {

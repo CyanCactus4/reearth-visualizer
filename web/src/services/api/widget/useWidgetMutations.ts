@@ -103,12 +103,16 @@ export const useWidgetMutations = () => {
       }
 
       if (collab?.status === "open") {
+        const wc = collab.widgetEntityClocks?.[id];
+        const entityClocks =
+          wc && Object.keys(wc).length > 0 ? { ...wc } : undefined;
         const ok = collab.sendRaw(
           applyUpdateWidgetPayload({
             sceneId,
             widgetId: id,
             type,
-            baseSceneRev: collab.remoteSceneRev,
+            baseSceneRev: entityClocks ? undefined : collab.remoteSceneRev,
+            entityClocks,
             enabled: true,
             location: update.location,
             extended: update.extended,

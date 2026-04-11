@@ -46,3 +46,54 @@ export function buildCollabApplyAuditUrl(
   }
   return u.toString();
 }
+
+function collabPostUrl(apiBase: string, pathSuffix: string): string {
+  const trimmed = apiBase.replace(/\/$/, "");
+  const u = new URL(trimmed, window.location.origin);
+  u.pathname = `${u.pathname.replace(/\/$/, "")}${pathSuffix}`;
+  return u.toString();
+}
+
+/** POST /api/collab/undo */
+export function buildCollabUndoPostUrl(apiBase: string): string {
+  return collabPostUrl(apiBase, "/collab/undo");
+}
+
+/** POST /api/collab/redo */
+export function buildCollabRedoPostUrl(apiBase: string): string {
+  return collabPostUrl(apiBase, "/collab/redo");
+}
+
+export async function postCollabUndo(
+  apiBase: string,
+  getToken: () => Promise<string | null>,
+  sceneId: string
+): Promise<Response> {
+  const token = await getToken();
+  return fetch(buildCollabUndoPostUrl(apiBase), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ sceneId })
+  });
+}
+
+export async function postCollabRedo(
+  apiBase: string,
+  getToken: () => Promise<string | null>,
+  sceneId: string
+): Promise<Response> {
+  const token = await getToken();
+  return fetch(buildCollabRedoPostUrl(apiBase), {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ sceneId })
+  });
+}

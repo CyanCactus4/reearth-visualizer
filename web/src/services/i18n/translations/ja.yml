@@ -178,6 +178,7 @@ Collab chat placeholder: コラボレーターへメッセージ…
 Collab chat send: 送信
 Collab peer applied toast: '{{userId}} が共同編集で変更しました（{{kind}} · {{widgetId}}）。'
 Collab apply stale toast: '編集前にサーバー側のシーンが更新されていました（リビジョン不一致）。エディターをサーバー内容で更新しました。'
+Collab apply stale entity field toast: '一部のウィジェット項目がサーバー側で先に更新されています（エンティティ時計の不一致）。再読み込みのうえ再試行してください。'
 Collab apply object locked toast: '他ユーザーがウィジェットの編集ロックを保持しているため、変更は適用されませんでした。シーンをサーバー側の内容で更新しました。'
 Collab apply failed toast: '共同編集の変更が拒否されました: {{message}} シーンをサーバー側の内容で更新しました。'
 Collab chat mention notify: '{{userId}} がチャットであなたに言及: {{preview}}'
@@ -187,6 +188,14 @@ Collab history empty: まだ apply イベントがありません。
 Collab history load failed: 履歴を読み込めませんでした。
 Collab lock conflict compare: キャッシュとサーバーを比較
 Collab lock conflict compare failed: 比較を読み込めませんでした。
+Collab lock conflict widget diff: ウィジェット差分（意味レベル）
+Collab lock conflict story pages: 'ストーリーページ数 — キャッシュ: {{c}}、サーバー: {{n}}'
+Collab undo: 元に戻す（サーバー）
+Collab redo: やり直す（サーバー）
+Collab undo ok: サーバーで元に戻しました。
+Collab redo ok: サーバーでやり直しました。
+Collab undo failed: 元に戻せません（対象なし、または未設定）。
+Collab redo failed: やり直せません（対象なし、または未設定）。
 Collab lock conflict col cache: このタブ（キャッシュ）
 Collab lock conflict col network: サーバー（ネットワーク）
 Layer: レイヤー

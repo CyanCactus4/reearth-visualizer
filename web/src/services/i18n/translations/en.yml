@@ -172,6 +172,7 @@ Collab chat placeholder: 'Message collaborators…'
 Collab chat send: Send
 Collab peer applied toast: '{{userId}} applied collaborative changes ({{kind}} · {{widgetId}}).'
 Collab apply stale toast: 'The scene changed on the server before your edit (revision mismatch). The editor was refreshed from the server.'
+Collab apply stale entity field toast: 'Some widget fields were already updated on the server (entity clock mismatch). Refresh and retry, or rely on merged fields only.'
 Collab apply object locked toast: 'Your edit was not applied because another user holds the widget lock. The scene was refreshed from the server.'
 Collab apply failed toast: 'Your collaborative edit was rejected: {{message}} The scene was refreshed from the server.'
 Collab chat mention notify: '{{userId}} mentioned you in chat: {{preview}}'
@@ -181,6 +182,14 @@ Collab history empty: No apply events yet.
 Collab history load failed: Could not load apply history.
 Collab lock conflict compare: Compare cache vs server
 Collab lock conflict compare failed: Could not load comparison.
+Collab lock conflict widget diff: Widget differences (semantic)
+Collab lock conflict story pages: 'Story pages — cache: {{c}}, server: {{n}}'
+Collab undo: Undo (server)
+Collab redo: Redo (server)
+Collab undo ok: Undo applied on the server.
+Collab redo ok: Redo applied on the server.
+Collab undo failed: Undo not available (nothing to undo or not configured).
+Collab redo failed: Redo not available (nothing to redo or not configured).
 Collab lock conflict col cache: This tab (cache)
 Collab lock conflict col network: Server (network)
 Layer: ''

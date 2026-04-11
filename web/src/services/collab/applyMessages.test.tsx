@@ -81,6 +81,21 @@ describe("apply payloads", () => {
     expect(JSON.parse(s).d.baseSceneRev).toBe(42);
   });
 
+  it("includes entityClocks when provided", () => {
+    const s = applyUpdateWidgetPayload({
+      sceneId: "sc1",
+      widgetId: "w1",
+      type: WidgetAlignSystemType.Desktop,
+      entityClocks: { enabled: 2, layout: 1 },
+      extended: true
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "update_widget",
+      entityClocks: { enabled: 2, layout: 1 },
+      extended: true
+    });
+  });
+
   it("builds move_story_block apply envelope", () => {
     const s = applyMoveStoryBlockPayload({
       sceneId: "sc1",

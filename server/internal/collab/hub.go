@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"strings"
 	"sync"
 	"time"
 
@@ -43,6 +44,13 @@ type Hub struct {
 
 	sceneRevSubMu sync.Mutex
 	sceneRevSubs  map[string][]chan int64 // scene ID → subscribers (buffered chans)
+
+	// Per-widget field LWW clocks (in-memory; resets on process restart).
+	widgetClockMu sync.Mutex
+	widgetClocks  map[string]int64
+
+	opStack          CollabOpStack
+	mentionWebhook   string
 }
 
 type room struct {
@@ -70,6 +78,9 @@ func NewHub(o Options) *Hub {
 		chatStore:           o.ChatHistory,
 		applyAudit:          o.ApplyAudit,
 		sceneRevSubs:        make(map[string][]chan int64),
+		widgetClocks:        make(map[string]int64),
+		opStack:             o.OpStack,
+		mentionWebhook:      strings.TrimSpace(o.MentionWebhookURL),
 	}
 	if o.RedisURL != "" {
 		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {

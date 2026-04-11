@@ -3,10 +3,12 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
+	"github.com/reearth/reearthx/log"
 )
 
 type applyMoveStoryBlock struct {
@@ -68,6 +70,26 @@ func applyMoveStoryBlockOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
 
+	fromIdx := -1
+	if sl, e := uc.StoryTelling.Fetch(opCtx, id.StoryIDList{storyID}, op); e == nil && sl != nil && len(*sl) > 0 {
+		for _, st := range *sl {
+			if st.Id() != storyID {
+				continue
+			}
+			pg := st.Pages().Page(pageID)
+			if pg == nil {
+				break
+			}
+			for i, b := range pg.Blocks() {
+				if b.ID() == blockID {
+					fromIdx = i
+					break
+				}
+			}
+			break
+		}
+	}
+
 	_, _, _, _, err2 := uc.StoryTelling.MoveBlock(opCtx, interfaces.MoveBlockParam{
 		StoryID: storyID,
 		PageID:  pageID,
@@ -91,5 +113,34 @@ func applyMoveStoryBlockOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 		"pageId":  p.PageID,
 		"blockId": p.BlockID,
 	}, sc)
+
+	if hub != nil && hub.opStack != nil && fromIdx >= 0 {
+		inv := applyMoveStoryBlock{
+			Kind:    "move_story_block",
+			SceneID: p.SceneID,
+			StoryID: p.StoryID,
+			PageID:  p.PageID,
+			BlockID: p.BlockID,
+			Index:   fromIdx,
+		}
+		binv, errI := json.Marshal(inv)
+		if errI == nil {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "move_story_block",
+				Forward:   d,
+				Inverse:   json.RawMessage(binv),
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }

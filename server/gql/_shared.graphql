@@ -120,7 +120,13 @@ type Query {
 
 type Mutation
 
+type Subscription {
+  """Scene row revision (Scene.updatedAt unix ms) after successful collab applies on this scene."""
+  collabSceneRevision(sceneId: ID!): Int!
+}
+
 schema {
   query: Query
   mutation: Mutation
+  subscription: Subscription
 }

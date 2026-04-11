@@ -112,6 +112,12 @@ type CollabConfig struct {
 	ChatCollection string `envconfig:"REEARTH_COLLAB_CHAT_COLLECTION" pp:",omitempty"`
 	// ApplyAuditCollection stores successful collab apply events (default collabApplyAudit).
 	ApplyAuditCollection string `envconfig:"REEARTH_COLLAB_APPLY_AUDIT_COLLECTION" pp:",omitempty"`
+	// OpLogCollection stores undoable collab ops (default collabUndoOps).
+	OpLogCollection string `envconfig:"REEARTH_COLLAB_OPLOG_COLLECTION" pp:",omitempty"`
+	// UndoStateCollection stores per-user undo/redo stacks (default collabUndoState).
+	UndoStateCollection string `envconfig:"REEARTH_COLLAB_UNDO_STATE_COLLECTION" pp:",omitempty"`
+	// MentionWebhookURL optional POST target for @mention payloads (out-of-room notifications).
+	MentionWebhookURL string `envconfig:"REEARTH_COLLAB_MENTION_WEBHOOK_URL" pp:",omitempty"`
 }
 
 type AccountsAPIConfig struct {

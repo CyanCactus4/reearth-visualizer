@@ -15,6 +15,7 @@ import (
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/adapter/gql"
 	"github.com/reearth/reearth/server/internal/app/config"
+	"github.com/reearth/reearth/server/internal/collab"
 	"github.com/reearth/reearth/server/pkg/i18n/message"
 	"github.com/reearth/reearth/server/pkg/verror"
 	"github.com/reearth/reearthx/log"
@@ -32,7 +33,7 @@ const (
 	maxMemorySize     = 100 * 1024 * 1024       // 100MB
 )
 
-func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, dev bool) echo.HandlerFunc {
+func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, collabHub *collab.Hub, dev bool) echo.HandlerFunc {
 
 	schema := gql.NewExecutableSchema(gql.Config{
 		Resolvers: gql.NewResolver(accountsAPIClient),
@@ -99,6 +100,9 @@ func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, 
 
 		usecases := adapter.Usecases(ctx)
 		ctx = gql.AttachUsecases(ctx, usecases, accountsAPIClient, enableDataLoaders)
+		if collabHub != nil {
+			ctx = collab.AttachHub(ctx, collabHub)
+		}
 		c.SetRequest(req.WithContext(ctx))
 
 		srv.ServeHTTP(c.Response(), c.Request())

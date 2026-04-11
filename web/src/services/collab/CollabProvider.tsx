@@ -1,5 +1,8 @@
+import { useSubscription } from "@apollo/client/react";
 import { useAuth } from "@reearth/services/auth/useAuth";
-import { useT } from "@reearth/services/i18n/hooks";
+import { GET_SCENE } from "@reearth/services/gql/queries/scene";
+import { useLang, useT } from "@reearth/services/i18n/hooks";
+import { gql } from "graphql-tag";
 import { useNotification } from "@reearth/services/state";
 import {
   useCallback,
@@ -33,6 +36,12 @@ import {
 import { extractChatMentions } from "./chatMentions";
 import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
 
+const COLLAB_SCENE_REV_SUB = gql`
+  subscription CollabSceneRevisionSub($sceneId: ID!) {
+    collabSceneRevision(sceneId: $sceneId)
+  }
+`;
+
 const lockResourceKinds = new Set<string>([
   "layer",
   "widget",
@@ -46,6 +55,8 @@ function asLockResource(s: string): LockResource | null {
 
 type Props = {
   projectId?: string;
+  /** Current editor scene — enables GraphQL `collabSceneRevision` subscription + clock merge. */
+  sceneId?: string;
   /** GraphQL `me.id` — omit when unknown; own cursor/typing events are ignored. */
   localUserId?: string;
   /** Refetch scene from server (e.g. user chose “reload” after lock conflict). */
@@ -65,6 +76,7 @@ const LOCAL_TYPING_DEBOUNCE_MS = 2500;
  */
 export const CollabProvider: FC<Props> = ({
   projectId,
+  sceneId,
   localUserId,
   onReconcileScene,
   onLockConflictCompare,
@@ -89,6 +101,29 @@ export const CollabProvider: FC<Props> = ({
   const [remoteSceneRev, setRemoteSceneRev] = useState<number | undefined>(
     undefined
   );
+  const [widgetEntityClocks, setWidgetEntityClocks] = useState<
+    Record<string, Record<string, number>>
+  >({});
+  const lang = useLang();
+  const langRef = useRef(lang);
+  langRef.current = lang;
+
+  useSubscription(COLLAB_SCENE_REV_SUB, {
+    variables: { sceneId: sceneId ?? "" },
+    skip: !sceneId || !projectId,
+    ignoreResults: true,
+    onData: ({ client, data }) => {
+      const rev = (data.data as { collabSceneRevision?: number } | undefined)
+        ?.collabSceneRevision;
+      if (typeof rev !== "number") return;
+      setRemoteSceneRev(rev);
+      void client.query({
+        query: GET_SCENE,
+        variables: { sceneId: sceneId as string, lang: langRef.current },
+        fetchPolicy: "network-only"
+      });
+    }
+  });
   const seenChatIdsRef = useRef<Set<string>>(new Set());
   /** Maps userId+NUL+text → optimistic local id (one in-flight own line per text). */
   const optimisticByKeyRef = useRef<Map<string, string>>(new Map());
@@ -172,7 +207,8 @@ export const CollabProvider: FC<Props> = ({
     if (
       code !== "apply_failed" &&
       code !== "object_locked" &&
-      code !== "stale_state"
+      code !== "stale_state" &&
+      code !== "stale_entity_field"
     )
       return;
     const now = Date.now();
@@ -190,6 +226,13 @@ export const CollabProvider: FC<Props> = ({
       setNotification({
         type: "warning",
         text: tCollab("Collab apply stale toast")
+      });
+      return;
+    }
+    if (code === "stale_entity_field") {
+      setNotification({
+        type: "warning",
+        text: tCollab("Collab apply stale entity field toast")
       });
       return;
     }
@@ -391,9 +434,31 @@ export const CollabProvider: FC<Props> = ({
         return;
       }
       if (msg.t === "applied") {
-        const d = msg.d as { sceneRev?: number } | undefined;
+        const d = msg.d as
+          | {
+              sceneRev?: number;
+              kind?: string;
+              widgetId?: string;
+              entityClocks?: Record<string, number>;
+            }
+          | undefined;
         if (typeof d?.sceneRev === "number") {
           setRemoteSceneRev(d.sceneRev);
+        }
+        if (
+          d?.kind === "update_widget" &&
+          typeof d.widgetId === "string" &&
+          d.widgetId &&
+          d.entityClocks &&
+          typeof d.entityClocks === "object"
+        ) {
+          setWidgetEntityClocks((prev) => ({
+            ...prev,
+            [d.widgetId!]: {
+              ...(prev[d.widgetId!] ?? {}),
+              ...d.entityClocks
+            }
+          }));
         }
       }
     },
@@ -408,6 +473,7 @@ export const CollabProvider: FC<Props> = ({
     setRemoteTypingUserIds([]);
     setChatMessages([]);
     setRemoteSceneRev(undefined);
+    setWidgetEntityClocks({});
     seenChatIdsRef.current.clear();
     optimisticByKeyRef.current.clear();
     lastAppliedNotifyAtRef.current.clear();
@@ -620,7 +686,8 @@ export const CollabProvider: FC<Props> = ({
       resourceLocks,
       chatMessages,
       sendChat,
-      remoteSceneRev
+      remoteSceneRev,
+      widgetEntityClocks
     }),
     [
       status,
@@ -633,7 +700,8 @@ export const CollabProvider: FC<Props> = ({
       resourceLocks,
       chatMessages,
       sendChat,
-      remoteSceneRev
+      remoteSceneRev,
+      widgetEntityClocks
     ]
   );
 

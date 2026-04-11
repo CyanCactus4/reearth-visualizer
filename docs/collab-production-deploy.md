@@ -8,9 +8,10 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 |-----------|------|
 | **WebSocket** `GET /api/collab/ws` | Real-time room per `projectId`; JSON v1 protocol (`apply`, `chat`, `lock`, `cursor`, `activity`, …). |
 | **Redis** `REEARTH_COLLAB_REDIS_URL` | Pub/sub between server instances + distributed object locks (Lua). Without Redis, relay and locks are **in-memory only** (single process). |
-| **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` journal); names overridable via env (see below). |
+| **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` journal), `collabUndoOps` + `collabUndoState` (server undo/redo stacks); names overridable via env (see below). |
 | **SSE** `GET /api/collab/scene-rev/stream?sceneId=` | **Server-Sent Events** stream of `sceneRev` (scene `updatedAt` ms) after each successful collab `apply` on that scene (**in-process hub only**; other API replicas do not receive those events unless extended to Redis). Use when you want HTTP-based consumers without GraphQL subscriptions. |
-| **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit` — same auth as private `/api`. |
+| **GraphQL** `POST/GET /api/graphql` | Standard queries/mutations over HTTP; **WebSocket upgrade on GET** serves `graphql-ws` / `graphql-transport-ws` for **`subscription { collabSceneRevision(sceneId) }`** (scene `updatedAt` ms after collab applies). |
+| **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit`, `POST /api/collab/undo`, `POST /api/collab/redo` — same auth as private `/api`. |
 
 ## Environment variables (collab-related)
 
@@ -23,7 +24,10 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 | `REEARTH_COLLAB_CHAT_MAX_RUNES` / `REEARTH_COLLAB_CHAT_MIN_INTERVAL_MS` | Chat size and per-user spacing. |
 | `REEARTH_COLLAB_CHAT_COLLECTION` | Mongo chat collection (default `collabChatMessages`). |
 | `REEARTH_COLLAB_APPLY_AUDIT_COLLECTION` | Mongo apply audit collection (default `collabApplyAudit`). |
-| `REEARTH_DB` / `REEARTH_DB_VIS` | Mongo connection and visualizer DB name (required for chat/audit stores). |
+| `REEARTH_COLLAB_OPLOG_COLLECTION` | Mongo undo op log (default `collabUndoOps`). |
+| `REEARTH_COLLAB_UNDO_STATE_COLLECTION` | Mongo per-user undo/redo stacks (default `collabUndoState`). |
+| `REEARTH_COLLAB_MENTION_WEBHOOK_URL` | Optional HTTPS URL: POST JSON on each `@mention` (in addition to in-room WS `notify`). |
+| `REEARTH_DB` / `REEARTH_DB_VIS` | Mongo connection and visualizer DB name (required for chat/audit/undo stores). |
 
 ## Scaling
 
@@ -31,15 +35,16 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 2. **Load balancers:** use **sticky sessions** for the collab WebSocket upgrade path if your LB does not guarantee same-node routing (optional when Redis relay is on; still helps for debugging).
 3. **Mongo growth:** plan TTL or archival for `collabApplyAudit` and `collabChatMessages` in large deployments (not enforced in OSS).
 
-## GraphQL subscriptions (optional)
+## GraphQL subscriptions
 
-The product today uses **Apollo over HTTP** for GraphQL plus a **separate collab WebSocket**. A native **GraphQL `Subscription`** for `sceneRev` would require:
+- **Server:** `subscription { collabSceneRevision(sceneId: ID!): Int! }` — resolver reads the collab hub (`AttachHub` on GraphQL context). **Run `make gql`** in `server/` after schema edits so `generated.go` stays in sync (this repo may ship a pre-patched `generated.go` when codegen cannot reach the network).
+- **Web:** Apollo uses a **split link** (`graphql-ws` + `GET /api/graphql` WebSocket). The editor `CollabProvider` subscribes when `sceneId` is set and refetches `GetScene` on each revision.
+- **SSE** remains a simple HTTP alternative for non-Apollo consumers.
 
-- `gqlgen generate` with a `Subscription` root in `server/gql/*.graphql`,
-- resolvers wired to the collab hub (or Redis) event bus,
-- Apollo Client **split link** (`graphql-ws` or `subscriptions-transport-ws`) on the browser.
+## Entity clocks (LWW) and undo
 
-The **SSE** endpoint above is the supported lightweight alternative until GQL subscriptions are implemented.
+- **Per-widget field clocks** (`enabled`, `extended`, `layout`) are kept **in-memory on each API process**; clients may send `entityClocks` on `update_widget` applies to merge non-stale fields without a global `baseSceneRev` (see design doc).
+- **Undo/redo** applies inverse JSON through the same interactors as collab; stacks live in Mongo (`collabUndoOps` / `collabUndoState`). **Not** a distributed CRDT log — plan Redis or stronger consistency for multi-writer undo if needed.
 
 ## Security checklist (ops)
 

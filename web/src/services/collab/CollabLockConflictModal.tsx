@@ -2,6 +2,8 @@ import { Button, Modal, ModalPanel } from "@reearth/app/lib/reearth-ui";
 import { useT } from "@reearth/services/i18n/hooks";
 import { FC, useCallback, useEffect, useState } from "react";
 
+import type { SceneMergeRichDiff } from "./sceneMergeDiff";
+
 export type CollabLockConflictPayload = {
   resource: string;
   id: string;
@@ -11,6 +13,8 @@ export type CollabLockConflictPayload = {
 export type CollabLockConflictSnapshots = {
   cache: { widgets: number; stories: number };
   network: { widgets: number; stories: number };
+  /** Optional semantic diff when both snapshots are full GetScene results. */
+  rich?: SceneMergeRichDiff | null;
 };
 
 type Props = {
@@ -149,6 +153,45 @@ const CollabLockConflictModal: FC<Props> = ({
                   </tr>
                 </tbody>
               </table>
+            ) : null}
+            {snap?.rich ? (
+              <div style={{ marginTop: 10, fontSize: 11, lineHeight: 1.45 }}>
+                <div style={{ fontWeight: 600, marginBottom: 4 }}>
+                  {t("Collab lock conflict widget diff")}
+                </div>
+                {snap.rich.widgetDiff.added.length ? (
+                  <div>
+                    +widgets: {snap.rich.widgetDiff.added.slice(0, 8).join(", ")}
+                    {snap.rich.widgetDiff.added.length > 8
+                      ? ` (+${snap.rich.widgetDiff.added.length - 8})`
+                      : ""}
+                  </div>
+                ) : null}
+                {snap.rich.widgetDiff.removed.length ? (
+                  <div>
+                    −widgets:{" "}
+                    {snap.rich.widgetDiff.removed.slice(0, 8).join(", ")}
+                    {snap.rich.widgetDiff.removed.length > 8
+                      ? ` (+${snap.rich.widgetDiff.removed.length - 8})`
+                      : ""}
+                  </div>
+                ) : null}
+                {snap.rich.widgetDiff.changed.length ? (
+                  <ul style={{ margin: "4px 0 0", paddingLeft: 16 }}>
+                    {snap.rich.widgetDiff.changed.slice(0, 12).map((c) => (
+                      <li key={c.id}>
+                        ~{c.id.slice(0, 8)}… ({c.fields.join(", ")})
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                <div style={{ marginTop: 6, opacity: 0.9 }}>
+                  {t("Collab lock conflict story pages", {
+                    c: snap.rich.storySummary.cachePages,
+                    n: snap.rich.storySummary.networkPages
+                  })}
+                </div>
+              </div>
             ) : null}
           </div>
         ) : null}

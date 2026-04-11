@@ -46,6 +46,10 @@ export type CollabContextValue = {
   sendChat: (text: string) => void;
   /** Monotonic scene stamp from last `applied` collab message (server `scene.UpdatedAt` ms). */
   remoteSceneRev: number | undefined;
+  /** Per-widget field LWW clocks from last peer `applied` (server `entityClocks`); used for CRDT-style applies. */
+  widgetEntityClocks: Readonly<
+    Record<string, Readonly<Record<string, number>>>
+  >;
 };
 
 export const CollabContext = createContext<CollabContextValue | null>(null);

@@ -1,14 +1,16 @@
 import styled from "@emotion/styled";
 import { useApolloClient } from "@apollo/client/react";
 import { useMe } from "@reearth/services/api/user";
-import { CollabProvider } from "@reearth/services/collab";
+import {
+  CollabProvider,
+  sceneMergeRichDiff,
+  type CollabLockConflictSnapshots
+} from "@reearth/services/collab";
 import { GET_SCENE } from "@reearth/services/gql/queries/scene";
 import { useLang } from "@reearth/services/i18n/hooks";
 import { css } from "@reearth/services/theme/reearthTheme/common";
 import { useAtom } from "jotai";
 import { FC, useCallback } from "react";
-
-import type { CollabLockConflictSnapshots } from "@reearth/services/collab";
 
 import CursorStatus from "../CursorStatus";
 import Navbar, { Tab } from "../Navbar";
@@ -83,7 +85,8 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
     const cache = sceneStatsFromGetScene(cacheR.data);
     const network = sceneStatsFromGetScene(netR.data);
     if (!cache || !network) return null;
-    return { cache, network };
+    const rich = sceneMergeRichDiff(cacheR.data, netR.data);
+    return { cache, network, rich };
   }, [apollo, sceneId, lang]);
   const {
     visualizerSize,
@@ -138,6 +141,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   return (
     <CollabProvider
       projectId={projectId}
+      sceneId={sceneId}
       localUserId={me?.id}
       onReconcileScene={onCollabReconcileScene}
       onLockConflictCompare={onCollabLockCompare}
@@ -145,7 +149,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
       <CollabSceneRefetch sceneId={sceneId} />
       <Wrapper data-testid="editor-wrapper">
         <CollabPresenceBar />
-        <CollabApplyHistoryPanel />
+        <CollabApplyHistoryPanel sceneId={sceneId} />
         <CollabChatPanel />
         <Navbar
         sceneId={sceneId}

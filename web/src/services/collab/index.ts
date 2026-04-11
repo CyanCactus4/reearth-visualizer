@@ -39,8 +39,16 @@ export { CollabProvider } from "./CollabProvider";
 export {
   buildCollabApplyAuditUrl,
   buildCollabChatUrl,
-  buildCollabWsUrl
+  buildCollabRedoPostUrl,
+  buildCollabUndoPostUrl,
+  buildCollabWsUrl,
+  postCollabRedo,
+  postCollabUndo
 } from "./collabUrl";
+export {
+  sceneMergeRichDiff,
+  type SceneMergeRichDiff
+} from "./sceneMergeDiff";
 export { useCollab } from "./useCollab";
 export {
   useCollabLockLease,

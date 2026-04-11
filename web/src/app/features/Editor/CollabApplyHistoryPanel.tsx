@@ -1,9 +1,13 @@
+import { useApolloClient } from "@apollo/client/react";
 import { useAuth } from "@reearth/services/auth/useAuth";
 import {
   buildCollabApplyAuditUrl,
+  postCollabRedo,
+  postCollabUndo,
   useCollab
 } from "@reearth/services/collab";
-import { useT } from "@reearth/services/i18n/hooks";
+import { GET_SCENE } from "@reearth/services/gql/queries/scene";
+import { useLang, useT } from "@reearth/services/i18n/hooks";
 import { FC, useCallback, useEffect, useState } from "react";
 
 type Entry = {
@@ -18,14 +22,19 @@ type Entry = {
   blockId?: string;
 };
 
-/** Read-only collab apply journal (PLAN phase 6 UI slice). */
-const CollabApplyHistoryPanel: FC = () => {
+type Props = { sceneId: string };
+
+/** Read-only collab apply journal + server undo/redo when configured. */
+const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
   const collab = useCollab();
   const t = useT();
+  const lang = useLang();
+  const apollo = useApolloClient();
   const { getAccessToken } = useAuth();
   const [entries, setEntries] = useState<Entry[]>([]);
   const [open, setOpen] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const [undoMsg, setUndoMsg] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     if (!collab?.projectId) return;
@@ -50,6 +59,40 @@ const CollabApplyHistoryPanel: FC = () => {
       setEntries([]);
     }
   }, [collab?.projectId, getAccessToken, t]);
+
+  const runUndo = useCallback(async () => {
+    setUndoMsg(null);
+    const apiBase = window.REEARTH_CONFIG?.api || "/api";
+    const res = await postCollabUndo(apiBase, getAccessToken, sceneId);
+    if (!res.ok) {
+      setUndoMsg(t("Collab undo failed"));
+      return;
+    }
+    setUndoMsg(t("Collab undo ok"));
+    void apollo.query({
+      query: GET_SCENE,
+      variables: { sceneId, lang },
+      fetchPolicy: "network-only"
+    });
+    void load();
+  }, [apollo, getAccessToken, lang, load, sceneId, t]);
+
+  const runRedo = useCallback(async () => {
+    setUndoMsg(null);
+    const apiBase = window.REEARTH_CONFIG?.api || "/api";
+    const res = await postCollabRedo(apiBase, getAccessToken, sceneId);
+    if (!res.ok) {
+      setUndoMsg(t("Collab redo failed"));
+      return;
+    }
+    setUndoMsg(t("Collab redo ok"));
+    void apollo.query({
+      query: GET_SCENE,
+      variables: { sceneId, lang },
+      fetchPolicy: "network-only"
+    });
+    void load();
+  }, [apollo, getAccessToken, lang, load, sceneId, t]);
 
   useEffect(() => {
     if (open) void load();
@@ -84,6 +127,43 @@ const CollabApplyHistoryPanel: FC = () => {
       </button>
       {open ? (
         <div style={{ marginTop: 6, maxHeight: 140, overflowY: "auto" }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 6 }}>
+            <button
+              type="button"
+              onClick={() => void runUndo()}
+              style={{
+                fontSize: 10,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                color: "inherit",
+                borderRadius: 4,
+                cursor: "pointer",
+                padding: "2px 8px"
+              }}
+            >
+              {t("Collab undo")}
+            </button>
+            <button
+              type="button"
+              onClick={() => void runRedo()}
+              style={{
+                fontSize: 10,
+                background: "rgba(255,255,255,0.08)",
+                border: "1px solid rgba(255,255,255,0.15)",
+                color: "inherit",
+                borderRadius: 4,
+                cursor: "pointer",
+                padding: "2px 8px"
+              }}
+            >
+              {t("Collab redo")}
+            </button>
+          </div>
+          {undoMsg ? (
+            <div style={{ fontSize: 10, marginBottom: 4, opacity: 0.85 }}>
+              {undoMsg}
+            </div>
+          ) : null}
           {err ? (
             <div style={{ color: "#f88" }}>{err}</div>
           ) : entries.length === 0 ? (

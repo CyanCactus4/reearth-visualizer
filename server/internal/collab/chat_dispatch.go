@@ -80,6 +80,17 @@ func dispatchChat(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 				hub.NotifyUserInRoom(from.projectID, uid, nb)
 			}
 		}
+		if hub != nil {
+			hub.notifyMentionWebhook(ctx, map[string]any{
+				"kind":       "chat_mention",
+				"projectId":  from.projectID,
+				"sceneId":    from.sceneID.String(),
+				"fromUserId": from.userID,
+				"messageId":  msgID,
+				"text":       m.Text,
+				"mentions":   mentions,
+			})
+		}
 	}
 	if hub.chatStore != nil {
 		pid, uid, txt, mid := from.projectID, from.userID, m.Text, msgID

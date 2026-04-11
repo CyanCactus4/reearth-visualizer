@@ -33,6 +33,8 @@ type applyUpdateWidget struct {
 		Section string `json:"section"`
 		Area    string `json:"area"`
 	} `json:"location,omitempty"`
+	// EntityClocks: optional per-field LWW clocks (see Hub.WidgetFieldClock). When non-empty, baseSceneRev is not required.
+	EntityClocks map[string]int64 `json:"entityClocks,omitempty"`
 }
 
 type applyRemoveWidget struct {
@@ -119,8 +121,11 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
 		return nil
 	}
-	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
-		return nil
+	clocksUsed := len(p.EntityClocks) > 0
+	if !clocksUsed {
+		if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+			return nil
+		}
 	}
 
 	wid, err := id.WidgetIDFrom(p.WidgetID)
@@ -151,22 +156,60 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		}
 	}
 
-	if p.Enabled == nil && p.Extended == nil && loc == nil && p.Index == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "empty_update", "message": "no widget fields to update"}})
+	sidStr := sid.String()
+	widStr := wid.String()
+	enabled := p.Enabled
+	extended := p.Extended
+	locUse := loc
+	idxUse := p.Index
+	if hub != nil && clocksUsed {
+		if enabled != nil {
+			if cv, ok := p.EntityClocks["enabled"]; ok && hub.WidgetFieldClock(sidStr, widStr, "enabled") > cv {
+				enabled = nil
+			}
+		}
+		if extended != nil {
+			if cv, ok := p.EntityClocks["extended"]; ok && hub.WidgetFieldClock(sidStr, widStr, "extended") > cv {
+				extended = nil
+			}
+		}
+		if locUse != nil || idxUse != nil {
+			if cv, ok := p.EntityClocks["layout"]; ok && hub.WidgetFieldClock(sidStr, widStr, "layout") > cv {
+				locUse, idxUse = nil, nil
+			}
+		}
+	}
+
+	if enabled == nil && extended == nil && locUse == nil && idxUse == nil {
+		code := "empty_update"
+		msg := "no widget fields to update"
+		if clocksUsed {
+			code = "stale_entity_field"
+			msg = "all touched fields are behind server entity clocks; refresh clocks from last applied"
+		}
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": code, "message": msg}})
 		return nil
 	}
 
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
 
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		scenesPre, errPre := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+		if errPre == nil && len(scenesPre) > 0 {
+			invJSON = buildUpdateWidgetInverseJSON(scenesPre[0], align, sidStr, p.AlignSystem, widStr, wid)
+		}
+	}
+
 	param := interfaces.UpdateWidgetParam{
 		Type:     align,
 		SceneID:  sid,
 		WidgetID: wid,
-		Enabled:  p.Enabled,
-		Extended: p.Extended,
-		Location: loc,
-		Index:    p.Index,
+		Enabled:  enabled,
+		Extended: extended,
+		Location: locUse,
+		Index:    idxUse,
 	}
 
 	sc, _, err2 := uc.Scene.UpdateWidget(opCtx, param, op)
@@ -175,10 +218,45 @@ func applyUpdateWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		return nil
 	}
 
-	broadcastApplied(ctx, hub, from, "update_widget", map[string]any{
+	extra := map[string]any{
 		"sceneId":  p.SceneID,
 		"widgetId": p.WidgetID,
-	}, sc)
+	}
+	if hub != nil {
+		fields := make([]string, 0, 4)
+		if enabled != nil {
+			fields = append(fields, "enabled")
+		}
+		if extended != nil {
+			fields = append(fields, "extended")
+		}
+		if locUse != nil || idxUse != nil {
+			fields = append(fields, "layout")
+		}
+		if len(fields) > 0 {
+			extra["entityClocks"] = hub.BumpWidgetFieldClocks(sidStr, widStr, fields)
+		}
+	}
+
+	broadcastApplied(ctx, hub, from, "update_widget", extra, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sidStr,
+			UserID:    actorUserID(from),
+			Kind:      "update_widget",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 

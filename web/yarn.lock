@@ -5573,6 +5573,7 @@ __metadata:
     graphiql: "npm:3.4.0"
     graphql: "npm:16.12.0"
     graphql-tag: "npm:2.12.6"
+    graphql-ws: "npm:6.0.6"
     husky: "npm:9.1.7"
     i18next: "npm:25.6.3"
     i18next-browser-languagedetector: "npm:8.2.0"
@@ -15712,7 +15713,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"graphql-ws@npm:^6.0.6":
+"graphql-ws@npm:6.0.6, graphql-ws@npm:^6.0.6":
   version: 6.0.6
   resolution: "graphql-ws@npm:6.0.6"
   peerDependencies:

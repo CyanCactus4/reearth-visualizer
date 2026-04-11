@@ -157,11 +157,17 @@ func initEcho(
 	}
 
 	// Main backend API
-	apiPrivateRoute.POST("/graphql", GraphqlAPI(cfg.Config.GraphQL, cfg.AccountsAPIClient, gqldev))
+	gqlHandler := GraphqlAPI(cfg.Config.GraphQL, cfg.AccountsAPIClient, cfg.CollabHub, gqldev)
+	apiPrivateRoute.POST("/graphql", gqlHandler)
+	apiPrivateRoute.GET("/graphql", gqlHandler)
 
 	if cfg.CollabHub != nil {
 		apiPrivateRoute.GET("/collab/ws", collab.ServeWS(cfg.CollabHub, &cfg.Config.Collab, allowedOrigins(cfg)))
 		apiPrivateRoute.GET("/collab/scene-rev/stream", collab.ServeSceneRevisionSSE(cfg.CollabHub))
+		if cfg.CollabOpStackStore != nil {
+			apiPrivateRoute.POST("/collab/undo", collab.ServeCollabUndo(cfg.CollabHub))
+			apiPrivateRoute.POST("/collab/redo", collab.ServeCollabRedo(cfg.CollabHub))
+		}
 	}
 	if cfg.CollabChatStore != nil {
 		apiPrivateRoute.GET("/collab/chat", collab.ServeChatHistory(cfg.CollabChatStore))
