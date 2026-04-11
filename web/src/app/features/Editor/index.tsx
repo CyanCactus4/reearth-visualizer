@@ -1,4 +1,5 @@
 import styled from "@emotion/styled";
+import { CollabProvider } from "@reearth/services/collab";
 import { css } from "@reearth/services/theme/reearthTheme/common";
 import { useAtom } from "jotai";
 import { FC } from "react";
@@ -85,8 +86,9 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
   };
 
   return (
-    <Wrapper data-testid="editor-wrapper">
-      <Navbar
+    <CollabProvider projectId={projectId}>
+      <Wrapper data-testid="editor-wrapper">
+        <Navbar
         sceneId={sceneId}
         projectId={projectId}
         workspaceId={workspaceId}
@@ -177,7 +179,8 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
         />
       )}
       <CursorStatus data-testid="editor-cursor-status" />
-    </Wrapper>
+      </Wrapper>
+    </CollabProvider>
   );
 };
 

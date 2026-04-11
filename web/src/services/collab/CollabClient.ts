@@ -12,17 +12,22 @@ export class CollabClient {
 
   constructor(
     private readonly apiBase: string,
-    private readonly getAccessToken: () => Promise<string | undefined>
+    private readonly getAccessToken: () => Promise<string>
   ) {}
 
   get socket(): WebSocket | null {
     return this.ws;
   }
 
-  async connect(projectId: string): Promise<void> {
+  async connect(projectId: string): Promise<WebSocket> {
     const token = await this.getAccessToken();
-    const url = buildCollabWsUrl(this.apiBase, projectId, token);
+    const url = buildCollabWsUrl(
+      this.apiBase,
+      projectId,
+      token ? token : undefined
+    );
     this.ws = new WebSocket(url);
+    return this.ws;
   }
 
   disconnect(): void {
