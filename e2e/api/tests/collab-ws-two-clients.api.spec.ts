@@ -118,9 +118,15 @@ function toPick(
   return null;
 }
 
+function mergePatchKey(field: FieldPick): string {
+  const z = "\0";
+  return `${field.schemaGroupId ?? ""}${z}${field.itemId ?? ""}${z}${field.fieldId}`;
+}
+
 function awaitApplied(
   ws: WebSocket,
-  timeoutMs: number
+  timeoutMs: number,
+  kind = "update_property_value"
 ): Promise<Record<string, unknown>> {
   return new Promise((resolve, reject) => {
     const t = setTimeout(() => {
@@ -129,7 +135,7 @@ function awaitApplied(
       } catch {
         /* ignore */
       }
-      reject(new Error("timeout waiting for applied"));
+      reject(new Error(`timeout waiting for applied (${kind})`));
     }, timeoutMs);
     ws.onmessage = (ev: { data: unknown }) => {
       try {
@@ -138,7 +144,7 @@ function awaitApplied(
           t?: string;
           d?: Record<string, unknown>;
         };
-        if (j.t === "applied" && j.d?.kind === "update_property_value") {
+        if (j.t === "applied" && j.d?.kind === kind) {
           clearTimeout(t);
           ws.onmessage = null;
           resolve(j.d ?? {});
@@ -246,5 +252,97 @@ test.describe("Collab WebSocket: two clients, apply → applied", () => {
 
     ws1.close();
     ws2.close();
+  });
+
+  test("two sockets: merge_property_json with docClock CAS, peer receives applied", async ({
+    gqlClient
+  }) => {
+    const { token } = JSON.parse(fs.readFileSync(tokenPath, "utf-8"));
+
+    const { data: me } = await gqlClient.query<{
+      me: { myWorkspaceId: string };
+    }>(GET_ME);
+
+    const { data: proj } = await gqlClient.mutate<{
+      createProject: { project: { id: string } };
+    }>(CREATE_PROJECT, {
+      input: {
+        workspaceId: me.me.myWorkspaceId,
+        visualizer: "CESIUM",
+        name: "Collab WS merge-json",
+        coreSupport: true
+      }
+    });
+    const localProjectId = proj.createProject.project.id;
+
+    const { data: sc } = await gqlClient.mutate<{
+      createScene: { scene: { id: string } };
+    }>(CREATE_SCENE, { input: { projectId: localProjectId } });
+    const localSceneId = sc.createScene.scene.id;
+
+    await gqlClient.mutate(ADD_NLS_LAYER_SIMPLE, {
+      input: {
+        sceneId: localSceneId,
+        layerType: "simple",
+        title: "Layer",
+        visible: true,
+        config: { data: { type: "geojson" } }
+      }
+    });
+
+    const { data: sceneData } = await gqlClient.query<{
+      node?: unknown;
+    }>(GET_SCENE, { sceneId: localSceneId });
+    const field = pickUpdatableSceneField(sceneData?.node);
+    if (!field) {
+      test.skip(true, "no BOOL/NUMBER/STRING field on scene property");
+      return;
+    }
+
+    const url = wsCollabUrl(localProjectId, token);
+    const ws1 = new WebSocket(url);
+    const ws2 = new WebSocket(url);
+
+    await Promise.all([
+      new Promise<void>((res, rej) => {
+        ws1.onopen = () => res();
+        ws1.onerror = () => rej(new Error("ws1 connect failed"));
+      }),
+      new Promise<void>((res, rej) => {
+        ws2.onopen = () => res();
+        ws2.onerror = () => rej(new Error("ws2 connect failed"));
+      })
+    ]);
+
+    const applied2 = awaitApplied(ws2, 25000, "merge_property_json");
+
+    const flatKey = mergePatchKey(field);
+    const d: Record<string, unknown> = {
+      kind: "merge_property_json",
+      sceneId: localSceneId,
+      propertyId: field.propertyId,
+      patch: {
+        [flatKey]: { type: field.type, value: field.value }
+      },
+      docClock: 0
+    };
+
+    ws1.send(JSON.stringify({ v: 1, t: "apply", d }));
+
+    const d2 = await applied2;
+    expect(d2.kind).toBe("merge_property_json");
+    expect(typeof d2.sceneRev).toBe("number");
+    expect(Array.isArray(d2.mergedKeys)).toBe(true);
+
+    ws1.close();
+    ws2.close();
+
+    try {
+      await gqlClient.mutate(DELETE_PROJECT, {
+        input: { projectId: localProjectId }
+      });
+    } catch {
+      /* ignore */
+    }
   });
 });
