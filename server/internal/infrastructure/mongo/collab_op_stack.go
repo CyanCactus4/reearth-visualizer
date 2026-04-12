@@ -37,7 +37,7 @@ func (s *CollabOpStackStore) EnsureIndexes(ctx context.Context) error {
 		return err
 	}
 	_, err = s.state.Indexes().CreateOne(ctx, mongo.IndexModel{
-		Keys: bson.D{{Key: "userId", Value: 1}, {Key: "sceneId", Value: 1}},
+		Keys:    bson.D{{Key: "userId", Value: 1}, {Key: "sceneId", Value: 1}},
 		Options: options.Index().SetUnique(true),
 	})
 	return err
@@ -147,4 +147,23 @@ func (s *CollabOpStackStore) loadOp(ctx context.Context, id primitive.ObjectID) 
 		Forward:   json.RawMessage(doc.ForwardJSON),
 		Inverse:   json.RawMessage(doc.InverseJSON),
 	}, nil
+}
+
+// PatchHeadRedoForward updates forwardJson for the op at the tail of the redo stack.
+func (s *CollabOpStackStore) PatchHeadRedoForward(ctx context.Context, userID, sceneID string, forward json.RawMessage) error {
+	if s == nil {
+		return nil
+	}
+	var st struct {
+		Redo []primitive.ObjectID `bson:"redo"`
+	}
+	if err := s.state.FindOne(ctx, bson.M{"userId": userID, "sceneId": sceneID}).Decode(&st); err != nil {
+		return err
+	}
+	if len(st.Redo) == 0 {
+		return nil
+	}
+	last := st.Redo[len(st.Redo)-1]
+	_, err := s.ops.UpdateOne(ctx, bson.M{"_id": last}, bson.M{"$set": bson.M{"forwardJson": string(forward)}})
+	return err
 }

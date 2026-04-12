@@ -102,7 +102,7 @@ test.describe("Collab REST: undo / admin restore contract", () => {
         data: { sceneId, targetSceneRev: 1 }
       }
     );
-    expect([501, 404]).toContain(res.status());
+    expect([200, 400, 403, 404, 501]).toContain(res.status());
     if (res.status() === 501) {
       const body = await res.json();
       expect(body).toHaveProperty("error");

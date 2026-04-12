@@ -24,6 +24,8 @@ type Options struct {
 	ApplyAudit ApplyAuditStore
 	// OpStack persists undo/redo for collab (Mongo); nil disables POST /api/collab/undo|redo.
 	OpStack CollabOpStack
+	// SceneSnapshot optional Mongo store for maintainer restore (sparse ExportSceneData blobs).
+	SceneSnapshot SceneSnapshotStore
 	// MentionWebhookURL optional HTTPS endpoint for out-of-room @mention delivery (POST JSON).
 	MentionWebhookURL string
 }

@@ -79,6 +79,13 @@ func serveCollabUndoRedo(hub *Hub, undo bool) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusInternalServerError, "scene nil after undo")
 		}
 
+		if undo {
+			uc := adapter.Usecases(c.Request().Context())
+			if err := maybePatchRedoForwardAfterUndo(c.Request().Context(), hub.opStack, userID, body.SceneID, rec, sc, uc, op); err != nil {
+				log.Warnfc(c.Request().Context(), "collab: patch redo forward: %v", err)
+			}
+		}
+
 		pid := sc.Project().String()
 		rev := sceneRevOf(sc)
 		hub.publishSceneRevision(sc.ID().String(), rev)

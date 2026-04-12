@@ -27,6 +27,7 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 	var collabChat collab.ChatHistoryStore
 	var collabApplyAudit collab.ApplyAuditStore
 	var collabOpStack collab.CollabOpStack
+	var collabSceneSnapshots collab.SceneSnapshotStore
 	if mongoClient != nil && conf.DB_Vis != "" {
 		db := mongoClient.Database(conf.DB_Vis)
 		cname := conf.Collab.ChatCollection
@@ -65,20 +66,31 @@ func runServer(ctx context.Context, conf *config.Config, otelServiceName otel.Ot
 			}
 			collabOpStack = os
 		}
+		snapName := conf.Collab.SceneSnapshotCollection
+		if snapName == "" {
+			snapName = "collabSceneSnapshots"
+		}
+		if ss := mongoinfra.NewCollabSceneSnapshotStore(db.Collection(snapName)); ss != nil {
+			if err := ss.EnsureIndexes(ctx); err != nil {
+				log.Warnfc(ctx, "collab scene snapshot indexes: %v", err)
+			}
+			collabSceneSnapshots = ss
+		}
 	}
 	// Start web server
 	NewServer(ctx, &ServerConfig{
-		Config:                conf,
-		Debug:                 debug,
-		Repos:                 repos,
-		Gateways:              gateways,
-		AccountRepos:          acRepos,
-		AccountGateways:       acGateways,
-		AccountsAPIClient:     accountsAPIClient,
-		ServiceName:           otelServiceName,
-		CollabChatStore:       collabChat,
-		CollabApplyAuditStore: collabApplyAudit,
-		CollabOpStackStore:    collabOpStack,
+		Config:                   conf,
+		Debug:                    debug,
+		Repos:                    repos,
+		Gateways:                 gateways,
+		AccountRepos:             acRepos,
+		AccountGateways:          acGateways,
+		AccountsAPIClient:        accountsAPIClient,
+		ServiceName:              otelServiceName,
+		CollabChatStore:          collabChat,
+		CollabApplyAuditStore:    collabApplyAudit,
+		CollabOpStackStore:       collabOpStack,
+		CollabSceneSnapshotStore: collabSceneSnapshots,
 	}).Run(ctx)
 }
 
@@ -91,18 +103,19 @@ type WebServer struct {
 }
 
 type ServerConfig struct {
-	Config                *config.Config
-	Debug                 bool
-	Repos                 *repo.Container
-	Gateways              *gateway.Container
-	AccountRepos          *accountsInfra.Container
-	AccountGateways       *accountsGateway.Container
-	AccountsAPIClient     *gqlclient.Client
-	ServiceName           otel.OtelServiceName
-	CollabHub             *collab.Hub
-	CollabChatStore       collab.ChatHistoryStore
-	CollabApplyAuditStore collab.ApplyAuditStore
-	CollabOpStackStore    collab.CollabOpStack
+	Config                   *config.Config
+	Debug                    bool
+	Repos                    *repo.Container
+	Gateways                 *gateway.Container
+	AccountRepos             *accountsInfra.Container
+	AccountGateways          *accountsGateway.Container
+	AccountsAPIClient        *gqlclient.Client
+	ServiceName              otel.OtelServiceName
+	CollabHub                *collab.Hub
+	CollabChatStore          collab.ChatHistoryStore
+	CollabApplyAuditStore    collab.ApplyAuditStore
+	CollabOpStackStore       collab.CollabOpStack
+	CollabSceneSnapshotStore collab.SceneSnapshotStore
 }
 
 func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
@@ -138,6 +151,7 @@ func NewServer(ctx context.Context, cfg *ServerConfig) *WebServer {
 		ChatHistory:                 cfg.CollabChatStore,
 		ApplyAudit:                  cfg.CollabApplyAuditStore,
 		OpStack:                     cfg.CollabOpStackStore,
+		SceneSnapshot:               cfg.CollabSceneSnapshotStore,
 		MentionWebhookURL:           cfg.Config.Collab.MentionWebhookURL,
 	})
 	cfg.CollabHub = hub

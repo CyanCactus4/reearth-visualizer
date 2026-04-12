@@ -116,6 +116,8 @@ type CollabConfig struct {
 	OpLogCollection string `envconfig:"REEARTH_COLLAB_OPLOG_COLLECTION" pp:",omitempty"`
 	// UndoStateCollection stores per-user undo/redo stacks (default collabUndoState).
 	UndoStateCollection string `envconfig:"REEARTH_COLLAB_UNDO_STATE_COLLECTION" pp:",omitempty"`
+	// SceneSnapshotCollection stores ExportSceneData JSON for admin restore (default collabSceneSnapshots).
+	SceneSnapshotCollection string `envconfig:"REEARTH_COLLAB_SCENE_SNAPSHOT_COLLECTION" pp:",omitempty"`
 	// MentionWebhookURL optional POST target for @mention payloads (out-of-room notifications).
 	MentionWebhookURL string `envconfig:"REEARTH_COLLAB_MENTION_WEBHOOK_URL" pp:",omitempty"`
 }

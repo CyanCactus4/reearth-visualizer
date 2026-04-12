@@ -49,8 +49,11 @@ type Hub struct {
 	widgetClockMu sync.Mutex
 	widgetClocks  map[string]int64
 
-	opStack        CollabOpStack
-	mentionWebhook string
+	opStack            CollabOpStack
+	sceneSnapshotStore SceneSnapshotStore
+	snapMu             sync.Mutex
+	snapLastAt         map[string]time.Time // scene ID → last snapshot attempt
+	mentionWebhook     string
 }
 
 type room struct {
@@ -80,6 +83,8 @@ func NewHub(o Options) *Hub {
 		sceneRevSubs:        make(map[string][]chan int64),
 		widgetClocks:        make(map[string]int64),
 		opStack:             o.OpStack,
+		sceneSnapshotStore:  o.SceneSnapshot,
+		snapLastAt:          make(map[string]time.Time),
 		mentionWebhook:      strings.TrimSpace(o.MentionWebhookURL),
 	}
 	if o.RedisURL != "" {

@@ -558,6 +558,12 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 			}
 		}()
 	}
+
+	if hub != nil && sc != nil && from != nil {
+		if rev := sceneRevOf(sc); rev > 0 {
+			hub.queueSceneSnapshot(from, sc, rev)
+		}
+	}
 }
 
 func actorUserID(from *Conn) string {

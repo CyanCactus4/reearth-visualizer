@@ -20,4 +20,7 @@ type CollabOpStack interface {
 	RecordUndoable(ctx context.Context, rec UndoableOpRecord) error
 	Undo(ctx context.Context, userID, sceneID string) (*UndoableOpRecord, error)
 	Redo(ctx context.Context, userID, sceneID string) (*UndoableOpRecord, error)
+	// PatchHeadRedoForward rewrites forwardJson for the op at the tail of the redo stack (Mongo).
+	// In-memory / no-op implementations should return nil.
+	PatchHeadRedoForward(ctx context.Context, userID, sceneID string, forward json.RawMessage) error
 }
