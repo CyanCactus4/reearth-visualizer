@@ -11,6 +11,8 @@ export type RemoteCursor = {
   ts: number;
 };
 
+import type { CollabHlcWire } from "./hlc";
+
 export type CollabChatLine = {
   id: string;
   userId: string;
@@ -50,6 +52,16 @@ export type CollabContextValue = {
   widgetEntityClocks: Readonly<
     Record<string, Readonly<Record<string, number>>>
   >;
+  /**
+   * Per property-field LWW clock from last `applied.propertyFieldClock` (see `propertyFieldClockKey`).
+   */
+  propertyFieldClocks: Readonly<Record<string, number>>;
+  /** Per property document CAS clock (`propertyDocClockKey`) from `applied.propertyDocClock`. */
+  propertyDocClocks: Readonly<Record<string, number>>;
+  /** Stable id for this tab (Hybrid Logical Clock replica). */
+  collabReplicaId: string;
+  /** Next HLC stamp for `update_property_value` CRDT applies (LWW register). */
+  tickPropertyFieldHlc: () => CollabHlcWire;
 };
 
 export const CollabContext = createContext<CollabContextValue | null>(null);

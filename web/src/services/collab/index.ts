@@ -28,17 +28,31 @@ export {
   applyRemoveWidgetPayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyAddPropertyItemPayload,
+  applyMergePropertyJsonPayload,
+  applyMovePropertyItemPayload,
+  applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
+  propertyDocClockKey,
+  propertyFieldClockKey,
+  propertyFieldMergePatchKey,
   applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyUpdateWidgetPayload
 } from "./applyMessages";
 export { activityPayload, type CollabActivityKind } from "./activityMessages";
+export { HybridLogicalClock, type CollabHlcWire } from "./hlc";
 export { chatPayload } from "./chatMessages";
 export { collabUserColor, collabUserHue } from "./collabUserColor";
 export { CollabClient, type CollabInbound } from "./CollabClient";
 export { cursorPayload } from "./cursorMessages";
-export { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
+export {
+  collabOfflineDrain,
+  collabOfflineFlush,
+  collabOfflineNormalize,
+  collabOfflinePush,
+  type OfflineCollabEntry
+} from "./offlineQueue";
 export {
   collabResourceLockKey,
   lockPayload,

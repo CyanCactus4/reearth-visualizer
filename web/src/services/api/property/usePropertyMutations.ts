@@ -17,6 +17,9 @@ import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
 import {
+  applyAddPropertyItemPayload,
+  applyMovePropertyItemPayload,
+  applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
   useCollab
 } from "@reearth/services/collab";
@@ -47,6 +50,7 @@ export const usePropertyMutations = (sceneId?: string) => {
       if (!gvt) return;
       const value = valueToGQL(v, vt);
       if (collab?.status === "open" && sceneId) {
+        const fieldHlc = collab.tickPropertyFieldHlc();
         const ok = collab.sendRaw(
           applyUpdatePropertyValuePayload({
             sceneId,
@@ -56,7 +60,7 @@ export const usePropertyMutations = (sceneId?: string) => {
             fieldId,
             type: gvt,
             value,
-            baseSceneRev: collab.remoteSceneRev
+            fieldHlc
           })
         );
         if (ok) {
@@ -108,6 +112,23 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyAddPropertyItemPayload({
+            sceneId,
+            propertyId,
+            schemaGroupId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the property value!")
+          });
+          return { data: propertyId, status: "success" };
+        }
+      }
       const { data, error } = await addPropertyItemMutation({
         variables: {
           propertyId,
@@ -131,7 +152,7 @@ export const usePropertyMutations = (sceneId?: string) => {
         status: "success"
       };
     },
-    [addPropertyItemMutation, setNotification, t]
+    [addPropertyItemMutation, collab, sceneId, setNotification, t]
   );
 
   const removePropertyItem = useCallback(
@@ -142,6 +163,24 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyRemovePropertyItemPayload({
+            sceneId,
+            propertyId,
+            schemaGroupId,
+            itemId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the property value!")
+          });
+          return { data: propertyId, status: "success" };
+        }
+      }
       const { data, error } = await removePropertyItemMutation({
         variables: {
           propertyId,
@@ -166,7 +205,7 @@ export const usePropertyMutations = (sceneId?: string) => {
         status: "success"
       };
     },
-    [removePropertyItemMutation, setNotification, t]
+    [collab, removePropertyItemMutation, sceneId, setNotification, t]
   );
 
   const movePropertyItem = useCallback(
@@ -178,6 +217,25 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
+      if (collab?.status === "open" && sceneId) {
+        const ok = collab.sendRaw(
+          applyMovePropertyItemPayload({
+            sceneId,
+            propertyId,
+            schemaGroupId,
+            itemId,
+            index,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully updated the property value!")
+          });
+          return { data: propertyId, status: "success" };
+        }
+      }
       const { data, error } = await movePropertyItemMutation({
         variables: {
           propertyId,
@@ -203,7 +261,7 @@ export const usePropertyMutations = (sceneId?: string) => {
         status: "success"
       };
     },
-    [movePropertyItemMutation, setNotification, t]
+    [collab, movePropertyItemMutation, sceneId, setNotification, t]
   );
 
   return {

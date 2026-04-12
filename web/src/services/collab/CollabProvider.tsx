@@ -34,7 +34,16 @@ import {
   type LockResource
 } from "./lockMessages";
 import { extractChatMentions } from "./chatMentions";
-import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
+import {
+  collabOfflineFlush,
+  collabOfflinePush
+} from "./offlineQueue";
+import {
+  propertyDocClockKey,
+  propertyFieldClockKey
+} from "./applyMessages";
+import type { CollabHlcWire } from "./hlc";
+import { HybridLogicalClock } from "./hlc";
 
 const COLLAB_SCENE_REV_SUB = gql`
   subscription CollabSceneRevisionSub($sceneId: ID!) {
@@ -105,6 +114,16 @@ export const CollabProvider: FC<Props> = ({
   const [widgetEntityClocks, setWidgetEntityClocks] = useState<
     Record<string, Record<string, number>>
   >({});
+  const [propertyFieldClocks, setPropertyFieldClocks] = useState<
+    Record<string, number>
+  >({});
+  const [propertyDocClocks, setPropertyDocClocks] = useState<
+    Record<string, number>
+  >({});
+  const propertyHlc = useMemo(
+    () => new HybridLogicalClock(crypto.randomUUID()),
+    [projectId]
+  );
   const lang = useLang();
   const langRef = useRef(lang);
   langRef.current = lang;
@@ -466,10 +485,25 @@ export const CollabProvider: FC<Props> = ({
               kind?: string;
               widgetId?: string;
               entityClocks?: Record<string, number>;
+              propertyId?: string;
+              fieldId?: string;
+              schemaGroupId?: string;
+              itemId?: string;
+              propertyFieldClock?: number;
+              propertyFieldHlc?: CollabHlcWire;
             }
           | undefined;
         if (typeof d?.sceneRev === "number") {
           setRemoteSceneRev(d.sceneRev);
+        }
+        const pfh = d?.propertyFieldHlc;
+        if (
+          pfh &&
+          typeof pfh.wall === "number" &&
+          typeof pfh.logical === "number" &&
+          typeof pfh.node === "string"
+        ) {
+          propertyHlc.receive(pfh);
         }
         if (
           d?.kind === "update_widget" &&
@@ -486,9 +520,53 @@ export const CollabProvider: FC<Props> = ({
             }
           }));
         }
+        if (
+          d?.kind === "update_property_value" &&
+          typeof d.propertyId === "string" &&
+          typeof d.fieldId === "string" &&
+          typeof d.propertyFieldClock === "number"
+        ) {
+          const pk = propertyFieldClockKey({
+            propertyId: d.propertyId,
+            fieldId: d.fieldId,
+            schemaGroupId: d.schemaGroupId,
+            itemId: d.itemId
+          });
+          setPropertyFieldClocks((prev) => ({
+            ...prev,
+            [pk]: d.propertyFieldClock!
+          }));
+        }
+        const kindsWithDocClock = new Set([
+          "update_property_value",
+          "merge_property_json",
+          "add_property_item",
+          "remove_property_item",
+          "move_property_item"
+        ]);
+        if (
+          sceneId &&
+          kindsWithDocClock.has(String(d?.kind ?? "")) &&
+          typeof d?.propertyId === "string" &&
+          typeof d?.propertyDocClock === "number"
+        ) {
+          const dk = propertyDocClockKey({
+            sceneId,
+            propertyId: d.propertyId
+          });
+          setPropertyDocClocks((prev) => ({
+            ...prev,
+            [dk]: d.propertyDocClock!
+          }));
+        }
       }
     },
-    [noteTypingUser]
+    [noteTypingUser, sceneId, propertyHlc]
+  );
+
+  const tickPropertyFieldHlc = useCallback(
+    () => propertyHlc.tick(),
+    [propertyHlc]
   );
 
   useEffect(() => {
@@ -500,6 +578,8 @@ export const CollabProvider: FC<Props> = ({
     setChatMessages([]);
     setRemoteSceneRev(undefined);
     setWidgetEntityClocks({});
+    setPropertyFieldClocks({});
+    setPropertyDocClocks({});
     seenChatIdsRef.current.clear();
     optimisticByKeyRef.current.clear();
     lastAppliedNotifyAtRef.current.clear();
@@ -605,10 +685,8 @@ export const CollabProvider: FC<Props> = ({
 
   const drainOfflineAndSend = useCallback(() => {
     if (!projectId) return Promise.resolve();
-    return collabOfflineDrain(projectId).then((batch) => {
-      for (const line of batch) {
-        clientRef.current?.sendRaw(line);
-      }
+    return collabOfflineFlush(projectId, (line) => {
+      return clientRef.current?.sendRaw(line) ?? false;
     });
   }, [projectId]);
 
@@ -722,7 +800,11 @@ export const CollabProvider: FC<Props> = ({
       chatMessages,
       sendChat,
       remoteSceneRev,
-      widgetEntityClocks
+      widgetEntityClocks,
+      propertyFieldClocks,
+      propertyDocClocks,
+      collabReplicaId: propertyHlc.replicaId,
+      tickPropertyFieldHlc
     }),
     [
       status,
@@ -736,7 +818,11 @@ export const CollabProvider: FC<Props> = ({
       chatMessages,
       sendChat,
       remoteSceneRev,
-      widgetEntityClocks
+      widgetEntityClocks,
+      propertyFieldClocks,
+      propertyDocClocks,
+      propertyHlc,
+      tickPropertyFieldHlc
     ]
   );
 

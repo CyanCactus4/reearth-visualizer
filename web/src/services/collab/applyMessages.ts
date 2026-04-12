@@ -1,5 +1,7 @@
 import { WidgetAlignSystemType } from "@reearth/services/gql";
 
+import type { CollabHlcWire } from "./hlc";
+
 /** Maps GraphQL enum to collab `apply` JSON (server parseAlignSystem). */
 export function alignSystemForCollab(
   t: WidgetAlignSystemType
@@ -603,6 +605,120 @@ export function applyRemoveStylePayload(params: {
   return JSON.stringify({ v: 1, t: "apply", d });
 }
 
+/** Stable key for LWW `fieldClock` / `propertyFieldClock` merge (must match server composite key). */
+export function propertyFieldClockKey(parts: {
+  propertyId: string;
+  fieldId: string;
+  schemaGroupId?: string;
+  itemId?: string;
+}): string {
+  const sg = parts.schemaGroupId ?? "";
+  const it = parts.itemId ?? "";
+  return `${parts.propertyId}\0${sg}\0${it}\0${parts.fieldId}`;
+}
+
+/** Key for `merge_property_json` patch leaves (must match server `flatPropertyFieldKey`). */
+export function propertyFieldMergePatchKey(parts: {
+  fieldId: string;
+  schemaGroupId?: string;
+  itemId?: string;
+}): string {
+  const sg = parts.schemaGroupId ?? "";
+  const it = parts.itemId ?? "";
+  return `${sg}\0${it}\0${parts.fieldId}`;
+}
+
+/** CAS clock for `merge_property_json` (per scene + property). */
+export function propertyDocClockKey(parts: {
+  sceneId: string;
+  propertyId: string;
+}): string {
+  return `${parts.sceneId}\0${parts.propertyId}`;
+}
+
+/**
+ * Batch merge of property field values (RFC7396-style JSON object merge on flattened leaves).
+ * When `docClock` is set, server requires CAS match (`stale_property_doc` otherwise).
+ */
+export function applyMergePropertyJsonPayload(params: {
+  sceneId: string;
+  propertyId: string;
+  /** Flat map: keys from `propertyFieldMergePatchKey`, values `{ type, value }`. */
+  patch: Record<string, { type: string; value?: unknown }>;
+  docClock?: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "merge_property_json",
+    sceneId: params.sceneId,
+    propertyId: params.propertyId,
+    patch: params.patch
+  };
+  if (params.docClock != null) d.docClock = params.docClock;
+  else if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyAddPropertyItemPayload(params: {
+  sceneId: string;
+  propertyId: string;
+  schemaGroupId: string;
+  index?: number;
+  nameFieldType?: string;
+  nameFieldValue?: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "add_property_item",
+    sceneId: params.sceneId,
+    propertyId: params.propertyId,
+    schemaGroupId: params.schemaGroupId
+  };
+  if (params.index != null) d.index = params.index;
+  if (params.nameFieldType != null) d.nameFieldType = params.nameFieldType;
+  if (params.nameFieldValue !== undefined) d.nameFieldValue = params.nameFieldValue;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemovePropertyItemPayload(params: {
+  sceneId: string;
+  propertyId: string;
+  schemaGroupId: string;
+  itemId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_property_item",
+    sceneId: params.sceneId,
+    propertyId: params.propertyId,
+    schemaGroupId: params.schemaGroupId,
+    itemId: params.itemId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyMovePropertyItemPayload(params: {
+  sceneId: string;
+  propertyId: string;
+  schemaGroupId: string;
+  itemId: string;
+  index: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "move_property_item",
+    sceneId: params.sceneId,
+    propertyId: params.propertyId,
+    schemaGroupId: params.schemaGroupId,
+    itemId: params.itemId,
+    index: params.index
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
 /** Collab apply for scene/widget/… property field edits (server `Property.UpdateValue`). */
 export function applyUpdatePropertyValuePayload(params: {
   sceneId: string;
@@ -614,6 +730,10 @@ export function applyUpdatePropertyValuePayload(params: {
   schemaGroupId?: string;
   itemId?: string;
   baseSceneRev?: number;
+  /** When set, server uses per-field LWW and ignores baseSceneRev (collab CRDT-style register). */
+  fieldClock?: number;
+  /** Hybrid Logical Clock (LWW CRDT). When set, `fieldClock` / `baseSceneRev` are omitted. */
+  fieldHlc?: CollabHlcWire;
 }): string {
   const d: Record<string, unknown> = {
     kind: "update_property_value",
@@ -629,6 +749,12 @@ export function applyUpdatePropertyValuePayload(params: {
     d.itemId = params.itemId;
   }
   if (params.value !== undefined) d.value = params.value;
-  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  if (params.fieldHlc != null) {
+    d.fieldHlc = params.fieldHlc;
+  } else if (params.fieldClock != null) {
+    d.fieldClock = params.fieldClock;
+  } else if (params.baseSceneRev != null) {
+    d.baseSceneRev = params.baseSceneRev;
+  }
   return JSON.stringify({ v: 1, t: "apply", d });
 }
