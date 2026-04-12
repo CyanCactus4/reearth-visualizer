@@ -144,6 +144,14 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyRemoveStyleOp(ctx, hub, from, d)
 	case "update_property_value":
 		return applyUpdatePropertyValueOp(ctx, hub, from, d)
+	case "merge_property_json":
+		return applyMergePropertyJSONOp(ctx, hub, from, d)
+	case "add_property_item":
+		return applyAddPropertyItemOp(ctx, hub, from, d)
+	case "remove_property_item":
+		return applyRemovePropertyItemOp(ctx, hub, from, d)
+	case "move_property_item":
+		return applyMovePropertyItemOp(ctx, hub, from, d)
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "unknown_kind", "message": head.Kind}})
 		return nil

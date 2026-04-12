@@ -49,6 +49,20 @@ type Hub struct {
 	widgetClockMu sync.Mutex
 	widgetClocks  map[string]int64
 
+	// Per-property-field LWW clocks (same Redis client as widget clocks when configured).
+	propertyFieldClockMu sync.Mutex
+	propertyFieldClocks  map[string]int64
+
+	// Per-property-field HLC (CRDT LWW register timestamps); in-memory when Redis absent.
+	propertyFieldHLCMemory *propertyFieldHLCMemory
+
+	// Per-property document clock for merge_property_json (CAS).
+	propertyDocClockMu sync.Mutex
+	propertyDocClocks  map[string]int64
+
+	// Serializes property-field collab paths (integer LWW + HLC CRDT) vs Mongo apply on this instance.
+	propertyCollabApplyMu sync.Mutex
+
 	opStack            CollabOpStack
 	sceneSnapshotStore SceneSnapshotStore
 	snapMu             sync.Mutex
@@ -82,6 +96,9 @@ func NewHub(o Options) *Hub {
 		applyAudit:          o.ApplyAudit,
 		sceneRevSubs:        make(map[string][]chan int64),
 		widgetClocks:        make(map[string]int64),
+		propertyFieldClocks:    make(map[string]int64),
+		propertyFieldHLCMemory: newPropertyFieldHLCMemory(),
+		propertyDocClocks:       make(map[string]int64),
 		opStack:             o.OpStack,
 		sceneSnapshotStore:  o.SceneSnapshot,
 		snapLastAt:          make(map[string]time.Time),

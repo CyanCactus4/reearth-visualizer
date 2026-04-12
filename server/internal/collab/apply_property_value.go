@@ -15,6 +15,19 @@ import (
 	"github.com/reearth/reearthx/log"
 )
 
+type fieldHLCWire struct {
+	Wall    int64  `json:"wall"`
+	Logical uint32 `json:"logical"`
+	Node    string `json:"node"`
+}
+
+func (w *fieldHLCWire) toHLC() HLC {
+	if w == nil {
+		return ZeroHLC
+	}
+	return HLC{Physical: w.Wall, Logical: w.Logical, NodeID: w.Node}
+}
+
 type applyUpdatePropertyValue struct {
 	Kind          string          `json:"kind"`
 	SceneID       string          `json:"sceneId"`
@@ -25,6 +38,10 @@ type applyUpdatePropertyValue struct {
 	Type          string          `json:"type"`
 	Value         json.RawMessage `json:"value,omitempty"`
 	BaseSceneRev  *int64          `json:"baseSceneRev,omitempty"`
+	// FieldClock optional per-field LWW clock (see Hub.PropertyFieldClock). When set, baseSceneRev is not required.
+	FieldClock *int64 `json:"fieldClock,omitempty"`
+	// FieldHLC optional Hybrid Logical Clock (LWW-register CRDT). When set with hub, baseSceneRev is not required; FieldClock is ignored.
+	FieldHLC *fieldHLCWire `json:"fieldHlc,omitempty"`
 }
 
 func sceneMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid id.SceneID) bool {
@@ -155,8 +172,57 @@ func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d jso
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "internal", "message": "usecases unavailable"}})
 		return nil
 	}
-	if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
-		return nil
+	fieldHlcUsed := p.FieldHLC != nil && hub != nil
+	fieldClockUsed := p.FieldClock != nil && hub != nil && !fieldHlcUsed
+
+	if !fieldHlcUsed && !fieldClockUsed {
+		if !assertSceneRevIfPresent(ctx, uc, op, sid, from, d) {
+			return nil
+		}
+	}
+	if fieldHlcUsed || fieldClockUsed {
+		hub.propertyCollabApplyMu.Lock()
+		defer hub.propertyCollabApplyMu.Unlock()
+	}
+	if fieldHlcUsed {
+		inc := p.FieldHLC.toHLC()
+		inc.NodeID = normalizeNodeID(inc.NodeID)
+		if !inc.IsValidClientHLC() {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid fieldHlc (wall/logical/node required)"}})
+			return nil
+		}
+		sg := ""
+		if p.SchemaGroupID != nil {
+			sg = *p.SchemaGroupID
+		}
+		it := ""
+		if p.ItemID != nil {
+			it = *p.ItemID
+		}
+		if !inc.After(hub.PropertyFieldHLC(sid.String(), p.PropertyID, sg, it, p.FieldID)) {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{
+				"code":    "stale_property_field",
+				"message": "property field HLC not newer than server; refresh from last applied",
+			}})
+			return nil
+		}
+	} else if fieldClockUsed {
+		sg := ""
+		if p.SchemaGroupID != nil {
+			sg = *p.SchemaGroupID
+		}
+		it := ""
+		if p.ItemID != nil {
+			it = *p.ItemID
+		}
+		srv := hub.PropertyFieldClock(sid.String(), p.PropertyID, sg, it, p.FieldID)
+		if srv > *p.FieldClock {
+			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{
+				"code":    "stale_property_field",
+				"message": "property field clock behind server; refresh from last applied",
+			}})
+			return nil
+		}
 	}
 	if !sceneMustNotBeLockedByPeer(ctx, hub, from, sid) {
 		return nil
@@ -179,11 +245,49 @@ func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d jso
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
 		return nil
 	}
-	broadcastApplied(ctx, hub, from, "update_property_value", map[string]any{
+	extra := map[string]any{
 		"sceneId":    p.SceneID,
 		"propertyId": p.PropertyID,
 		"fieldId":    p.FieldID,
-	}, sc)
+	}
+	if p.SchemaGroupID != nil && *p.SchemaGroupID != "" {
+		extra["schemaGroupId"] = *p.SchemaGroupID
+	}
+	if p.ItemID != nil && *p.ItemID != "" {
+		extra["itemId"] = *p.ItemID
+	}
+	if fieldClockUsed && hub != nil {
+		sg := ""
+		if p.SchemaGroupID != nil {
+			sg = *p.SchemaGroupID
+		}
+		it := ""
+		if p.ItemID != nil {
+			it = *p.ItemID
+		}
+		extra["propertyFieldClock"] = hub.BumpPropertyFieldClock(sid.String(), p.PropertyID, sg, it, p.FieldID)
+	}
+	if fieldHlcUsed && hub != nil {
+		sg := ""
+		if p.SchemaGroupID != nil {
+			sg = *p.SchemaGroupID
+		}
+		it := ""
+		if p.ItemID != nil {
+			it = *p.ItemID
+		}
+		committed := hub.advancePropertyFieldHLC(sid.String(), p.PropertyID, sg, it, p.FieldID, p.FieldHLC.toHLC(), time.Now().UnixMilli())
+		extra["propertyFieldHlc"] = map[string]any{
+			"wall":     committed.Physical,
+			"logical":  committed.Logical,
+			"node":     committed.NodeID,
+		}
+		extra["propertyFieldClock"] = hub.BumpPropertyFieldClock(sid.String(), p.PropertyID, sg, it, p.FieldID)
+	}
+	if hub != nil {
+		extra["propertyDocClock"] = hub.BumpPropertyDocClock(sid.String(), p.PropertyID)
+	}
+	broadcastApplied(ctx, hub, from, "update_property_value", extra, sc)
 
 	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
 		rec := UndoableOpRecord{
