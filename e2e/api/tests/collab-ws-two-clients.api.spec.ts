@@ -123,6 +123,34 @@ function mergePatchKey(field: FieldPick): string {
   return `${field.schemaGroupId ?? ""}${z}${field.itemId ?? ""}${z}${field.fieldId}`;
 }
 
+type TilesListInfo = {
+  propertyId: string;
+  groupIds: string[];
+};
+
+function pickTilesGroupList(node: unknown): TilesListInfo | null {
+  const n = node as {
+    property?: {
+      id?: string;
+      items?: Array<{
+        schemaGroupId?: string;
+        groups?: Array<{ id: string }>;
+      }>;
+    };
+  };
+  const prop = n?.property;
+  if (!prop?.id || !Array.isArray(prop.items)) return null;
+  for (const item of prop.items) {
+    if (item.schemaGroupId === "tiles" && Array.isArray(item.groups)) {
+      return {
+        propertyId: prop.id,
+        groupIds: item.groups.map((g) => g.id)
+      };
+    }
+  }
+  return null;
+}
+
 function awaitApplied(
   ws: WebSocket,
   timeoutMs: number,
@@ -333,6 +361,146 @@ test.describe("Collab WebSocket: two clients, apply → applied", () => {
     expect(d2.kind).toBe("merge_property_json");
     expect(typeof d2.sceneRev).toBe("number");
     expect(Array.isArray(d2.mergedKeys)).toBe(true);
+
+    ws1.close();
+    ws2.close();
+
+    try {
+      await gqlClient.mutate(DELETE_PROJECT, {
+        input: { projectId: localProjectId }
+      });
+    } catch {
+      /* ignore */
+    }
+  });
+
+  test("two sockets: add / move / remove property_item (tiles list)", async ({
+    gqlClient
+  }) => {
+    const { token } = JSON.parse(fs.readFileSync(tokenPath, "utf-8"));
+
+    const { data: me } = await gqlClient.query<{
+      me: { myWorkspaceId: string };
+    }>(GET_ME);
+
+    const { data: proj } = await gqlClient.mutate<{
+      createProject: { project: { id: string } };
+    }>(CREATE_PROJECT, {
+      input: {
+        workspaceId: me.me.myWorkspaceId,
+        visualizer: "CESIUM",
+        name: "Collab WS property items",
+        coreSupport: true
+      }
+    });
+    const localProjectId = proj.createProject.project.id;
+
+    const { data: sc } = await gqlClient.mutate<{
+      createScene: { scene: { id: string } };
+    }>(CREATE_SCENE, { input: { projectId: localProjectId } });
+    const localSceneId = sc.createScene.scene.id;
+
+    await gqlClient.mutate(ADD_NLS_LAYER_SIMPLE, {
+      input: {
+        sceneId: localSceneId,
+        layerType: "simple",
+        title: "Layer",
+        visible: true,
+        config: { data: { type: "geojson" } }
+      }
+    });
+
+    const { data: sceneData } = await gqlClient.query<{
+      node?: unknown;
+    }>(GET_SCENE, { sceneId: localSceneId });
+    const tiles = pickTilesGroupList(sceneData?.node);
+    if (!tiles) {
+      test.skip(true, "no scene tiles PropertyGroupList");
+      return;
+    }
+    const beforeIds = new Set(tiles.groupIds);
+
+    const url = wsCollabUrl(localProjectId, token);
+    const ws1 = new WebSocket(url);
+    const ws2 = new WebSocket(url);
+
+    await Promise.all([
+      new Promise<void>((res, rej) => {
+        ws1.onopen = () => res();
+        ws1.onerror = () => rej(new Error("ws1 connect failed"));
+      }),
+      new Promise<void>((res, rej) => {
+        ws2.onopen = () => res();
+        ws2.onerror = () => rej(new Error("ws2 connect failed"));
+      })
+    ]);
+
+    const appliedAdd = awaitApplied(ws2, 25000, "add_property_item");
+    ws1.send(
+      JSON.stringify({
+        v: 1,
+        t: "apply",
+        d: {
+          kind: "add_property_item",
+          sceneId: localSceneId,
+          propertyId: tiles.propertyId,
+          schemaGroupId: "tiles"
+        }
+      })
+    );
+    const addPayload = await appliedAdd;
+    expect(addPayload.kind).toBe("add_property_item");
+    const itemIdFromApplied =
+      typeof addPayload.itemId === "string" ? addPayload.itemId : "";
+
+    const { data: afterAdd } = await gqlClient.query<{
+      node?: unknown;
+    }>(GET_SCENE, { sceneId: localSceneId });
+    const tilesAfterAdd = pickTilesGroupList(afterAdd?.node);
+    expect(tilesAfterAdd?.groupIds.length).toBeGreaterThan(beforeIds.size);
+    const newGroupId =
+      itemIdFromApplied ||
+      tilesAfterAdd!.groupIds.find((id) => !beforeIds.has(id)) ||
+      "";
+    expect(newGroupId.length).toBeGreaterThan(0);
+
+    if (tilesAfterAdd!.groupIds.length >= 2) {
+      const appliedMove = awaitApplied(ws2, 25000, "move_property_item");
+      const firstId = tilesAfterAdd.groupIds[0];
+      ws1.send(
+        JSON.stringify({
+          v: 1,
+          t: "apply",
+          d: {
+            kind: "move_property_item",
+            sceneId: localSceneId,
+            propertyId: tiles.propertyId,
+            schemaGroupId: "tiles",
+            itemId: firstId,
+            index: tilesAfterAdd.groupIds.length - 1
+          }
+        })
+      );
+      const movePayload = await appliedMove;
+      expect(movePayload.kind).toBe("move_property_item");
+    }
+
+    const appliedRemove = awaitApplied(ws2, 25000, "remove_property_item");
+    ws1.send(
+      JSON.stringify({
+        v: 1,
+        t: "apply",
+        d: {
+          kind: "remove_property_item",
+          sceneId: localSceneId,
+          propertyId: tiles.propertyId,
+          schemaGroupId: "tiles",
+          itemId: newGroupId
+        }
+      })
+    );
+    const removePayload = await appliedRemove;
+    expect(removePayload.kind).toBe("remove_property_item");
 
     ws1.close();
     ws2.close();
