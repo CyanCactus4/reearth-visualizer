@@ -16,7 +16,8 @@ import (
 )
 
 // ExecuteCollabUndoJSON runs one undo/redo payload (inverse or forward JSON) through the same interactors as collab apply.
-func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *usecase.Operator) (*scene.Scene, error) {
+// hub may be nil (skips property collab mutex and doc/field clocks); when undo/redo is served over HTTP, pass the live hub.
+func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *usecase.Operator, hub *Hub) (*scene.Scene, error) {
 	var env struct {
 		Kind string `json:"kind"`
 	}
@@ -191,6 +192,8 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, err
 		}
 		return runPropertyValueUpdate(ctx, uc, operator, pid, ptr, val, sid)
+	case "merge_property_json":
+		return mergePropertyJSONForUndoRedo(ctx, hub, uc, operator, raw)
 	case "add_property_item":
 		var p applyAddPropertyItem
 		if err := json.Unmarshal(raw, &p); err != nil {

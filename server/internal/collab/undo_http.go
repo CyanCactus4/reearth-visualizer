@@ -71,7 +71,7 @@ func serveCollabUndoRedo(hub *Hub, undo bool) echo.HandlerFunc {
 			payload = rec.Forward
 		}
 
-		sc, err2 := ExecuteCollabUndoJSON(c.Request().Context(), payload, op)
+		sc, err2 := ExecuteCollabUndoJSON(c.Request().Context(), payload, op, hub)
 		if err2 != nil {
 			return echo.NewHTTPError(http.StatusBadRequest, err2.Error())
 		}
