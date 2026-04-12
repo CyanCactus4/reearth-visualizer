@@ -22,7 +22,7 @@ Optimistic locks, TTL, read-only для чужих блокировок; при 
 
 ### Requirement: FR-5 History and undo
 
-Журнал apply, undo/redo только своих операций, авторы в UI, админский restore по снимкам где настроено.
+Журнал apply, undo/redo только своих операций, авторы в UI, админский restore по снимкам где настроено; в т.ч. **`remove_property_item`** с inverse **`add_property_item`** (снимок до удаления).
 
 ### Requirement: FR-6 Notifications and chat
 

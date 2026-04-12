@@ -18,14 +18,14 @@ import (
 )
 
 type applyAddPropertyItem struct {
-	Kind            string          `json:"kind"`
-	SceneID         string          `json:"sceneId"`
-	PropertyID      string          `json:"propertyId"`
-	SchemaGroupID   string          `json:"schemaGroupId"`
-	Index           *int            `json:"index,omitempty"`
-	NameFieldType   *string         `json:"nameFieldType,omitempty"`
-	NameFieldValue  json.RawMessage `json:"nameFieldValue,omitempty"`
-	BaseSceneRev    *int64          `json:"baseSceneRev,omitempty"`
+	Kind           string          `json:"kind"`
+	SceneID        string          `json:"sceneId"`
+	PropertyID     string          `json:"propertyId"`
+	SchemaGroupID  string          `json:"schemaGroupId"`
+	Index          *int            `json:"index,omitempty"`
+	NameFieldType  *string         `json:"nameFieldType,omitempty"`
+	NameFieldValue json.RawMessage `json:"nameFieldValue,omitempty"`
+	BaseSceneRev   *int64          `json:"baseSceneRev,omitempty"`
 }
 
 type applyRemovePropertyItem struct {
@@ -243,8 +243,28 @@ func applyRemovePropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
 		return nil
 	}
-	if fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from) == nil {
+	prop := fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from)
+	if prop == nil {
 		return nil
+	}
+	itemIid, err := id.PropertyItemIDFrom(p.ItemID)
+	if err != nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid itemId"}})
+		return nil
+	}
+	sgID := id.PropertySchemaGroupID(p.SchemaGroupID)
+	listIdx, ok := groupListItemIndex(prop, sgID, itemIid)
+	if !ok {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "property item not found in list"}})
+		return nil
+	}
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		var bErr error
+		invJSON, bErr = buildInverseAddPropertyItemJSONAfterRemove(ctx, uc, op, prop, &p, listIdx)
+		if bErr != nil {
+			log.Warnfc(ctx, "collab: remove_property_item undo snapshot: %v", bErr)
+		}
 	}
 	sc, err2 := runRemovePropertyItemCore(ctx, uc, op, sid, pid, &p)
 	if err2 != nil {
@@ -266,6 +286,24 @@ func applyRemovePropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json
 		extra["propertyDocClock"] = hub.BumpPropertyDocClock(sid.String(), p.PropertyID)
 	}
 	broadcastApplied(ctx, hub, from, "remove_property_item", extra, sc)
+
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "remove_property_item",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 

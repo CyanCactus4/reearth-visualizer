@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/reearth/reearth/server/internal/adapter/gql/gqlmodel"
 	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
@@ -28,6 +29,11 @@ func maybePatchRedoForwardAfterUndo(ctx context.Context, stack CollabOpStack, us
 			return nil
 		}
 		newFwd, err = patchedRedoRemoveStyleForward(ctx, uc, op, rec)
+	case "remove_property_item":
+		if uc == nil {
+			return nil
+		}
+		newFwd, err = patchedRedoRemovePropertyItemForward(ctx, uc, op, rec)
 	default:
 		return nil
 	}
@@ -126,6 +132,50 @@ func patchedRedoRemoveStyleForward(ctx context.Context, uc *interfaces.Container
 	}
 	fwd.StyleID = bestID.String()
 	b, err := json.Marshal(fwd)
+	if err != nil {
+		return nil, err
+	}
+	return json.RawMessage(b), nil
+}
+
+func patchedRedoRemovePropertyItemForward(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, rec *UndoableOpRecord) (json.RawMessage, error) {
+	var inv applyAddPropertyItem
+	if err := json.Unmarshal(rec.Inverse, &inv); err != nil {
+		return nil, err
+	}
+	var fwd applyRemovePropertyItem
+	if err := json.Unmarshal(rec.Forward, &fwd); err != nil {
+		return nil, err
+	}
+	sid, err := id.SceneIDFrom(inv.SceneID)
+	if err != nil {
+		return nil, err
+	}
+	pid, err := gqlmodel.ToID[id.Property](gqlmodel.ID(inv.PropertyID))
+	if err != nil {
+		return nil, err
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	list, err := uc.Property.Fetch(opCtx, []id.PropertyID{pid}, op)
+	if err != nil || len(list) == 0 || list[0] == nil {
+		return nil, fmt.Errorf("property fetch after undo")
+	}
+	prop := list[0]
+	if prop.Scene() != sid {
+		return nil, fmt.Errorf("scene mismatch")
+	}
+	sg := id.PropertySchemaGroupID(inv.SchemaGroupID)
+	idx := 0
+	if inv.Index != nil {
+		idx = *inv.Index
+	}
+	newItemID, err := propertyListGroupIDAtIndex(prop, sg, idx)
+	if err != nil {
+		return nil, err
+	}
+	fwd.ItemID = newItemID.String()
+	b, err := json.Marshal(&fwd)
 	if err != nil {
 		return nil, err
 	}
