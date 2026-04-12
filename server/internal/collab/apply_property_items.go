@@ -3,6 +3,8 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
 	"github.com/reearth/reearth/server/internal/adapter/gql/gqlmodel"
@@ -11,6 +13,7 @@ import (
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/property"
 	"github.com/reearth/reearth/server/pkg/scene"
+	"github.com/reearth/reearthx/log"
 	"github.com/samber/lo"
 )
 
@@ -54,6 +57,61 @@ func reloadSceneAfterProperty(ctx context.Context, uc *interfaces.Container, op 
 	return scenes[0], nil
 }
 
+// groupListItemIndex returns the index of a group inside a PropertyGroupList for the given schema group.
+func groupListItemIndex(prop *property.Property, schemaGroupID id.PropertySchemaGroupID, itemID id.PropertyItemID) (int, bool) {
+	if prop == nil {
+		return 0, false
+	}
+	for _, it := range prop.Items() {
+		gl, ok := it.(*property.GroupList)
+		if !ok || gl.SchemaGroup() != schemaGroupID {
+			continue
+		}
+		for i, g := range gl.Groups() {
+			if g != nil && g.ID() == itemID {
+				return i, true
+			}
+		}
+	}
+	return 0, false
+}
+
+func runAddPropertyItemCore(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, pid id.PropertyID, p *applyAddPropertyItem) (*scene.Scene, *property.Group, error) {
+	var nameVal *property.Value
+	if p.NameFieldType != nil && *p.NameFieldType != "" && len(p.NameFieldValue) > 0 && string(p.NameFieldValue) != "null" {
+		var valIface interface{}
+		if err := json.Unmarshal(p.NameFieldValue, &valIface); err != nil {
+			return nil, nil, err
+		}
+		vt := gqlmodel.ValueType(*p.NameFieldType)
+		nameVal = gqlmodel.FromPropertyValueAndType(valIface, vt)
+		if nameVal == nil {
+			return nil, nil, errInvalidPropertyApply("invalid name field value")
+		}
+	}
+	sg := gqlmodel.ID(p.SchemaGroupID)
+	ptr := gqlmodel.FromPointer(gqlmodel.ToStringIDRef[id.PropertySchemaGroup](&sg), nil, nil)
+	if ptr == nil {
+		return nil, nil, errInvalidPropertyApply("invalid schema group")
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, _, newGroup, err := uc.Property.AddItem(opCtx, interfaces.AddPropertyItemParam{
+		PropertyID:     pid,
+		Pointer:        ptr,
+		Index:          p.Index,
+		NameFieldValue: nameVal,
+	}, op)
+	if err != nil {
+		return nil, nil, err
+	}
+	sc, err2 := reloadSceneAfterProperty(ctx, uc, op, sid)
+	if err2 != nil {
+		return nil, nil, err2
+	}
+	return sc, newGroup, nil
+}
+
 // applyAddPropertyItemOp runs Property.AddItem (list schema groups).
 func applyAddPropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
 	var p applyAddPropertyItem
@@ -94,52 +152,58 @@ func applyAddPropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 	if fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from) == nil {
 		return nil
 	}
-	var nameVal *property.Value
-	if p.NameFieldType != nil && *p.NameFieldType != "" && len(p.NameFieldValue) > 0 && string(p.NameFieldValue) != "null" {
-		var valIface interface{}
-		if err := json.Unmarshal(p.NameFieldValue, &valIface); err != nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
-			return nil
-		}
-		vt := gqlmodel.ValueType(*p.NameFieldType)
-		nameVal = gqlmodel.FromPropertyValueAndType(valIface, vt)
-		if nameVal == nil {
-			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid name field value"}})
-			return nil
-		}
-	}
-	sg := gqlmodel.ID(p.SchemaGroupID)
-	ptr := gqlmodel.FromPointer(gqlmodel.ToStringIDRef[id.PropertySchemaGroup](&sg), nil, nil)
-	if ptr == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid schema group"}})
-		return nil
-	}
-	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
-	defer cancel()
-	_, _, _, err = uc.Property.AddItem(opCtx, interfaces.AddPropertyItemParam{
-		PropertyID:     pid,
-		Pointer:        ptr,
-		Index:          p.Index,
-		NameFieldValue: nameVal,
-	}, op)
-	if err != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err.Error()}})
-		return nil
-	}
-	sc, err2 := reloadSceneAfterProperty(ctx, uc, op, sid)
+	sc, newGroup, err2 := runAddPropertyItemCore(ctx, uc, op, sid, pid, &p)
 	if err2 != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
+		code := "apply_failed"
+		var inv errInvalidPropertyApply
+		if errors.As(err2, &inv) {
+			code = "invalid_payload"
+		}
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": code, "message": err2.Error()}})
+		return nil
+	}
+	if newGroup == nil {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "add item produced no group"}})
 		return nil
 	}
 	extra := map[string]any{
 		"sceneId":       p.SceneID,
 		"propertyId":    p.PropertyID,
 		"schemaGroupId": p.SchemaGroupID,
+		"itemId":        newGroup.ID().String(),
 	}
 	if hub != nil {
 		extra["propertyDocClock"] = hub.BumpPropertyDocClock(sid.String(), p.PropertyID)
 	}
 	broadcastApplied(ctx, hub, from, "add_property_item", extra, sc)
+
+	if hub != nil && hub.opStack != nil {
+		inv := applyRemovePropertyItem{
+			Kind:          "remove_property_item",
+			SceneID:       p.SceneID,
+			PropertyID:    p.PropertyID,
+			SchemaGroupID: p.SchemaGroupID,
+			ItemID:        newGroup.ID().String(),
+		}
+		invJSON, mErr := json.Marshal(&inv)
+		if mErr == nil {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "add_property_item",
+				Forward:   d,
+				Inverse:   invJSON,
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }
 
@@ -182,29 +246,14 @@ func applyRemovePropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json
 	if fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from) == nil {
 		return nil
 	}
-	itemID := gqlmodel.ID(p.ItemID)
-	ptr := gqlmodel.FromPointer(
-		lo.ToPtr(id.PropertySchemaGroupID(p.SchemaGroupID)),
-		&itemID,
-		nil,
-	)
-	if ptr == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid pointer"}})
-		return nil
-	}
-	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
-	defer cancel()
-	_, err = uc.Property.RemoveItem(opCtx, interfaces.RemovePropertyItemParam{
-		PropertyID: pid,
-		Pointer:    ptr,
-	}, op)
-	if err != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err.Error()}})
-		return nil
-	}
-	sc, err2 := reloadSceneAfterProperty(ctx, uc, op, sid)
+	sc, err2 := runRemovePropertyItemCore(ctx, uc, op, sid, pid, &p)
 	if err2 != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
+		code := "apply_failed"
+		var inv errInvalidPropertyApply
+		if errors.As(err2, &inv) {
+			code = "invalid_payload"
+		}
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": code, "message": err2.Error()}})
 		return nil
 	}
 	extra := map[string]any{
@@ -256,33 +305,28 @@ func applyMovePropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json.R
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": err.Error()}})
 		return nil
 	}
-	if fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from) == nil {
+	prop := fetchPropertyForCollabApply(ctx, uc, op, sid, pid, from)
+	if prop == nil {
 		return nil
 	}
-	itemID := gqlmodel.ID(p.ItemID)
-	ptr := gqlmodel.FromPointer(
-		lo.ToPtr(id.PropertySchemaGroupID(p.SchemaGroupID)),
-		&itemID,
-		nil,
-	)
-	if ptr == nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid pointer"}})
-		return nil
-	}
-	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
-	defer cancel()
-	_, _, _, err = uc.Property.MoveItem(opCtx, interfaces.MovePropertyItemParam{
-		PropertyID: pid,
-		Pointer:    ptr,
-		Index:      p.Index,
-	}, op)
+	itemIid, err := id.PropertyItemIDFrom(p.ItemID)
 	if err != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err.Error()}})
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_payload", "message": "invalid itemId"}})
 		return nil
 	}
-	sc, err2 := reloadSceneAfterProperty(ctx, uc, op, sid)
+	oldIdx, ok := groupListItemIndex(prop, id.PropertySchemaGroupID(p.SchemaGroupID), itemIid)
+	if !ok {
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": "property item not found in list"}})
+		return nil
+	}
+	sc, err2 := runMovePropertyItemCore(ctx, uc, op, sid, pid, &p)
 	if err2 != nil {
-		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
+		code := "apply_failed"
+		var inv errInvalidPropertyApply
+		if errors.As(err2, &inv) {
+			code = "invalid_payload"
+		}
+		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": code, "message": err2.Error()}})
 		return nil
 	}
 	extra := map[string]any{
@@ -296,5 +340,79 @@ func applyMovePropertyItemOp(ctx context.Context, hub *Hub, from *Conn, d json.R
 		extra["propertyDocClock"] = hub.BumpPropertyDocClock(sid.String(), p.PropertyID)
 	}
 	broadcastApplied(ctx, hub, from, "move_property_item", extra, sc)
+
+	if hub != nil && hub.opStack != nil && oldIdx != p.Index {
+		inv := applyMovePropertyItem{
+			Kind:          "move_property_item",
+			SceneID:       p.SceneID,
+			PropertyID:    p.PropertyID,
+			SchemaGroupID: p.SchemaGroupID,
+			ItemID:        p.ItemID,
+			Index:         oldIdx,
+		}
+		invJSON, mErr := json.Marshal(&inv)
+		if mErr == nil {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "move_property_item",
+				Forward:   d,
+				Inverse:   invJSON,
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
+}
+
+func runRemovePropertyItemCore(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, pid id.PropertyID, p *applyRemovePropertyItem) (*scene.Scene, error) {
+	itemID := gqlmodel.ID(p.ItemID)
+	ptr := gqlmodel.FromPointer(
+		lo.ToPtr(id.PropertySchemaGroupID(p.SchemaGroupID)),
+		&itemID,
+		nil,
+	)
+	if ptr == nil {
+		return nil, errInvalidPropertyApply("invalid pointer")
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, err := uc.Property.RemoveItem(opCtx, interfaces.RemovePropertyItemParam{
+		PropertyID: pid,
+		Pointer:    ptr,
+	}, op)
+	if err != nil {
+		return nil, err
+	}
+	return reloadSceneAfterProperty(ctx, uc, op, sid)
+}
+
+func runMovePropertyItemCore(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID, pid id.PropertyID, p *applyMovePropertyItem) (*scene.Scene, error) {
+	itemID := gqlmodel.ID(p.ItemID)
+	ptr := gqlmodel.FromPointer(
+		lo.ToPtr(id.PropertySchemaGroupID(p.SchemaGroupID)),
+		&itemID,
+		nil,
+	)
+	if ptr == nil {
+		return nil, errInvalidPropertyApply("invalid pointer")
+	}
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	_, _, _, err := uc.Property.MoveItem(opCtx, interfaces.MovePropertyItemParam{
+		PropertyID: pid,
+		Pointer:    ptr,
+		Index:      p.Index,
+	}, op)
+	if err != nil {
+		return nil, err
+	}
+	return reloadSceneAfterProperty(ctx, uc, op, sid)
 }

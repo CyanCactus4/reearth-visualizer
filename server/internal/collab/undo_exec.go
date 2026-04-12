@@ -191,6 +191,58 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, err
 		}
 		return runPropertyValueUpdate(ctx, uc, operator, pid, ptr, val, sid)
+	case "add_property_item":
+		var p applyAddPropertyItem
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		pid, err := gqlmodel.ToID[id.Property](gqlmodel.ID(p.PropertyID))
+		if err != nil {
+			return nil, err
+		}
+		sc, _, err := runAddPropertyItemCore(ctx, uc, operator, sid, pid, &p)
+		return sc, err
+	case "remove_property_item":
+		var p applyRemovePropertyItem
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		pid, err := gqlmodel.ToID[id.Property](gqlmodel.ID(p.PropertyID))
+		if err != nil {
+			return nil, err
+		}
+		return runRemovePropertyItemCore(ctx, uc, operator, sid, pid, &p)
+	case "move_property_item":
+		var p applyMovePropertyItem
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		pid, err := gqlmodel.ToID[id.Property](gqlmodel.ID(p.PropertyID))
+		if err != nil {
+			return nil, err
+		}
+		return runMovePropertyItemCore(ctx, uc, operator, sid, pid, &p)
 	case "update_style":
 		var p applyUpdateStyle
 		if err := json.Unmarshal(raw, &p); err != nil {
