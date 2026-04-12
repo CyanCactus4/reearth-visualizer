@@ -179,6 +179,8 @@ Collab chat send: 送信
 Collab peer applied toast: '{{userId}} が共同編集で変更しました（{{kind}} · {{widgetId}}）。'
 Collab apply stale toast: '編集前にサーバー側のシーンが更新されていました（リビジョン不一致）。エディターをサーバー内容で更新しました。'
 Collab apply stale entity field toast: '一部のウィジェット項目がサーバー側で先に更新されています（エンティティ時計の不一致）。再読み込みのうえ再試行してください。'
+Collab apply stale property field toast: 'このプロパティ項目はサーバー側で先に更新されています（フィールド時計/HLCの不一致）。シーンを再取得して再試行してください。'
+Collab apply stale property doc toast: 'プロパティ全体の版がサーバー側で先に進んでいます（ドキュメント時計の不一致）。シーンを再取得してマージをやり直してください。'
 Collab apply object locked toast: '他ユーザーがウィジェットの編集ロックを保持しているため、変更は適用されませんでした。シーンをサーバー側の内容で更新しました。'
 Collab apply failed toast: '共同編集の変更が拒否されました: {{message}} シーンをサーバー側の内容で更新しました。'
 Collab chat mention notify: '{{userId}} がチャットであなたに言及: {{preview}}'

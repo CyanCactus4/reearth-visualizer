@@ -173,6 +173,8 @@ Collab chat send: Send
 Collab peer applied toast: '{{userId}} applied collaborative changes ({{kind}} · {{widgetId}}).'
 Collab apply stale toast: 'The scene changed on the server before your edit (revision mismatch). The editor was refreshed from the server.'
 Collab apply stale entity field toast: 'Some widget fields were already updated on the server (entity clock mismatch). Refresh and retry, or rely on merged fields only.'
+Collab apply stale property field toast: 'This property field was already updated on the server (field clock/HLC mismatch). Refetch the scene and retry.'
+Collab apply stale property doc toast: 'The property document changed on the server (merge doc clock mismatch). Refetch the scene and retry your merge.'
 Collab apply object locked toast: 'Your edit was not applied because another user holds the widget lock. The scene was refreshed from the server.'
 Collab apply failed toast: 'Your collaborative edit was rejected: {{message}} The scene was refreshed from the server.'
 Collab chat mention notify: '{{userId}} mentioned you in chat: {{preview}}'

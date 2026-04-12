@@ -207,6 +207,7 @@ export const CollabProvider: FC<Props> = ({
           styleId?: string;
           propertyId?: string;
           fieldId?: string;
+          itemId?: string;
         }
       | undefined;
     const peer = d?.userId;
@@ -227,8 +228,9 @@ export const CollabProvider: FC<Props> = ({
     const stid = typeof d?.styleId === "string" ? d.styleId : "";
     const propId = typeof d?.propertyId === "string" ? d.propertyId : "";
     const fldId = typeof d?.fieldId === "string" ? d.fieldId : "";
+    const itemId = typeof d?.itemId === "string" ? d.itemId : "";
     const blkId = typeof d?.blockId === "string" ? d.blockId : "";
-    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${blkId}\0${stid}\0${propId}\0${fldId}`;
+    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${blkId}\0${stid}\0${propId}\0${fldId}\0${itemId}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
@@ -253,7 +255,9 @@ export const CollabProvider: FC<Props> = ({
       code !== "apply_failed" &&
       code !== "object_locked" &&
       code !== "stale_state" &&
-      code !== "stale_entity_field"
+      code !== "stale_entity_field" &&
+      code !== "stale_property_field" &&
+      code !== "stale_property_doc"
     )
       return;
     const now = Date.now();
@@ -278,6 +282,20 @@ export const CollabProvider: FC<Props> = ({
       setNotification({
         type: "warning",
         text: tCollab("Collab apply stale entity field toast")
+      });
+      return;
+    }
+    if (code === "stale_property_field") {
+      setNotification({
+        type: "warning",
+        text: tCollab("Collab apply stale property field toast")
+      });
+      return;
+    }
+    if (code === "stale_property_doc") {
+      setNotification({
+        type: "warning",
+        text: tCollab("Collab apply stale property doc toast")
       });
       return;
     }
