@@ -3,6 +3,7 @@ package collab
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/reearth/reearth/server/internal/adapter"
@@ -125,6 +126,17 @@ func fetchSceneAfterNLSChange(ctx context.Context, uc *interfaces.Container, op 
 	return scenes[0]
 }
 
+// fetchSceneAfterNLSSilent reloads the scene after an NLS mutation (REST undo / tests; no WS error enqueue).
+func fetchSceneAfterNLSSilent(ctx context.Context, uc *interfaces.Container, op *usecase.Operator, sid id.SceneID) (*scene.Scene, error) {
+	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
+	defer cancel()
+	scenes, err := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+	if err != nil || len(scenes) == 0 {
+		return nil, fmt.Errorf("scene reload failed")
+	}
+	return scenes[0], nil
+}
+
 func applyAddNLSLayerSimpleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
 	var p applyAddNLSLayerSimple
 	if err := json.Unmarshal(d, &p); err != nil {
@@ -196,6 +208,30 @@ func applyAddNLSLayerSimpleOp(ctx context.Context, hub *Hub, from *Conn, d json.
 		"sceneId": p.SceneID,
 		"layerId": lidStr,
 	}, sc)
+	if hub != nil && hub.opStack != nil && layer != nil {
+		inv := applyRemoveNLSLayer{
+			Kind:    "remove_nls_layer",
+			SceneID: p.SceneID,
+			LayerID: layer.ID().String(),
+		}
+		if invJSON, errM := json.Marshal(inv); errM == nil {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "add_nls_layer_simple",
+				Forward:   d,
+				Inverse:   invJSON,
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }
 
@@ -238,6 +274,20 @@ func applyRemoveNLSLayerOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 	if !nlsLayerMustNotBeLockedByPeer(ctx, hub, from, lid) {
 		return nil
 	}
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		preCtx, preCancel := context.WithTimeout(ctx, applyOpTimeout)
+		listL, errL := uc.NLSLayer.Fetch(preCtx, id.NLSLayerIDList{lid}, op)
+		preCancel()
+		if errL == nil && len(listL) > 0 && listL[0] != nil {
+			ly := *listL[0]
+			if sl := nlslayer.NLSLayerSimpleFromLayer(ly); sl != nil {
+				if raw, errM := marshalAddNLSLayerSimpleJSONFromSimple(p.SceneID, sl); errM == nil {
+					invJSON = raw
+				}
+			}
+		}
+	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
 	_, _, err2 := uc.NLSLayer.Remove(opCtx, lid, op)
@@ -253,6 +303,23 @@ func applyRemoveNLSLayerOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 		"sceneId": p.SceneID,
 		"layerId": p.LayerID,
 	}, sc)
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "remove_nls_layer",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 
@@ -519,4 +586,44 @@ func applyUpdateNlsLayersOp(ctx context.Context, hub *Hub, from *Conn, d json.Ra
 		}
 	}
 	return nil
+}
+
+// marshalAddNLSLayerSimpleJSONFromSimple builds an add_nls_layer_simple apply body from a simple layer snapshot
+// (inverse of remove_nls_layer). Infobox / photo overlay / sketch feature data beyond schema are not serialized here.
+func marshalAddNLSLayerSimpleJSONFromSimple(sceneID string, sl *nlslayer.NLSLayerSimple) (json.RawMessage, error) {
+	if sl == nil {
+		return nil, fmt.Errorf("nil layer")
+	}
+	inv := applyAddNLSLayerSimple{
+		Kind:      "add_nls_layer_simple",
+		SceneID:   sceneID,
+		Title:     sl.Title(),
+		LayerType: string(sl.LayerType()),
+	}
+	if sl.Index() != nil {
+		i := *sl.Index()
+		inv.Index = &i
+	}
+	v := sl.IsVisible()
+	inv.Visible = &v
+	if cfg := sl.Config(); cfg != nil {
+		m := map[string]any(*cfg)
+		b, err := json.Marshal(m)
+		if err != nil {
+			return nil, err
+		}
+		inv.Config = json.RawMessage(b)
+	}
+	if ds := sl.DataSourceName(); ds != nil {
+		s := *ds
+		inv.DataSourceName = &s
+	}
+	if sk := sl.Sketch(); sk != nil && sk.CustomPropertySchema() != nil {
+		b, err := json.Marshal(*sk.CustomPropertySchema())
+		if err != nil {
+			return nil, err
+		}
+		inv.Schema = json.RawMessage(b)
+	}
+	return json.Marshal(inv)
 }

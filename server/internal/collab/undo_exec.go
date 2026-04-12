@@ -11,6 +11,7 @@ import (
 	"github.com/reearth/reearth/server/internal/usecase"
 	"github.com/reearth/reearth/server/internal/usecase/interfaces"
 	"github.com/reearth/reearth/server/pkg/id"
+	"github.com/reearth/reearth/server/pkg/nlslayer"
 	"github.com/reearth/reearth/server/pkg/scene"
 )
 
@@ -194,6 +195,464 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, errors.New("write not allowed")
 		}
 		return collabRunUpdateStoryPageFromJSON(ctx, uc, operator, raw)
+	case "update_nls_custom_properties":
+		var p applyUpdateNlsCustomProperties
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		schemaMap, err := nlsCustomPropertySchemaMap(p.Schema)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.AddOrUpdateCustomProperties(opCtx, interfaces.AddOrUpdateCustomPropertiesInput{
+			LayerID: lid,
+			Schema:  schemaMap,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "change_nls_custom_property_title":
+		var p applyChangeNlsCustomPropertyTitle
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		schemaMap, err := nlsCustomPropertySchemaMap(p.Schema)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.ChangeCustomPropertyTitle(opCtx, interfaces.AddOrUpdateCustomPropertiesInput{
+			LayerID: lid,
+			Schema:  schemaMap,
+		}, p.OldTitle, p.NewTitle, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "restore_nls_custom_property_removed":
+		var p applyRestoreNlsCustomPropertyRemoved
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		schemaMap, err := nlsCustomPropertySchemaMap(p.Schema)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.AddOrUpdateCustomProperties(opCtx, interfaces.AddOrUpdateCustomPropertiesInput{
+			LayerID: lid,
+			Schema:  schemaMap,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		for _, fv := range p.FeatureValues {
+			fid, err := id.FeatureIDFrom(fv.FeatureID)
+			if err != nil {
+				return nil, err
+			}
+			list, err2 := uc.NLSLayer.Fetch(opCtx, id.NLSLayerIDList{lid}, operator)
+			if err2 != nil || len(list) == 0 || list[0] == nil {
+				return nil, fmt.Errorf("nls layer fetch failed")
+			}
+			layer := *list[0]
+			feat, err2 := findNLSFeature(layer, fid)
+			if err2 != nil {
+				return nil, err2
+			}
+			merged := map[string]any{}
+			if fp := feat.Properties(); fp != nil && *fp != nil {
+				for k, v := range *fp {
+					merged[k] = v
+				}
+			}
+			var val any
+			if len(fv.Value) > 0 && string(fv.Value) != "null" {
+				if err2 := json.Unmarshal(fv.Value, &val); err2 != nil {
+					return nil, err2
+				}
+			}
+			merged[p.RemovedTitle] = val
+			_, err = uc.NLSLayer.UpdateGeoJSONFeature(opCtx, interfaces.UpdateNLSLayerGeoJSONFeatureParams{
+				LayerID:    lid,
+				FeatureID:  fid,
+				Geometry:   nil,
+				Properties: &merged,
+			}, operator)
+			if err != nil {
+				return nil, err
+			}
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "add_nls_geojson_feature":
+		var p applyAddNLSGeoJSONFeature
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		geomMap, err := geoJSONObjectMapRequired(p.Geometry)
+		if err != nil {
+			return nil, err
+		}
+		propsPtr, err := geoJSONPropertiesPtr(p.Properties)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.AddGeoJSONFeature(opCtx, interfaces.AddNLSLayerGeoJSONFeatureParams{
+			LayerID:    lid,
+			Type:       p.Type,
+			Geometry:   geomMap,
+			Properties: propsPtr,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "update_nls_geojson_feature":
+		var p applyUpdateNLSGeoJSONFeature
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		fid, err := id.FeatureIDFrom(p.FeatureID)
+		if err != nil {
+			return nil, err
+		}
+		geomPtr, err := geoJSONOptionalObjectMapPtr(p.Geometry)
+		if err != nil {
+			return nil, err
+		}
+		propsPtr, err := geoJSONOptionalObjectMapPtr(p.Properties)
+		if err != nil {
+			return nil, err
+		}
+		if geomPtr == nil && propsPtr == nil {
+			return nil, fmt.Errorf("geometry or properties required")
+		}
+		_, err = uc.NLSLayer.UpdateGeoJSONFeature(opCtx, interfaces.UpdateNLSLayerGeoJSONFeatureParams{
+			LayerID:    lid,
+			FeatureID:  fid,
+			Geometry:   geomPtr,
+			Properties: propsPtr,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "delete_nls_geojson_feature":
+		var p applyDeleteNLSGeoJSONFeature
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		fid, err := id.FeatureIDFrom(p.FeatureID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.DeleteGeoJSONFeature(opCtx, interfaces.DeleteNLSLayerGeoJSONFeatureParams{
+			LayerID:   lid,
+			FeatureID: fid,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "create_nls_infobox":
+		var p applyCreateNLSInfobox
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.CreateNLSInfobox(opCtx, lid, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "remove_nls_infobox":
+		var p applyRemoveNLSInfobox
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.RemoveNLSInfobox(opCtx, lid, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "create_nls_photo_overlay":
+		var p applyCreateNLSPhotoOverlay
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.CreateNLSPhotoOverlay(opCtx, lid, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "remove_nls_photo_overlay":
+		var p applyRemoveNLSPhotoOverlay
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.RemoveNLSPhotoOverlay(opCtx, lid, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "add_nls_infobox_block":
+		var p applyAddNLSInfoboxBlock
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		pid, err := id.PluginIDFrom(p.PluginID)
+		if err != nil {
+			return nil, err
+		}
+		eid := id.PluginExtensionID(p.ExtensionID)
+		if string(eid) == "" {
+			return nil, fmt.Errorf("extensionId required")
+		}
+		_, _, err = uc.NLSLayer.AddNLSInfoboxBlock(opCtx, interfaces.AddNLSInfoboxBlockParam{
+			LayerID:     lid,
+			PluginID:    pid,
+			ExtensionID: eid,
+			Index:       p.Index,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "remove_nls_infobox_block":
+		var p applyRemoveNLSInfoboxBlock
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		bid, err := id.InfoboxBlockIDFrom(p.InfoboxBlockID)
+		if err != nil {
+			return nil, err
+		}
+		_, _, err = uc.NLSLayer.RemoveNLSInfoboxBlock(opCtx, interfaces.RemoveNLSInfoboxBlockParam{
+			LayerID:        lid,
+			InfoboxBlockID: bid,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "move_nls_infobox_block":
+		var p applyMoveNLSInfoboxBlock
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		bid, err := id.InfoboxBlockIDFrom(p.InfoboxBlockID)
+		if err != nil {
+			return nil, err
+		}
+		_, _, _, err = uc.NLSLayer.MoveNLSInfoboxBlock(opCtx, interfaces.MoveNLSInfoboxBlockParam{
+			LayerID:        lid,
+			InfoboxBlockID: bid,
+			Index:          p.Index,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "add_nls_layer_simple":
+		var p applyAddNLSLayerSimple
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lt, err := nlslayer.NewLayerType(p.LayerType)
+		if err != nil || !lt.IsValidLayerType() {
+			return nil, fmt.Errorf("invalid layerType")
+		}
+		cfg, err := parseNLSConfigRaw(p.Config)
+		if err != nil {
+			return nil, err
+		}
+		schema, err := parseNLSSchemaRaw(p.Schema)
+		if err != nil {
+			return nil, err
+		}
+		_, err = uc.NLSLayer.AddLayerSimple(opCtx, interfaces.AddNLSLayerSimpleInput{
+			SceneID:        sid,
+			Title:          p.Title,
+			Index:          p.Index,
+			LayerType:      lt,
+			Config:         cfg,
+			Visible:        p.Visible,
+			Schema:         schema,
+			DataSourceName: p.DataSourceName,
+		}, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
+	case "remove_nls_layer":
+		var p applyRemoveNLSLayer
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		lid, err := id.NLSLayerIDFrom(p.LayerID)
+		if err != nil {
+			return nil, err
+		}
+		_, _, err = uc.NLSLayer.Remove(opCtx, lid, operator)
+		if err != nil {
+			return nil, err
+		}
+		return fetchSceneAfterNLSSilent(ctx, uc, operator, sid)
 	default:
 		return nil, fmt.Errorf("unsupported undo kind %q", env.Kind)
 	}

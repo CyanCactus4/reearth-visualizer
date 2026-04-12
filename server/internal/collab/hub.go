@@ -49,8 +49,8 @@ type Hub struct {
 	widgetClockMu sync.Mutex
 	widgetClocks  map[string]int64
 
-	opStack          CollabOpStack
-	mentionWebhook   string
+	opStack        CollabOpStack
+	mentionWebhook string
 }
 
 type room struct {

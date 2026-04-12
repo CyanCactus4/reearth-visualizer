@@ -4,10 +4,10 @@ import "context"
 
 // ApplyAuditRecord is one persisted successful collab apply (PLAN phase 6 journal slice).
 type ApplyAuditRecord struct {
-	ProjectID  string
-	UserID     string
-	UserName   string
-	Kind       string
+	ProjectID string
+	UserID    string
+	UserName  string
+	Kind      string
 	// OpKind is the domain apply kind from the undo stack (e.g. update_widget) when Kind is collab_undo / collab_redo.
 	OpKind     string
 	SceneRev   int64

@@ -164,6 +164,7 @@ func initEcho(
 	if cfg.CollabHub != nil {
 		apiPrivateRoute.GET("/collab/ws", collab.ServeWS(cfg.CollabHub, &cfg.Config.Collab, allowedOrigins(cfg)))
 		apiPrivateRoute.GET("/collab/scene-rev/stream", collab.ServeSceneRevisionSSE(cfg.CollabHub))
+		apiPrivateRoute.POST("/collab/admin/restore-scene", collab.ServeCollabAdminRestorePlaceholder())
 		if cfg.CollabOpStackStore != nil {
 			apiPrivateRoute.POST("/collab/undo", collab.ServeCollabUndo(cfg.CollabHub))
 			apiPrivateRoute.POST("/collab/redo", collab.ServeCollabRedo(cfg.CollabHub))

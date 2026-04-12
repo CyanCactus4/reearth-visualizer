@@ -12,12 +12,12 @@ import (
 )
 
 type applyMoveStoryBlock struct {
-	Kind        string `json:"kind"`
-	SceneID     string `json:"sceneId"`
-	StoryID     string `json:"storyId"`
-	PageID      string `json:"pageId"`
-	BlockID     string `json:"blockId"`
-	Index       int    `json:"index"`
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	StoryID      string `json:"storyId"`
+	PageID       string `json:"pageId"`
+	BlockID      string `json:"blockId"`
+	Index        int    `json:"index"`
 	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
@@ -146,14 +146,14 @@ func applyMoveStoryBlockOp(ctx context.Context, hub *Hub, from *Conn, d json.Raw
 }
 
 type applyCreateStoryBlock struct {
-	Kind          string `json:"kind"`
-	SceneID       string `json:"sceneId"`
-	StoryID       string `json:"storyId"`
-	PageID        string `json:"pageId"`
-	PluginID      string `json:"pluginId"`
-	ExtensionID   string `json:"extensionId"`
-	Index         *int   `json:"index,omitempty"`
-	BaseSceneRev  *int64 `json:"baseSceneRev,omitempty"`
+	Kind         string `json:"kind"`
+	SceneID      string `json:"sceneId"`
+	StoryID      string `json:"storyId"`
+	PageID       string `json:"pageId"`
+	PluginID     string `json:"pluginId"`
+	ExtensionID  string `json:"extensionId"`
+	Index        *int   `json:"index,omitempty"`
+	BaseSceneRev *int64 `json:"baseSceneRev,omitempty"`
 }
 
 type applyRemoveStoryBlock struct {

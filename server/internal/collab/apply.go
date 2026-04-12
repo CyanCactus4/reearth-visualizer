@@ -110,6 +110,32 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyUpdateNLSLayerOp(ctx, hub, from, d)
 	case "update_nls_layers":
 		return applyUpdateNlsLayersOp(ctx, hub, from, d)
+	case "create_nls_infobox":
+		return applyCreateNLSInfoboxOp(ctx, hub, from, d)
+	case "remove_nls_infobox":
+		return applyRemoveNLSInfoboxOp(ctx, hub, from, d)
+	case "create_nls_photo_overlay":
+		return applyCreateNLSPhotoOverlayOp(ctx, hub, from, d)
+	case "remove_nls_photo_overlay":
+		return applyRemoveNLSPhotoOverlayOp(ctx, hub, from, d)
+	case "add_nls_infobox_block":
+		return applyAddNLSInfoboxBlockOp(ctx, hub, from, d)
+	case "move_nls_infobox_block":
+		return applyMoveNLSInfoboxBlockOp(ctx, hub, from, d)
+	case "remove_nls_infobox_block":
+		return applyRemoveNLSInfoboxBlockOp(ctx, hub, from, d)
+	case "update_nls_custom_properties":
+		return applyUpdateNlsCustomPropertiesOp(ctx, hub, from, d)
+	case "change_nls_custom_property_title":
+		return applyChangeNlsCustomPropertyTitleOp(ctx, hub, from, d)
+	case "remove_nls_custom_property":
+		return applyRemoveNlsCustomPropertyOp(ctx, hub, from, d)
+	case "add_nls_geojson_feature":
+		return applyAddNLSGeoJSONFeatureOp(ctx, hub, from, d)
+	case "update_nls_geojson_feature":
+		return applyUpdateNLSGeoJSONFeatureOp(ctx, hub, from, d)
+	case "delete_nls_geojson_feature":
+		return applyDeleteNLSGeoJSONFeatureOp(ctx, hub, from, d)
 	case "add_style":
 		return applyAddStyleOp(ctx, hub, from, d)
 	case "update_style":

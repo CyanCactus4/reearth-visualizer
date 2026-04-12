@@ -47,19 +47,13 @@ func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
 		}
 
-		sceneFilter := ""
-		if q := strings.TrimSpace(c.QueryParam("sceneId")); q != "" {
-			sid, errS := id.SceneIDFrom(q)
-			if errS != nil {
-				return echo.NewHTTPError(http.StatusBadRequest, "invalid sceneId")
-			}
-			if sid != pj.Scene() {
-				return echo.NewHTTPError(http.StatusForbidden, "sceneId does not match project")
-			}
-			if !op.IsReadableScene(sid) {
-				return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
-			}
-			sceneFilter = sid.String()
+		sceneFilter, errScene := parseApplyAuditSceneFilterParam(
+			c.QueryParam("sceneId"),
+			pj.Scene(),
+			func(s id.SceneID) bool { return op.IsReadableScene(s) },
+		)
+		if errScene != nil {
+			return errScene
 		}
 
 		limit := 100
@@ -78,4 +72,27 @@ func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 		}
 		return c.JSON(http.StatusOK, map[string]any{"v": 1, "entries": recs})
 	}
+}
+
+// parseApplyAuditSceneFilterParam returns a Mongo sceneId filter, or empty when the query is omitted.
+func parseApplyAuditSceneFilterParam(
+	sceneParam string,
+	projectScene id.SceneID,
+	isReadable func(id.SceneID) bool,
+) (filter string, err error) {
+	q := strings.TrimSpace(sceneParam)
+	if q == "" {
+		return "", nil
+	}
+	sid, e := id.SceneIDFrom(q)
+	if e != nil {
+		return "", echo.NewHTTPError(http.StatusBadRequest, "invalid sceneId")
+	}
+	if sid != projectScene {
+		return "", echo.NewHTTPError(http.StatusForbidden, "sceneId does not match project")
+	}
+	if !isReadable(sid) {
+		return "", echo.NewHTTPError(http.StatusForbidden, "scene not readable")
+	}
+	return sid.String(), nil
 }
