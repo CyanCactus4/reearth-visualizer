@@ -11,6 +11,7 @@ const collabState = {
   sendRaw: vi.fn(() => true),
   remoteCursors: {} as Record<string, { x: number; y: number; inside: boolean; ts: number }>,
   remoteTypingUserIds: [] as string[],
+  remoteMovingUserIds: [] as string[],
   resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>,
   chatMessages: [] as { id: string; userId: string; text: string; ts: number }[],
   sendChat: vi.fn(),
@@ -29,6 +30,7 @@ describe("CollabPresenceBar", () => {
     collabState.lastMessage = null;
     collabState.remoteCursors = {};
     collabState.remoteTypingUserIds = [];
+    collabState.remoteMovingUserIds = [];
     collabState.resourceLocks = {};
     collabState.chatMessages = [];
     collabState.sendRaw.mockClear();
@@ -58,6 +60,14 @@ describe("CollabPresenceBar", () => {
     render(<CollabPresenceBar />);
     expect(screen.getByTestId("collab-presence-bar")).toHaveTextContent(
       "typing: bob"
+    );
+  });
+
+  it("shows moving-map peers from context", () => {
+    collabState.remoteMovingUserIds = ["carol"];
+    render(<CollabPresenceBar />);
+    expect(screen.getByTestId("collab-presence-bar")).toHaveTextContent(
+      "moving map: carol"
     );
   });
 });

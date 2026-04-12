@@ -35,6 +35,7 @@ import {
   applyMovePropertyItemPayload,
   applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
+  applyUpdateSceneCameraPayload,
   propertyDocClockKey,
   propertyFieldClockKey,
   propertyFieldMergePatchKey,
@@ -407,6 +408,29 @@ describe("apply payloads", () => {
       type: "NUMBER",
       value: 0.5,
       baseSceneRev: 9
+    });
+  });
+
+  it("builds update_scene_camera apply envelope", () => {
+    const hlc = { wall: 10, logical: 1, node: "n1" };
+    const s = applyUpdateSceneCameraPayload({
+      sceneId: "sc1",
+      value: { lat: 1, lng: 2, altitude: 100, heading: 0, pitch: 0, roll: 0, fov: 1 },
+      fieldHlc: hlc
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "update_scene_camera",
+      sceneId: "sc1",
+      value: {
+        lat: 1,
+        lng: 2,
+        altitude: 100,
+        heading: 0,
+        pitch: 0,
+        roll: 0,
+        fov: 1
+      },
+      fieldHlc: hlc
     });
   });
 

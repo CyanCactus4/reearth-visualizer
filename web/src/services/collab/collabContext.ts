@@ -45,6 +45,8 @@ export type CollabContextValue = {
   remoteCursors: Record<string, RemoteCursor>;
   /** Peers recently reported typing (via activity); cleared on timeout server-side spacing applies too. */
   remoteTypingUserIds: readonly string[];
+  /** Peers recently moving the map/camera (`activity` kind `move`). */
+  remoteMovingUserIds: readonly string[];
   /** Map key `layer:id` / `widget:id` → current holder (TASK.md FR-4). */
   resourceLocks: Readonly<Record<string, CollabResourceLock>>;
   /** Recent collab chat lines (REST history + live WebSocket). */

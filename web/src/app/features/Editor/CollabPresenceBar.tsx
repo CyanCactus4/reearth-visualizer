@@ -30,6 +30,12 @@ const CollabPresenceBar: FC = () => {
     return ` · typing: ${ids.join(", ")}`;
   }, [collab?.remoteTypingUserIds]);
 
+  const movingLine = useMemo(() => {
+    const ids = collab?.remoteMovingUserIds ?? [];
+    if (ids.length === 0) return null;
+    return ` · moving map: ${ids.join(", ")}`;
+  }, [collab?.remoteMovingUserIds]);
+
   const photos = collab?.remoteUserPhotoURLs ?? {};
   const localPhoto = collab?.localUserPhotoURL;
 
@@ -58,6 +64,7 @@ const CollabPresenceBar: FC = () => {
           ? ` · ${list.length} active: ${list.join(", ")}`
           : null}
         {typingLine}
+        {movingLine}
       </span>
       {list.length > 0 ? (
         <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>

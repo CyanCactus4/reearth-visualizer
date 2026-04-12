@@ -33,6 +33,7 @@ export {
   applyMovePropertyItemPayload,
   applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
+  applyUpdateSceneCameraPayload,
   propertyDocClockKey,
   propertyFieldClockKey,
   propertyFieldMergePatchKey,

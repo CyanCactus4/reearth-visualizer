@@ -14,6 +14,7 @@ const collabState = {
     { x: number; y: number; inside: boolean; ts: number }
   >,
   remoteTypingUserIds: [] as string[],
+  remoteMovingUserIds: [] as string[],
   remoteUserPhotoURLs: {} as Record<string, string>,
   resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>
 };

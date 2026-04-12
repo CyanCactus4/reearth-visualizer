@@ -107,6 +107,7 @@ export const CollabProvider: FC<Props> = ({
     Record<string, RemoteCursor>
   >({});
   const [remoteTypingUserIds, setRemoteTypingUserIds] = useState<string[]>([]);
+  const [remoteMovingUserIds, setRemoteMovingUserIds] = useState<string[]>([]);
   const [remoteUserPhotoURLs, setRemoteUserPhotoURLs] = useState<
     Record<string, string>
   >({});
@@ -156,6 +157,9 @@ export const CollabProvider: FC<Props> = ({
   const clientRef = useRef<CollabClient | null>(null);
   const localUserIdRef = useRef(localUserId);
   const typingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
+    new Map()
+  );
+  const movingTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map()
   );
   const lastLocalTypingSent = useRef(0);
@@ -337,6 +341,11 @@ export const CollabProvider: FC<Props> = ({
     setRemoteTypingUserIds((arr) => arr.filter((x) => x !== uid));
   }, []);
 
+  const removeMovingUser = useCallback((uid: string) => {
+    movingTimersRef.current.delete(uid);
+    setRemoteMovingUserIds((arr) => arr.filter((x) => x !== uid));
+  }, []);
+
   const noteTypingUser = useCallback(
     (uid: string) => {
       const self = localUserIdRef.current;
@@ -350,6 +359,21 @@ export const CollabProvider: FC<Props> = ({
       );
     },
     [removeTypingUser]
+  );
+
+  const noteMovingUser = useCallback(
+    (uid: string) => {
+      const self = localUserIdRef.current;
+      if (!uid || (self && uid === self)) return;
+      const prev = movingTimersRef.current.get(uid);
+      if (prev) clearTimeout(prev);
+      const t = setTimeout(() => removeMovingUser(uid), TYPING_TTL_MS);
+      movingTimersRef.current.set(uid, t);
+      setRemoteMovingUserIds((arr) =>
+        arr.includes(uid) ? arr : [...arr, uid]
+      );
+    },
+    [removeMovingUser]
   );
 
   const applyInbound = useCallback(
@@ -460,8 +484,15 @@ export const CollabProvider: FC<Props> = ({
         const d = msg.d as
           | { userId?: string; kind?: string }
           | undefined;
-        if (!d || d.kind !== "typing" || !d.userId) return;
-        noteTypingUser(d.userId);
+        if (!d?.userId) return;
+        if (d.kind === "typing") {
+          noteTypingUser(d.userId);
+          return;
+        }
+        if (d.kind === "move") {
+          noteMovingUser(d.userId);
+          return;
+        }
         return;
       }
       if (msg.t === "chat") {
@@ -612,7 +643,7 @@ export const CollabProvider: FC<Props> = ({
         }
       }
     },
-    [noteTypingUser, sceneId, propertyHlc]
+    [noteTypingUser, noteMovingUser, sceneId, propertyHlc]
   );
 
   const tickPropertyFieldHlc = useCallback(
@@ -625,7 +656,10 @@ export const CollabProvider: FC<Props> = ({
     setResourceLocks({});
     for (const t of typingTimersRef.current.values()) clearTimeout(t);
     typingTimersRef.current.clear();
+    for (const t of movingTimersRef.current.values()) clearTimeout(t);
+    movingTimersRef.current.clear();
     setRemoteTypingUserIds([]);
+    setRemoteMovingUserIds([]);
     setChatMessages([]);
     setRemoteSceneRev(undefined);
     setWidgetEntityClocks({});
@@ -850,6 +884,7 @@ export const CollabProvider: FC<Props> = ({
       sendRaw,
       remoteCursors,
       remoteTypingUserIds,
+      remoteMovingUserIds,
       resourceLocks,
       chatMessages,
       sendChat,
@@ -870,6 +905,7 @@ export const CollabProvider: FC<Props> = ({
       sendRaw,
       remoteCursors,
       remoteTypingUserIds,
+      remoteMovingUserIds,
       resourceLocks,
       chatMessages,
       sendChat,

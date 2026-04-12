@@ -142,6 +142,8 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		return applyUpdateStyleOp(ctx, hub, from, d)
 	case "remove_style":
 		return applyRemoveStyleOp(ctx, hub, from, d)
+	case "update_scene_camera":
+		return applyUpdateSceneCameraOp(ctx, hub, from, d)
 	case "update_property_value":
 		return applyUpdatePropertyValueOp(ctx, hub, from, d)
 	case "merge_property_json":

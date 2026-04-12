@@ -14,6 +14,7 @@ const collabState: {
   sendRaw: ReturnType<typeof vi.fn>;
   remoteCursors: Record<string, unknown>;
   remoteTypingUserIds: string[];
+  remoteMovingUserIds: string[];
   resourceLocks: Record<string, unknown>;
   chatMessages: {
     id: string;
@@ -32,6 +33,7 @@ const collabState: {
   sendRaw: vi.fn(() => true),
   remoteCursors: {} as Record<string, unknown>,
   remoteTypingUserIds: [] as string[],
+  remoteMovingUserIds: [] as string[],
   resourceLocks: {} as Record<string, unknown>,
   chatMessages: [] as {
     id: string;

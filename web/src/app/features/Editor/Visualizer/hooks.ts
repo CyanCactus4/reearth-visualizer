@@ -16,6 +16,7 @@ import {
 import { useNLSLayers } from "@reearth/services/api/layer";
 import { useLayerStyles } from "@reearth/services/api/layerStyle";
 import { usePropertyMutations } from "@reearth/services/api/property";
+import { activityPayload, useCollab } from "@reearth/services/collab";
 import { useStoryBlockMutations } from "@reearth/services/api/storytelling";
 import { useWidgetMutations } from "@reearth/services/api/widget";
 import { config } from "@reearth/services/config";
@@ -80,9 +81,20 @@ export default ({
   const handleCameraUpdate = useCallback(
     (camera: Camera) => {
       setCurrentCamera(camera);
+      if (collab?.status !== "open") return;
+      const now = Date.now();
+      if (now - lastLocalMoveActivitySent.current < MOVE_ACTIVITY_DEBOUNCE_MS) {
+        return;
+      }
+      lastLocalMoveActivitySent.current = now;
+      collab.sendRaw(activityPayload("move"));
     },
-    [setCurrentCamera]
+    [collab, setCurrentCamera]
   );
+
+  const collab = useCollab();
+  const lastLocalMoveActivitySent = useRef(0);
+  const MOVE_ACTIVITY_DEBOUNCE_MS = 900;
 
   const { nlsLayers } = useNLSLayers({ sceneId });
   const { layerStyles } = useLayerStyles({ sceneId });

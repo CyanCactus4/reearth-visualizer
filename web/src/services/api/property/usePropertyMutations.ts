@@ -21,6 +21,7 @@ import {
   applyMovePropertyItemPayload,
   applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
+  applyUpdateSceneCameraPayload,
   useCollab
 } from "@reearth/services/collab";
 
@@ -51,17 +52,25 @@ export const usePropertyMutations = (sceneId?: string) => {
       const value = valueToGQL(v, vt);
       if (collab?.status === "open" && sceneId) {
         const fieldHlc = collab.tickPropertyFieldHlc();
+        const isSceneCamera =
+          schemaGroupId === "camera" && fieldId === "camera" && vt === "camera";
         const ok = collab.sendRaw(
-          applyUpdatePropertyValuePayload({
-            sceneId,
-            propertyId,
-            schemaGroupId: schemaGroupId || undefined,
-            itemId: itemId || undefined,
-            fieldId,
-            type: gvt,
-            value,
-            fieldHlc
-          })
+          isSceneCamera
+            ? applyUpdateSceneCameraPayload({
+                sceneId,
+                value,
+                fieldHlc
+              })
+            : applyUpdatePropertyValuePayload({
+                sceneId,
+                propertyId,
+                schemaGroupId: schemaGroupId || undefined,
+                itemId: itemId || undefined,
+                fieldId,
+                type: gvt,
+                value,
+                fieldHlc
+              })
         );
         if (ok) {
           setNotification({

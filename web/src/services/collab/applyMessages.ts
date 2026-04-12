@@ -719,6 +719,29 @@ export function applyMovePropertyItemPayload(params: {
   return JSON.stringify({ v: 1, t: "apply", d });
 }
 
+/** Scene root camera field (`schemaGroup` / `fieldId` `camera`, type `CAMERA`); server resolves `propertyId` + `itemId`. */
+export function applyUpdateSceneCameraPayload(params: {
+  sceneId: string;
+  value?: unknown;
+  baseSceneRev?: number;
+  fieldClock?: number;
+  fieldHlc?: CollabHlcWire;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_scene_camera",
+    sceneId: params.sceneId
+  };
+  if (params.value !== undefined) d.value = params.value;
+  if (params.fieldHlc != null) {
+    d.fieldHlc = params.fieldHlc;
+  } else if (params.fieldClock != null) {
+    d.fieldClock = params.fieldClock;
+  } else if (params.baseSceneRev != null) {
+    d.baseSceneRev = params.baseSceneRev;
+  }
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
 /** Collab apply for scene/widget/… property field edits (server `Property.UpdateValue`). */
 export function applyUpdatePropertyValuePayload(params: {
   sceneId: string;
