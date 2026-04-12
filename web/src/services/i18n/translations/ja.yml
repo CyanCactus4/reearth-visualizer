@@ -176,7 +176,60 @@ Collab lock conflict description: 'ユーザー {{userId}} が {{resource}} {{id
 Collab lock conflict reload scene: サーバーからシーンを再読み込み
 Collab chat placeholder: コラボレーターへメッセージ…
 Collab chat send: 送信
-Collab peer applied toast: '{{userId}} が共同編集で変更しました（{{kind}} · {{widgetId}}）。'
+Collab peer applied heading: 共同編集
+Collab peer applied toast: '{{userId}} · {{action}}{{target}}'
+Collab participants title: 参加者
+Collab participants heading: '参加者 — オンライン {{count}}'
+Collab participants open: 参加者
+Collab participants close: 閉じる
+Collab participants empty: このルームに接続中のユーザーはいません。
+Collab participants need live: ライブ接続中にオンラインのユーザーを表示します。
+Collab participants you this tab: あなた（このタブ）
+Collab participants you other tab: あなた（別タブ）
+Collab participants status typing: 入力中…
+Collab participants status moving: 地図操作中
+Collab presence connections: '{{count}} 接続'
+Collab history location hint: 下のジャーナルにこのシーンの編集履歴が並びます。他ユーザーの変更は画面上部の通知にも約8秒表示されます。
+Collab apply meta undo: '取り消し（{{op}}）'
+Collab apply meta redo: '再適用（{{op}}）'
+Collab apply kind update_widget: ウィジェットを更新
+Collab apply kind add_widget: ウィジェットを追加
+Collab apply kind remove_widget: ウィジェットを削除
+Collab apply kind add_nls_layer_simple: レイヤーを追加
+Collab apply kind remove_nls_layer: レイヤーを削除
+Collab apply kind update_nls_layer: レイヤーを更新
+Collab apply kind update_nls_layers: レイヤー順を変更
+Collab apply kind merge_property_json: プロパティ項目をマージ
+Collab apply kind update_property_value: プロパティ値を更新
+Collab apply kind add_property_item: プロパティ項目を追加
+Collab apply kind remove_property_item: プロパティ項目を削除
+Collab apply kind move_property_item: プロパティ項目を移動
+Collab apply kind add_style: レイヤースタイルを追加
+Collab apply kind update_style: レイヤースタイルを更新
+Collab apply kind remove_style: レイヤースタイルを削除
+Collab apply kind move_story_block: ストーリーブロックを移動
+Collab apply kind create_story_block: ストーリーブロックを追加
+Collab apply kind remove_story_block: ストーリーブロックを削除
+Collab apply kind move_story_page: ストーリーページを移動
+Collab apply kind create_story_page: ストーリーページを追加
+Collab apply kind remove_story_page: ストーリーページを削除
+Collab apply kind update_story_page: ストーリーページを更新
+Collab apply kind duplicate_story_page: ストーリーページを複製
+Collab apply kind create_nls_photo_overlay: 写真オーバーレイを追加
+Collab apply kind remove_nls_photo_overlay: 写真オーバーレイを削除
+Collab apply kind create_nls_infobox: インフォボックスを追加
+Collab apply kind remove_nls_infobox: インフォボックスを削除
+Collab apply kind add_nls_infobox_block: インフォボックスブロックを追加
+Collab apply kind move_nls_infobox_block: インフォボックスブロックを移動
+Collab apply kind remove_nls_infobox_block: インフォボックスブロックを削除
+Collab apply kind add_nls_geojson_feature: 地図フィーチャーを追加
+Collab apply kind update_nls_geojson_feature: 地図フィーチャーを更新
+Collab apply kind delete_nls_geojson_feature: 地図フィーチャーを削除
+Collab apply kind update_nls_custom_properties: カスタム項目を更新
+Collab apply kind change_nls_custom_property_title: カスタム項目名を変更
+Collab apply kind remove_nls_custom_property: カスタム項目を削除
+Collab apply kind collab_undo: 元に戻す
+Collab apply kind collab_redo: やり直し
 Collab apply stale toast: '編集前にサーバー側のシーンが更新されていました（リビジョン不一致）。エディターをサーバー内容で更新しました。'
 Collab apply stale entity field toast: '一部のウィジェット項目がサーバー側で先に更新されています（エンティティ時計の不一致）。再読み込みのうえ再試行してください。'
 Collab apply stale property field toast: 'このプロパティ項目はサーバー側で先に更新されています（フィールド時計/HLCの不一致）。シーンを再取得して再試行してください。'
@@ -186,6 +239,14 @@ Collab apply failed toast: '共同編集の変更が拒否されました: {{mes
 Collab chat mention notify: '{{userId}} がチャットであなたに言及: {{preview}}'
 Collab history show: 共同編集履歴を表示
 Collab history hide: 履歴を隠す
+Collab audit line undo: '元に戻す: {{op}}'
+Collab audit line redo: 'やり直す: {{op}}'
+Collab history refresh: ジャーナルを更新
+Collab history loading: 読み込み中…
+Collab history journal show: ジャーナルを表示
+Collab history journal hide: ジャーナルを隠す
+Collab history undo needs live: サーバー側の元に戻す／やり直しはライブ接続中のみ使えます。
+Collab history count badge: "{{count}} 件"
 Collab history empty: まだ apply イベントがありません。
 Collab history load failed: 履歴を読み込めませんでした。
 Collab history author you: あなた
@@ -201,6 +262,18 @@ Collab undo ok: サーバーで元に戻しました。
 Collab redo ok: サーバーでやり直しました。
 Collab undo failed: 元に戻せません（対象なし、または未設定）。
 Collab redo failed: やり直せません（対象なし、または未設定）。
+Collab history undo scope note: 使い方：（1）下の一覧はこのシーンで成功した共同編集の監査ログ（誰が・どのシーン版で・何をしたか）です。完全なバージョン木ではありません。（2）元に戻す／やり直しは、サーバーに積まれた「このアカウントの操作」だけを対象にします。他ユーザーの編集は取り消せません。（3）管理者向けの復元は保存済みスナップショットでシーンを置き換えます。慎重に操作してください。
+Collab history entry you: 自分
+Collab history entry other: 共同編集者
+Collab admin restore heading: 管理者 — シーンスナップショットの復元
+Collab admin restore pick rev: 復元するシーン版（ms）以下で最も新しいスナップショット
+Collab admin restore run: 復元
+Collab admin restore confirm: 指定した版以前で最も新しい保存状態にシーンを置き換えます。全員に反映されます。よろしいですか？
+Collab admin restore ok: スナップショットからシーンを復元しました。
+Collab admin restore forbidden: スナップショット復元にはメンテナー権限が必要です。
+Collab admin restore no snapshots: サーバーにシーンスナップショットが設定されていません（Mongo）。
+Collab admin restore not found: 指定した版以前のスナップショットがありません。
+Collab admin restore failed: 復元リクエストに失敗しました。
 Collab lock conflict col cache: このタブ（キャッシュ）
 Collab lock conflict col network: サーバー（ネットワーク）
 Layer: レイヤー

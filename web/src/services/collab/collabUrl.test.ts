@@ -27,6 +27,17 @@ describe("buildCollabWsUrl", () => {
     expect(u).toContain("projectId=p-2");
     expect(u).toContain("access_token=");
   });
+
+  it("appends clientId when provided", () => {
+    const u = buildCollabWsUrl(
+      "http://localhost:8080/api",
+      "proj1",
+      undefined,
+      "replica-uuid-1"
+    );
+    expect(u).toContain("projectId=proj1");
+    expect(u).toContain("clientId=replica-uuid-1");
+  });
 });
 
 describe("buildCollabChatUrl", () => {
@@ -87,7 +98,7 @@ describe("postCollabUndo / postCollabRedo", () => {
       const [url, init] = fetchSpy.mock.calls[0] as [string, RequestInit];
       expect(url).toBe("http://localhost:8080/api/collab/undo");
       expect(init?.method).toBe("POST");
-      expect(init?.credentials).toBe("include");
+      expect(init?.credentials).toBeUndefined();
       expect((init?.headers as Record<string, string>).Authorization).toBe(
         "Bearer tok"
       );

@@ -50,7 +50,14 @@ export function useForeignCollabLock(
       return { readOnly: false, holderUserId: undefined };
     }
     const me = collab.localUserId;
-    const foreign = !me || row.holderUserId !== me;
+    if (!me || row.holderUserId !== me) {
+      return { readOnly: true, holderUserId: row.holderUserId };
+    }
+    const hc = row.holderClientId;
+    if (!hc) {
+      return { readOnly: false, holderUserId: undefined };
+    }
+    const foreign = hc !== collab.collabReplicaId;
     return { readOnly: foreign, holderUserId: row.holderUserId };
   }, [collab, resource, id]);
 }

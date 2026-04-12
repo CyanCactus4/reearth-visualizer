@@ -16,6 +16,7 @@ type Conn struct {
 	projectID string
 	sceneID   id.SceneID
 	userID    string
+	clientID  string
 	photoURL  string
 	operator  *usecase.Operator
 	bgCtx     context.Context

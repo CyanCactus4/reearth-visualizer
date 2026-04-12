@@ -11,4 +11,13 @@ describe("cursorPayload", () => {
       d: { x: 0.5, y: 0.25, inside: true }
     });
   });
+
+  it("includes clientId when provided", () => {
+    const s = cursorPayload(0.1, 0.2, false, "tab-a");
+    expect(JSON.parse(s)).toEqual({
+      v: 1,
+      t: "cursor",
+      d: { x: 0.1, y: 0.2, inside: false, clientId: "tab-a" }
+    });
+  });
 });

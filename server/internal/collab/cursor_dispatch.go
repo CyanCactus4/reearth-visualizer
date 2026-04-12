@@ -7,9 +7,10 @@ import (
 )
 
 type cursorInbound struct {
-	X      *float64 `json:"x"`
-	Y      *float64 `json:"y"`
-	Inside *bool    `json:"inside,omitempty"`
+	X        *float64 `json:"x"`
+	Y        *float64 `json:"y"`
+	Inside   *bool    `json:"inside,omitempty"`
+	ClientID string   `json:"clientId,omitempty"`
 }
 
 func dispatchCursor(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
@@ -35,19 +36,23 @@ func dispatchCursor(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage
 	if m.Inside != nil {
 		inside = *m.Inside
 	}
-	if !hub.cursorAllow(from.projectID, from.userID) {
+	if !hub.cursorAllow(from.projectID, from.userID, m.ClientID) {
 		return nil
+	}
+	dOut := map[string]any{
+		"userId": from.userID,
+		"x":      x,
+		"y":      y,
+		"inside": inside,
+		"ts":     time.Now().UnixMilli(),
+	}
+	if m.ClientID != "" {
+		dOut["clientId"] = m.ClientID
 	}
 	b, err := json.Marshal(serverMessage{
 		V: 1,
 		T: "cursor",
-		D: map[string]any{
-			"userId": from.userID,
-			"x":      x,
-			"y":      y,
-			"inside": inside,
-			"ts":     time.Now().UnixMilli(),
-		},
+		D: dOut,
 	})
 	if err != nil {
 		return nil

@@ -25,14 +25,14 @@ const CollabViewportCapture: FC<Props> = ({ children }) => {
       if (r.width < 1 || r.height < 1) return;
       const x = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
       const y = Math.min(1, Math.max(0, (e.clientY - r.top) / r.height));
-      collab.sendRaw(cursorPayload(x, y, true));
+      collab.sendRaw(cursorPayload(x, y, true, collab.collabReplicaId));
     },
     [collab]
   );
 
   const onMouseLeave = useCallback(() => {
     if (collab?.status !== "open") return;
-    collab.sendRaw(cursorPayload(0, 0, false));
+    collab.sendRaw(cursorPayload(0, 0, false, collab.collabReplicaId));
   }, [collab]);
 
   return (

@@ -44,7 +44,7 @@ export const useFeatureCollectionMutations = (
     async (
       input: AddGeoJsonFeatureInput
     ): Promise<MutationReturn<AddGeoJsonFeatureMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab && input.geometry) {
+      if (collab && sceneIdForCollab && input.geometry) {
         const ok = collab.sendRaw(
           applyAddNlsGeojsonFeaturePayload({
             sceneId: sceneIdForCollab,
@@ -92,7 +92,7 @@ export const useFeatureCollectionMutations = (
       const hasGeom = input.geometry !== undefined && input.geometry !== null;
       const hasProps =
         input.properties !== undefined && input.properties !== null;
-      if (collab?.status === "open" && sceneIdForCollab && (hasGeom || hasProps)) {
+      if (collab && sceneIdForCollab && (hasGeom || hasProps)) {
         const ok = collab.sendRaw(
           applyUpdateNlsGeojsonFeaturePayload({
             sceneId: sceneIdForCollab,
@@ -144,7 +144,7 @@ export const useFeatureCollectionMutations = (
       input: DeleteGeoJsonFeatureInput
     ): Promise<MutationReturn<DeleteGeoJsonFeatureMutation>> => {
       if (!input.layerId || !input.featureId) return { status: "error" };
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyDeleteNlsGeojsonFeaturePayload({
             sceneId: sceneIdForCollab,

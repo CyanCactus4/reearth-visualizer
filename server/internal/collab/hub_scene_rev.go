@@ -50,6 +50,12 @@ func (h *Hub) deliverSceneRevisionSubscribers(sceneID string, rev int64) {
 	}
 }
 
+// PublishSceneRevision notifies GraphQL/SSE subscribers after scene data changed (collab apply,
+// GraphQL mutation, admin tools). No-op when hub, scene id, or rev is invalid.
+func (h *Hub) PublishSceneRevision(sceneID string, rev int64) {
+	h.publishSceneRevision(sceneID, rev)
+}
+
 // publishSceneRevision notifies local GraphQL/SSE subscribers and, when Redis relay is configured,
 // other API instances (which deliver to their own local subscribers only).
 func (h *Hub) publishSceneRevision(sceneID string, rev int64) {

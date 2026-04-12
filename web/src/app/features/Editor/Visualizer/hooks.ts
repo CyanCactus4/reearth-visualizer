@@ -76,6 +76,7 @@ export default ({
 
   const { createInfoboxBlock, deleteInfoboxBlock, moveInfoboxBlock } =
     useInfoboxBlockMutations(sceneId);
+    const collab = useCollab();
 
   const [currentCamera, setCurrentCamera] = useCurrentCamera();
   const handleCameraUpdate = useCallback(
@@ -87,12 +88,10 @@ export default ({
         return;
       }
       lastLocalMoveActivitySent.current = now;
-      collab.sendRaw(activityPayload("move"));
+      collab.sendRaw(activityPayload("move", collab.collabReplicaId));
     },
     [collab, setCurrentCamera]
   );
-
-  const collab = useCollab();
   const lastLocalMoveActivitySent = useRef(0);
   const MOVE_ACTIVITY_DEBOUNCE_MS = 900;
 

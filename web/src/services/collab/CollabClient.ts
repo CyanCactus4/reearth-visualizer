@@ -5,7 +5,18 @@ export type CollabInbound =
   | {
       v: 1;
       t: "presence";
-      d?: { event?: string; userId?: string; photoURL?: string };
+      d?: { event?: string; userId?: string; clientId?: string; photoURL?: string };
+    }
+  | {
+      v: 1;
+      t: "presence_snapshot";
+      d?: {
+        peers?: Array<{
+          userId?: string;
+          clientId?: string;
+          photoURL?: string;
+        }>;
+      };
     }
   | {
       v: 1;
@@ -14,6 +25,7 @@ export type CollabInbound =
         resource?: string;
         id?: string;
         holderUserId?: string;
+        holderClientId?: string;
         until?: string;
         released?: boolean;
       };
@@ -25,6 +37,7 @@ export type CollabInbound =
         resource?: string;
         id?: string;
         holderUserId?: string;
+        holderClientId?: string;
         until?: string;
       };
     }
@@ -44,6 +57,7 @@ export type CollabInbound =
       t: "cursor";
       d?: {
         userId?: string;
+        clientId?: string;
         x?: number;
         y?: number;
         inside?: boolean;
@@ -53,7 +67,12 @@ export type CollabInbound =
   | {
       v: 1;
       t: "activity";
-      d?: { userId?: string; kind?: string; ts?: number };
+      d?: {
+        userId?: string;
+        clientId?: string;
+        kind?: string;
+        ts?: number;
+      };
     }
   | {
       v: 1;
@@ -63,9 +82,20 @@ export type CollabInbound =
         sceneId?: string;
         widgetId?: string;
         userId?: string;
+        clientId?: string;
         sceneRev?: number;
         pluginId?: string;
         extensionId?: string;
+        opKind?: string;
+        layerId?: string;
+        layerIds?: string[];
+        blockId?: string;
+        styleId?: string;
+        propertyId?: string;
+        fieldId?: string;
+        itemId?: string;
+        storyId?: string;
+        pageId?: string;
       };
     }
   | {
@@ -95,12 +125,13 @@ export class CollabClient {
     return this.ws;
   }
 
-  async connect(projectId: string): Promise<WebSocket> {
+  async connect(projectId: string, clientId?: string): Promise<WebSocket> {
     const token = await this.getAccessToken();
     const url = buildCollabWsUrl(
       this.apiBase,
       projectId,
-      token ? token : undefined
+      token ? token : undefined,
+      clientId
     );
     this.ws = new WebSocket(url);
     return this.ws;

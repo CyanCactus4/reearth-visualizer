@@ -68,23 +68,24 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 
 	switch lm.Action {
 	case "acquire":
-		ok, holder, until, err := hub.tryLockAcquire(ctx, from.projectID, lm.Resource, lm.ID, from.userID, ttl)
+		ok, holderWire, until, err := hub.tryLockAcquire(ctx, from.projectID, lm.Resource, lm.ID, from.userID, from.clientID, ttl)
 		if err != nil {
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_redis", "message": err.Error()}})
 			return nil
 		}
 		if !ok {
-			from.enqueueJSON(serverMessage{
-				V: 1,
-				T: "lock_denied",
-				D: map[string]any{"resource": lm.Resource, "id": lm.ID, "holderUserId": holder, "until": until.Format(time.RFC3339Nano)},
-			})
+			hu, hc := ParseLockHolderWire(holderWire)
+			denied := map[string]any{"resource": lm.Resource, "id": lm.ID, "holderUserId": hu, "until": until.Format(time.RFC3339Nano)}
+			if hc != "" {
+				denied["holderClientId"] = hc
+			}
+			from.enqueueJSON(serverMessage{V: 1, T: "lock_denied", D: denied})
 			return nil
 		}
-		hub.broadcastLockChanged(ctx, from.projectID, lm.Resource, lm.ID, from.userID, until)
+		hub.broadcastLockChanged(ctx, from.projectID, lm.Resource, lm.ID, holderWire, until)
 		return nil
 	case "release":
-		ok, err := hub.tryLockRelease(ctx, from.projectID, lm.Resource, lm.ID, from.userID)
+		ok, err := hub.tryLockRelease(ctx, from.projectID, lm.Resource, lm.ID, from.userID, from.clientID)
 		if err != nil {
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_redis", "message": err.Error()}})
 			return nil
@@ -96,7 +97,7 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 		hub.broadcastLockReleased(ctx, from.projectID, lm.Resource, lm.ID)
 		return nil
 	case "heartbeat":
-		ok, until, err := hub.tryLockHeartbeat(ctx, from.projectID, lm.Resource, lm.ID, from.userID, ttl)
+		ok, until, err := hub.tryLockHeartbeat(ctx, from.projectID, lm.Resource, lm.ID, from.userID, from.clientID, ttl)
 		if err != nil {
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_redis", "message": err.Error()}})
 			return nil
@@ -105,7 +106,7 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 			from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "lock_heartbeat_failed", "message": "not holder or lock expired"}})
 			return nil
 		}
-		hub.broadcastLockChanged(ctx, from.projectID, lm.Resource, lm.ID, from.userID, until)
+		hub.broadcastLockChanged(ctx, from.projectID, lm.Resource, lm.ID, LockHolderWire(from.userID, from.clientID), until)
 		return nil
 	default:
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_action", "message": lm.Action}})
@@ -113,14 +114,19 @@ func dispatchLock(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) 
 	}
 }
 
-func (h *Hub) broadcastLockChanged(ctx context.Context, projectID, resource, rid, holder string, until time.Time) {
+func (h *Hub) broadcastLockChanged(ctx context.Context, projectID, resource, rid, holderWire string, until time.Time) {
+	hu, hc := ParseLockHolderWire(holderWire)
+	d := map[string]any{
+		"resource": resource, "id": rid, "holderUserId": hu,
+		"until": until.Format(time.RFC3339Nano),
+	}
+	if hc != "" {
+		d["holderClientId"] = hc
+	}
 	b, err := json.Marshal(serverMessage{
 		V: 1,
 		T: "lock_changed",
-		D: map[string]any{
-			"resource": resource, "id": rid, "holderUserId": holder,
-			"until": until.Format(time.RFC3339Nano),
-		},
+		D: d,
 	})
 	if err != nil {
 		return

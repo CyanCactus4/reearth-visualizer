@@ -48,7 +48,7 @@ export const useWidgetMutations = () => {
         };
 
       const [pluginId, extensionId] = id.split("/");
-      if (collab?.status === "open") {
+      if (collab) {
         const ok = collab.sendRaw(
           applyAddWidgetPayload({
             sceneId,
@@ -102,7 +102,7 @@ export const useWidgetMutations = () => {
         };
       }
 
-      if (collab?.status === "open") {
+      if (collab) {
         const wc = collab.widgetEntityClocks?.[id];
         const entityClocks =
           wc && Object.keys(wc).length > 0 ? { ...wc } : undefined;
@@ -178,7 +178,7 @@ export const useWidgetMutations = () => {
         };
       }
 
-      if (collab?.status === "open") {
+      if (collab) {
         const ok = collab.sendRaw(
           applyRemoveWidgetPayload({
             sceneId,

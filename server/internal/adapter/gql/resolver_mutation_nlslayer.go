@@ -30,6 +30,7 @@ func (r *mutationResolver) AddNLSLayerSimple(ctx context.Context, input gqlmodel
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, sId)
 
 	return &gqlmodel.AddNLSLayerSimplePayload{
 		Layers: gqlmodel.ToNLSLayerSimple(layer),
@@ -42,13 +43,20 @@ func (r *mutationResolver) RemoveNLSLayer(ctx context.Context, input gqlmodel.Re
 		return nil, err
 	}
 
-	id, _, err := usecases(ctx).NLSLayer.Remove(ctx, lid, getOperator(ctx))
+	op := getOperator(ctx)
+	var preScene id.SceneID
+	if layers, err2 := usecases(ctx).NLSLayer.Fetch(ctx, id.NLSLayerIDList{lid}, op); err2 == nil && len(layers) > 0 && layers[0] != nil {
+		preScene = (*layers[0]).Scene()
+	}
+
+	removedID, _, err := usecases(ctx).NLSLayer.Remove(ctx, lid, op)
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, preScene)
 
 	return &gqlmodel.RemoveNLSLayerPayload{
-		LayerID: gqlmodel.IDFrom(id),
+		LayerID: gqlmodel.IDFrom(removedID),
 	}, nil
 }
 
@@ -68,6 +76,7 @@ func (r *mutationResolver) UpdateNLSLayer(ctx context.Context, input gqlmodel.Up
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.UpdateNLSLayerPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -76,6 +85,7 @@ func (r *mutationResolver) UpdateNLSLayer(ctx context.Context, input gqlmodel.Up
 
 func (r *mutationResolver) UpdateNLSLayers(ctx context.Context, input gqlmodel.UpdateNLSLayersInput) (*gqlmodel.UpdateNLSLayersPayload, error) {
 	var updatedLayers []gqlmodel.NLSLayer
+	var sceneID id.SceneID
 
 	for _, layerInput := range input.Layers {
 		lid, err := gqlmodel.ToID[id.NLSLayer](layerInput.LayerID)
@@ -94,8 +104,11 @@ func (r *mutationResolver) UpdateNLSLayers(ctx context.Context, input gqlmodel.U
 			return nil, err
 		}
 
+		sceneID = layer.Scene()
 		updatedLayers = append(updatedLayers, gqlmodel.ToNLSLayer(layer, nil))
 	}
+
+	publishCollabSceneRevisionForScene(ctx, sceneID)
 
 	return &gqlmodel.UpdateNLSLayersPayload{
 		Layers: updatedLayers,
@@ -112,6 +125,7 @@ func (r *mutationResolver) DuplicateNLSLayer(ctx context.Context, input gqlmodel
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.DuplicateNLSLayerPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -128,6 +142,7 @@ func (r *mutationResolver) CreateNLSInfobox(ctx context.Context, input gqlmodel.
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.CreateNLSInfoboxPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -144,6 +159,7 @@ func (r *mutationResolver) RemoveNLSInfobox(ctx context.Context, input gqlmodel.
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.RemoveNLSInfoboxPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -160,6 +176,7 @@ func (r *mutationResolver) CreateNLSPhotoOverlay(ctx context.Context, input gqlm
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.CreateNLSPhotoOverlayPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -176,6 +193,7 @@ func (r *mutationResolver) RemoveNLSPhotoOverlay(ctx context.Context, input gqlm
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.RemoveNLSPhotoOverlayPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -202,6 +220,7 @@ func (r *mutationResolver) AddNLSInfoboxBlock(ctx context.Context, input gqlmode
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.AddNLSInfoboxBlockPayload{
 		InfoboxBlock: gqlmodel.ToNLSInfoboxBlock(infoboxBlock, layer.Scene()),
@@ -223,6 +242,7 @@ func (r *mutationResolver) MoveNLSInfoboxBlock(ctx context.Context, input gqlmod
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.MoveNLSInfoboxBlockPayload{
 		InfoboxBlockID: gqlmodel.IDFrom(infoboxBlock),
@@ -244,6 +264,7 @@ func (r *mutationResolver) RemoveNLSInfoboxBlock(ctx context.Context, input gqlm
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.RemoveNLSInfoboxBlockPayload{
 		InfoboxBlockID: gqlmodel.IDFrom(infoboxBlock),
@@ -264,6 +285,7 @@ func (r *mutationResolver) UpdateCustomProperties(ctx context.Context, input gql
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.UpdateNLSLayerPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -283,6 +305,7 @@ func (r *mutationResolver) ChangeCustomPropertyTitle(ctx context.Context, input 
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.UpdateNLSLayerPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),
@@ -302,6 +325,7 @@ func (r *mutationResolver) RemoveCustomProperty(ctx context.Context, input gqlmo
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForScene(ctx, layer.Scene())
 
 	return &gqlmodel.UpdateNLSLayerPayload{
 		Layer: gqlmodel.ToNLSLayer(layer, nil),

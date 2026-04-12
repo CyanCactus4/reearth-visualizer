@@ -81,8 +81,9 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 		if err != nil || pj == nil {
 			return echo.NewHTTPError(http.StatusForbidden, "project not accessible")
 		}
-		if !op.IsReadableScene(pj.Scene()) {
-			return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
+		sceneID, err := resolveProjectSceneForAccess(c.Request().Context(), uc, op, pj, pid)
+		if err != nil {
+			return err
 		}
 
 		ws, err := up.Upgrade(c.Response(), c.Request(), nil)
@@ -99,12 +100,14 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 				photoURL = md.PhotoURL()
 			}
 		}
+		tabClientID := NormalizeCollabClientID(c.QueryParam("clientId"))
 		conn := &Conn{
 			hub:       hub,
 			ws:        ws,
 			projectID: pid.String(),
-			sceneID:   pj.Scene(),
+			sceneID:   sceneID,
 			userID:    userID,
+			clientID:  tabClientID,
 			photoURL:  photoURL,
 			operator:  op,
 			bgCtx:     bgCtx,

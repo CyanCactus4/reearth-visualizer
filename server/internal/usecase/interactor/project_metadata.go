@@ -12,7 +12,6 @@ import (
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/project"
 	"github.com/reearth/reearthx/usecasex"
-	"go.mongodb.org/mongo-driver/mongo"
 )
 
 type ProjectMetadata struct {
@@ -129,8 +128,11 @@ func (i *ProjectMetadata) Create(ctx context.Context, p interfaces.CreateProject
 
 func (i *ProjectMetadata) FindByProjectID(ctx context.Context, id id.ProjectID, operator *usecase.Operator) (*project.ProjectMetadata, error) {
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, id)
-	if err != mongo.ErrNoDocuments && err != nil {
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
 		return nil, errors.New("failed to find project metadata: " + err.Error())
+	}
+	if meta == nil {
+		return nil, nil
 	}
 
 	if err := i.CanReadWorkspace(meta.Workspace(), operator); err != nil {
@@ -174,7 +176,7 @@ func (i *ProjectMetadata) UpdateProjectMetadataByAnyUser(ctx context.Context, p 
 
 func (i *ProjectMetadata) FindProjectByIDByAnyUser(ctx context.Context, id id.ProjectID) (*project.ProjectMetadata, error) {
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, id)
-	if err != mongo.ErrNoDocuments && err != nil {
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
 		return nil, errors.New("failed to find project metadata: " + err.Error())
 	}
 

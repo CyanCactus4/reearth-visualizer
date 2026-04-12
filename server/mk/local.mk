@@ -83,9 +83,34 @@ schematyper:
 	go run $(SCHEMATYPER) -o $(MANIFEST_DIR)/schema_gen.go --package manifest ./schemas/plugin_manifest.json
 
 test:
-	REEARTH_DB=${REEARTH_DB} go test ${TEST_DIR} -run ${TARGET_TEST}
+	@if [ -d tmp/mongo ] && [ ! -r tmp/mongo ]; then \
+		echo >&2 "tmp/mongo under server/ is not readable (legacy Docker bind mount as root). Remove it:"; \
+		echo >&2 "  sudo rm -rf tmp/mongo tmp/gcs"; \
+		exit 1; \
+	fi
+	@if [ -d tmp/gcs ] && [ ! -r tmp/gcs ]; then \
+		echo >&2 "tmp/gcs under server/ is not readable. Remove it:"; \
+		echo >&2 "  sudo rm -rf tmp/mongo tmp/gcs"; \
+		exit 1; \
+	fi
+	REEARTH_DB=${REEARTH_DB} go test $(if $(TEST_P),-p $(TEST_P),) ${TEST_DIR} -run ${TARGET_TEST}
+
+# Full package list except e2e (same REEARTH_DB). Use when local Mongo drops under full ./...
+# (e.g. VM + Docker): make test-no-e2e TEST_P=2
+test-no-e2e:
+	@if [ -d tmp/mongo ] && [ ! -r tmp/mongo ]; then \
+		echo >&2 "tmp/mongo under server/ is not readable (legacy Docker bind mount as root). Remove it:"; \
+		echo >&2 "  sudo rm -rf tmp/mongo tmp/gcs"; \
+		exit 1; \
+	fi
+	@if [ -d tmp/gcs ] && [ ! -r tmp/gcs ]; then \
+		echo >&2 "tmp/gcs under server/ is not readable. Remove it:"; \
+		echo >&2 "  sudo rm -rf tmp/mongo tmp/gcs"; \
+		exit 1; \
+	fi
+	REEARTH_DB=${REEARTH_DB} go test $(if $(TEST_P),-p $(TEST_P),) $$(go list ./... | grep -v '/e2e$$') -run ${TARGET_TEST}
 
 test-debug:
 	go test -v -timeout 10s ${TEST_DIR} | tee test.log
 
-.PHONY: build clean deep-copy dev dev-install e2e error-msg generate gql lint migrate migrate-with-key run-app run-clean-start run-standalone schematyper test test-debug
+.PHONY: build clean deep-copy dev dev-install e2e error-msg generate gql lint migrate migrate-with-key run-app run-clean-start run-standalone schematyper test test-no-e2e test-debug

@@ -2,12 +2,14 @@ package mongo
 
 import (
 	"context"
+	"errors"
 
 	"github.com/reearth/reearth/server/internal/infrastructure/mongo/mongodoc"
 	"github.com/reearth/reearth/server/internal/usecase/repo"
 	"github.com/reearth/reearth/server/pkg/id"
 	"github.com/reearth/reearth/server/pkg/project"
 	"github.com/reearth/reearthx/mongox"
+	"github.com/reearth/reearthx/rerror"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )
@@ -84,10 +86,13 @@ func (r *ProjectMetadata) find(ctx context.Context, filter interface{}) ([]*proj
 func (r *ProjectMetadata) findOne(ctx context.Context, filter any) (*project.ProjectMetadata, error) {
 	c := mongodoc.NewProjectMetadataConsumer(nil)
 	if err := r.client.FindOne(ctx, filter, c); err != nil {
+		if errors.Is(err, mongo.ErrNoDocuments) || errors.Is(err, rerror.ErrNotFound) {
+			return nil, repo.ErrProjectMetadataNotFound
+		}
 		return nil, err
 	}
 	if len(c.Result) == 0 {
-		return nil, mongo.ErrNoDocuments
+		return nil, repo.ErrProjectMetadataNotFound
 	}
 	return c.Result[0], nil
 }

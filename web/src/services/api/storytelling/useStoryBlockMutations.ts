@@ -40,7 +40,7 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: CreateStoryBlockInput
     ): Promise<MutationReturn<CreateStoryBlockMutation>> => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyCreateStoryBlockPayload({
             sceneId,
@@ -87,7 +87,7 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: RemoveStoryBlockInput
     ): Promise<MutationReturn<RemoveStoryBlockMutation>> => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyRemoveStoryBlockPayload({
             sceneId,
@@ -132,7 +132,7 @@ export const useStoryBlockMutations = (sceneId?: string) => {
     async (
       input: MoveStoryBlockInput
     ): Promise<MutationReturn<MoveStoryBlockMutation>> => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyMoveStoryBlockPayload({
             sceneId,

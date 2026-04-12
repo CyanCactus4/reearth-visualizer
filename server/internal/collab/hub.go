@@ -123,18 +123,21 @@ func (h *Hub) chatAllow(projectID, userID string) bool {
 	return lim.(*rate.Limiter).Allow()
 }
 
-// cursorAllow limits cursor broadcasts per user per project (burst 1).
-func (h *Hub) cursorAllow(projectID, userID string) bool {
+// cursorAllow limits cursor broadcasts per browser tab (optional clientID) per project (burst 1).
+func (h *Hub) cursorAllow(projectID, userID, clientID string) bool {
 	if userID == "" {
 		return false
 	}
 	key := projectID + "\x00" + userID
+	if clientID != "" {
+		key += "\x00" + clientID
+	}
 	lim, _ := h.cursorLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(h.cursorEvery), 1))
 	return lim.(*rate.Limiter).Allow()
 }
 
-// activityAllow limits typing/move hints per user per project and kind (burst 1).
-func (h *Hub) activityAllow(projectID, userID, kind string) bool {
+// activityAllow limits typing/move hints per tab and kind (burst 1).
+func (h *Hub) activityAllow(projectID, userID, clientID, kind string) bool {
 	if userID == "" {
 		return false
 	}
@@ -143,6 +146,9 @@ func (h *Hub) activityAllow(projectID, userID, kind string) bool {
 		every = h.activityTypingEvery
 	}
 	key := projectID + "\x00" + userID + "\x00" + kind
+	if clientID != "" {
+		key += "\x00" + clientID
+	}
 	lim, _ := h.activityLimiters.LoadOrStore(key, rate.NewLimiter(rate.Every(every), 1))
 	return lim.(*rate.Limiter).Allow()
 }
@@ -170,8 +176,52 @@ func (h *Hub) register(c *Conn) {
 	r.conns[c] = struct{}{}
 	n := len(r.conns)
 	r.mu.Unlock()
+	h.sendPresenceSnapshot(c)
 	log.Infofc(context.Background(), "collab: join room project=%s conns=%d", c.projectID, n)
 	h.presenceBroadcast(context.Background(), c, "join")
+}
+
+// sendPresenceSnapshot sends the joining client a full roster of current room members
+// (so late joiners see everyone already in the room, not only subsequent join events).
+func (h *Hub) sendPresenceSnapshot(to *Conn) {
+	if to == nil {
+		return
+	}
+	h.mu.RLock()
+	r, ok := h.rooms[to.projectID]
+	h.mu.RUnlock()
+	if !ok {
+		return
+	}
+	r.mu.Lock()
+	peers := make([]map[string]string, 0, len(r.conns))
+	for oc := range r.conns {
+		uid := oc.userID
+		if uid == "" {
+			uid = "unknown"
+		}
+		p := map[string]string{"userId": uid}
+		if oc.clientID != "" {
+			p["clientId"] = oc.clientID
+		}
+		if oc.photoURL != "" {
+			p["photoURL"] = oc.photoURL
+		}
+		peers = append(peers, p)
+	}
+	r.mu.Unlock()
+	b, err := json.Marshal(map[string]any{
+		"v": 1,
+		"t": "presence_snapshot",
+		"d": map[string]any{"peers": peers},
+	})
+	if err != nil {
+		return
+	}
+	select {
+	case to.send <- b:
+	default:
+	}
 }
 
 func (h *Hub) unregister(c *Conn) {
@@ -260,6 +310,9 @@ func (h *Hub) presenceBroadcast(ctx context.Context, c *Conn, event string) {
 		uid = "unknown"
 	}
 	d := map[string]string{"event": event, "userId": uid}
+	if c.clientID != "" {
+		d["clientId"] = c.clientID
+	}
 	if c.photoURL != "" {
 		d["photoURL"] = c.photoURL
 	}

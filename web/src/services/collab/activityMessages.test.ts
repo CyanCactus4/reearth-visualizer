@@ -10,4 +10,12 @@ describe("activityPayload", () => {
       d: { kind: "typing" }
     });
   });
+
+  it("includes clientId when provided", () => {
+    expect(JSON.parse(activityPayload("move", "cid"))).toEqual({
+      v: 1,
+      t: "activity",
+      d: { kind: "move", clientId: "cid" }
+    });
+  });
 });

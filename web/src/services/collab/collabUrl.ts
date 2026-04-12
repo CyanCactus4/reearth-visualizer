@@ -2,7 +2,9 @@
 export function buildCollabWsUrl(
   apiBase: string,
   projectId: string,
-  accessToken?: string
+  accessToken?: string,
+  /** Per-browser-tab id; server scopes collab locks to this connection. */
+  clientId?: string
 ): string {
   const trimmed = apiBase.replace(/\/$/, "");
   const u = new URL(trimmed);
@@ -11,6 +13,10 @@ export function buildCollabWsUrl(
   u.searchParams.set("projectId", projectId);
   if (accessToken) {
     u.searchParams.set("access_token", accessToken);
+  }
+  const cid = clientId?.trim();
+  if (cid) {
+    u.searchParams.set("clientId", cid);
   }
   return u.toString();
 }
@@ -71,33 +77,58 @@ export function buildCollabRedoPostUrl(apiBase: string): string {
 export async function postCollabUndo(
   apiBase: string,
   getToken: () => Promise<string | null>,
-  sceneId: string
+  sceneId: string,
+  /** Same tab id as collab WebSocket — included in fan-out `applied` so other tabs see the action. */
+  clientId?: string
 ): Promise<Response> {
   const token = await getToken();
+  const body: Record<string, string> = { sceneId };
+  const cid = clientId?.trim();
+  if (cid) body.clientId = cid;
   return fetch(buildCollabUndoPostUrl(apiBase), {
     method: "POST",
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ sceneId })
+    body: JSON.stringify(body)
   });
 }
 
 export async function postCollabRedo(
   apiBase: string,
   getToken: () => Promise<string | null>,
-  sceneId: string
+  sceneId: string,
+  clientId?: string
 ): Promise<Response> {
   const token = await getToken();
+  const body: Record<string, string> = { sceneId };
+  const cid = clientId?.trim();
+  if (cid) body.clientId = cid;
   return fetch(buildCollabRedoPostUrl(apiBase), {
     method: "POST",
-    credentials: "include",
     headers: {
       "Content-Type": "application/json",
       ...(token ? { Authorization: `Bearer ${token}` } : {})
     },
-    body: JSON.stringify({ sceneId })
+    body: JSON.stringify(body)
+  });
+}
+
+/** POST /api/collab/admin/restore-scene (maintainer+; snapshots must be configured). */
+export async function postCollabAdminRestore(
+  apiBase: string,
+  getToken: () => Promise<string | null>,
+  sceneId: string,
+  targetSceneRev: number
+): Promise<Response> {
+  const token = await getToken();
+  return fetch(collabPostUrl(apiBase, "/collab/admin/restore-scene"), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    },
+    body: JSON.stringify({ sceneId, targetSceneRev })
   });
 }

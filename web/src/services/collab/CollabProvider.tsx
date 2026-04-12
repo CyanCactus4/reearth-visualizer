@@ -44,6 +44,16 @@ import {
 } from "./applyMessages";
 import type { CollabHlcWire } from "./hlc";
 import { HybridLogicalClock } from "./hlc";
+import {
+  collabPeerAppliedAction,
+  collabPeerAppliedTargetHint
+} from "./collabApplyPeerToast";
+import {
+  isSameCollabTab,
+  parsePeerInstanceKey,
+  peerInstanceKey,
+  suppressCollabPeerAppliedNotification
+} from "./peerInstanceKey";
 
 const COLLAB_SCENE_REV_SUB = gql`
   subscription CollabSceneRevisionSub($sceneId: ID!) {
@@ -67,7 +77,7 @@ type Props = {
   projectId?: string;
   /** Current editor scene — enables GraphQL `collabSceneRevision` subscription + clock merge. */
   sceneId?: string;
-  /** GraphQL `me.id` — omit when unknown; own cursor/typing events are ignored. */
+  /** GraphQL `me.id` — omit when unknown; same-tab cursor/typing filtered via `collabReplicaId`. */
   localUserId?: string;
   /** GraphQL `me.metadata.photoURL` — shown for local user where UI lists avatars. */
   localUserPhotoURL?: string;
@@ -111,6 +121,7 @@ export const CollabProvider: FC<Props> = ({
   const [remoteUserPhotoURLs, setRemoteUserPhotoURLs] = useState<
     Record<string, string>
   >({});
+  const [presencePeerKeys, setPresencePeerKeys] = useState<string[]>([]);
   const [resourceLocks, setResourceLocks] = useState<
     Record<string, CollabResourceLock>
   >({});
@@ -131,6 +142,8 @@ export const CollabProvider: FC<Props> = ({
     () => new HybridLogicalClock(crypto.randomUUID()),
     [projectId]
   );
+  const collabReplicaIdRef = useRef(propertyHlc.replicaId);
+  collabReplicaIdRef.current = propertyHlc.replicaId;
   const lang = useLang();
   const langRef = useRef(lang);
   langRef.current = lang;
@@ -208,6 +221,7 @@ export const CollabProvider: FC<Props> = ({
     const d = lastMessage.d as
       | {
           userId?: string;
+          clientId?: string;
           kind?: string;
           opKind?: string;
           widgetId?: string;
@@ -218,17 +232,28 @@ export const CollabProvider: FC<Props> = ({
           propertyId?: string;
           fieldId?: string;
           itemId?: string;
+          storyId?: string;
+          pageId?: string;
         }
       | undefined;
     const peer = d?.userId;
     if (!peer || peer === "unknown") return;
-    if (localUserId && peer === localUserId) return;
+    const peerCid =
+      typeof d?.clientId === "string" && d.clientId.length > 0
+        ? d.clientId
+        : undefined;
+    if (
+      suppressCollabPeerAppliedNotification(
+        localUserId,
+        collabReplicaIdRef.current,
+        peer,
+        peerCid
+      )
+    ) {
+      return;
+    }
     const kind = typeof d?.kind === "string" ? d.kind : "";
     const opKind = typeof d?.opKind === "string" ? d.opKind : "";
-    const kindLabel =
-      (kind === "collab_undo" || kind === "collab_redo") && opKind
-        ? `${kind} · ${opKind}`
-        : kind;
     const wid = typeof d?.widgetId === "string" ? d.widgetId : "";
     const lid = typeof d?.layerId === "string" ? d.layerId : "";
     const lids =
@@ -240,18 +265,38 @@ export const CollabProvider: FC<Props> = ({
     const fldId = typeof d?.fieldId === "string" ? d.fieldId : "";
     const itemId = typeof d?.itemId === "string" ? d.itemId : "";
     const blkId = typeof d?.blockId === "string" ? d.blockId : "";
-    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${blkId}\0${stid}\0${propId}\0${fldId}\0${itemId}`;
+    const pgId = typeof d?.pageId === "string" ? d.pageId : "";
+    const storyId = typeof d?.storyId === "string" ? d.storyId : "";
+    const key = `${peer}\0${peerCid ?? ""}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${blkId}\0${stid}\0${propId}\0${fldId}\0${itemId}\0${pgId}\0${storyId}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
     lastAppliedNotifyAtRef.current.set(key, now);
+    const action = collabPeerAppliedAction(kind, opKind, tCollab);
+    const hint = collabPeerAppliedTargetHint({
+      kind,
+      opKind,
+      widgetId: wid,
+      layerId: lid,
+      layerIds: Array.isArray(d?.layerIds) ? d.layerIds : undefined,
+      blockId: blkId,
+      styleId: stid,
+      propertyId: propId,
+      fieldId: fldId,
+      itemId,
+      storyId,
+      pageId: pgId
+    });
+    const target = hint ? ` — ${hint}` : "";
     setNotification({
       type: "info",
+      heading: tCollab("Collab peer applied heading"),
       text: tCollab("Collab peer applied toast", {
         userId: peer,
-        kind: kindLabel || "edit",
-        widgetId: wid || lid || lids || blkId || stid || propId || fldId || "—"
-      })
+        action,
+        target
+      }),
+      duration: 8000
     });
   }, [lastMessage, localUserId, setNotification, tCollab]);
 
@@ -347,30 +392,50 @@ export const CollabProvider: FC<Props> = ({
   }, []);
 
   const noteTypingUser = useCallback(
-    (uid: string) => {
-      const self = localUserIdRef.current;
-      if (!uid || (self && uid === self)) return;
-      const prev = typingTimersRef.current.get(uid);
+    (peerKey: string) => {
+      const { userId: uid, clientId: cid } = parsePeerInstanceKey(peerKey);
+      if (
+        !uid ||
+        isSameCollabTab(
+          localUserIdRef.current,
+          collabReplicaIdRef.current,
+          uid,
+          cid
+        )
+      ) {
+        return;
+      }
+      const prev = typingTimersRef.current.get(peerKey);
       if (prev) clearTimeout(prev);
-      const t = setTimeout(() => removeTypingUser(uid), TYPING_TTL_MS);
-      typingTimersRef.current.set(uid, t);
+      const t = setTimeout(() => removeTypingUser(peerKey), TYPING_TTL_MS);
+      typingTimersRef.current.set(peerKey, t);
       setRemoteTypingUserIds((arr) =>
-        arr.includes(uid) ? arr : [...arr, uid]
+        arr.includes(peerKey) ? arr : [...arr, peerKey]
       );
     },
     [removeTypingUser]
   );
 
   const noteMovingUser = useCallback(
-    (uid: string) => {
-      const self = localUserIdRef.current;
-      if (!uid || (self && uid === self)) return;
-      const prev = movingTimersRef.current.get(uid);
+    (peerKey: string) => {
+      const { userId: uid, clientId: cid } = parsePeerInstanceKey(peerKey);
+      if (
+        !uid ||
+        isSameCollabTab(
+          localUserIdRef.current,
+          collabReplicaIdRef.current,
+          uid,
+          cid
+        )
+      ) {
+        return;
+      }
+      const prev = movingTimersRef.current.get(peerKey);
       if (prev) clearTimeout(prev);
-      const t = setTimeout(() => removeMovingUser(uid), TYPING_TTL_MS);
-      movingTimersRef.current.set(uid, t);
+      const t = setTimeout(() => removeMovingUser(peerKey), TYPING_TTL_MS);
+      movingTimersRef.current.set(peerKey, t);
       setRemoteMovingUserIds((arr) =>
-        arr.includes(uid) ? arr : [...arr, uid]
+        arr.includes(peerKey) ? arr : [...arr, peerKey]
       );
     },
     [removeMovingUser]
@@ -378,12 +443,57 @@ export const CollabProvider: FC<Props> = ({
 
   const applyInbound = useCallback(
     (msg: CollabInbound) => {
+      if (msg.t === "presence_snapshot") {
+        const d = msg.d as
+          | {
+              peers?: Array<{
+                userId?: string;
+                clientId?: string;
+                photoURL?: string;
+              }>;
+            }
+          | undefined;
+        const peers = d?.peers;
+        if (!Array.isArray(peers)) {
+          setPresencePeerKeys([]);
+          return;
+        }
+        const keys = new Set<string>();
+        for (const p of peers) {
+          const uid =
+            typeof p.userId === "string" ? p.userId.trim() : "";
+          if (!uid) continue;
+          const cidRaw =
+            typeof p.clientId === "string" ? p.clientId.trim() : "";
+          const cid = cidRaw.length > 0 ? cidRaw : undefined;
+          keys.add(peerInstanceKey(uid, cid));
+          const url =
+            typeof p.photoURL === "string" ? p.photoURL.trim() : "";
+          if (url.length > 0) {
+            setRemoteUserPhotoURLs((prev) =>
+              prev[uid] === url ? prev : { ...prev, [uid]: url }
+            );
+          }
+        }
+        setPresencePeerKeys(Array.from(keys).sort());
+        return;
+      }
       if (msg.t === "presence") {
         const d = msg.d as
-          | { event?: string; userId?: string; photoURL?: string }
+          | {
+              event?: string;
+              userId?: string;
+              clientId?: string;
+              photoURL?: string;
+            }
           | undefined;
         const uid = d?.userId;
         if (!uid) return;
+        const cid =
+          typeof d.clientId === "string" && d.clientId.length > 0
+            ? d.clientId
+            : undefined;
+        const pk = peerInstanceKey(uid, cid);
         if (d?.event === "join") {
           const url =
             typeof d.photoURL === "string" ? d.photoURL.trim() : "";
@@ -392,15 +502,20 @@ export const CollabProvider: FC<Props> = ({
               prev[uid] === url ? prev : { ...prev, [uid]: url }
             );
           }
+          setPresencePeerKeys((prev) => {
+            const s = new Set(prev);
+            s.add(pk);
+            return Array.from(s).sort();
+          });
           return;
         }
         if (d?.event === "leave") {
-          setRemoteUserPhotoURLs((prev) => {
-            if (!(uid in prev)) return prev;
-            const next = { ...prev };
-            delete next[uid];
-            return next;
+          setPresencePeerKeys((prev) => {
+            const s = new Set(prev);
+            s.delete(pk);
+            return Array.from(s).sort();
           });
+          return;
         }
         return;
       }
@@ -411,6 +526,7 @@ export const CollabProvider: FC<Props> = ({
               resource?: string;
               id?: string;
               holderUserId?: string;
+              holderClientId?: string;
               until?: string;
             }
           | undefined;
@@ -429,11 +545,15 @@ export const CollabProvider: FC<Props> = ({
           });
           return;
         }
-        const holder = d.holderUserId;
-        if (holder) {
+        const holderUserId = d.holderUserId;
+        const holderClientId =
+          typeof d.holderClientId === "string" && d.holderClientId.length > 0
+            ? d.holderClientId
+            : undefined;
+        if (holderUserId) {
           setResourceLocks((prev) => ({
             ...prev,
-            [key]: { holderUserId: holder, until: d.until }
+            [key]: { holderUserId, holderClientId, until: d.until }
           }));
         }
         return;
@@ -444,6 +564,7 @@ export const CollabProvider: FC<Props> = ({
               resource?: string;
               id?: string;
               holderUserId?: string;
+              holderClientId?: string;
               until?: string;
             }
           | undefined;
@@ -452,9 +573,17 @@ export const CollabProvider: FC<Props> = ({
         if (!resDenied) return;
         const key = collabResourceLockKey(resDenied, d.id);
         const holderDenied = d.holderUserId;
+        const holderClientDenied =
+          typeof d.holderClientId === "string" && d.holderClientId.length > 0
+            ? d.holderClientId
+            : undefined;
         setResourceLocks((prev) => ({
           ...prev,
-          [key]: { holderUserId: holderDenied, until: d.until }
+          [key]: {
+            holderUserId: holderDenied,
+            holderClientId: holderClientDenied,
+            until: d.until
+          }
         }));
         return;
       }
@@ -462,6 +591,7 @@ export const CollabProvider: FC<Props> = ({
         const d = msg.d as
           | {
               userId?: string;
+              clientId?: string;
               x?: number;
               y?: number;
               inside?: boolean;
@@ -471,26 +601,45 @@ export const CollabProvider: FC<Props> = ({
         const x = d.x;
         const y = d.y;
         const uid = d.userId;
-        const self = localUserIdRef.current;
-        if (!uid || (self && uid === self)) return;
+        const peerCid =
+          typeof d.clientId === "string" && d.clientId.length > 0
+            ? d.clientId
+            : undefined;
+        if (
+          !uid ||
+          isSameCollabTab(
+            localUserIdRef.current,
+            collabReplicaIdRef.current,
+            uid,
+            peerCid
+          )
+        ) {
+          return;
+        }
         const inside = d.inside !== false;
+        const peerKey = peerInstanceKey(uid, peerCid);
         setRemoteCursors((prev) => ({
           ...prev,
-          [uid]: { x, y, inside, ts: Date.now() }
+          [peerKey]: { x, y, inside, ts: Date.now() }
         }));
         return;
       }
       if (msg.t === "activity") {
         const d = msg.d as
-          | { userId?: string; kind?: string }
+          | { userId?: string; clientId?: string; kind?: string }
           | undefined;
         if (!d?.userId) return;
+        const peerCid =
+          typeof d.clientId === "string" && d.clientId.length > 0
+            ? d.clientId
+            : undefined;
+        const peerKey = peerInstanceKey(d.userId, peerCid);
         if (d.kind === "typing") {
-          noteTypingUser(d.userId);
+          noteTypingUser(peerKey);
           return;
         }
         if (d.kind === "move") {
-          noteMovingUser(d.userId);
+          noteMovingUser(peerKey);
           return;
         }
         return;
@@ -643,7 +792,7 @@ export const CollabProvider: FC<Props> = ({
         }
       }
     },
-    [noteTypingUser, noteMovingUser, sceneId, propertyHlc]
+    [noteTypingUser, noteMovingUser, sceneId, propertyHlc.replicaId]
   );
 
   const tickPropertyFieldHlc = useCallback(
@@ -666,6 +815,7 @@ export const CollabProvider: FC<Props> = ({
     setPropertyFieldClocks({});
     setPropertyDocClocks({});
     setRemoteUserPhotoURLs({});
+    setPresencePeerKeys([]);
     seenChatIdsRef.current.clear();
     optimisticByKeyRef.current.clear();
     lastAppliedNotifyAtRef.current.clear();
@@ -697,6 +847,7 @@ export const CollabProvider: FC<Props> = ({
   useEffect(() => {
     if (status === "closed" || status === "error") {
       setResourceLocks({});
+      setPresencePeerKeys([]);
     }
   }, [status]);
 
@@ -715,7 +866,7 @@ export const CollabProvider: FC<Props> = ({
     const run = async () => {
       setStatus("connecting");
       try {
-        const ws = await client.connect(projectId);
+        const ws = await client.connect(projectId, collabReplicaIdRef.current);
         if (cancelled) {
           ws.close();
           return;
@@ -803,9 +954,30 @@ export const CollabProvider: FC<Props> = ({
   const sendRaw = useCallback(
     (json: string): boolean => {
       if (!projectId) return false;
-      const sent = clientRef.current?.sendRaw(json) ?? false;
+      let wire = json;
+      try {
+        const o = JSON.parse(json) as {
+          t?: string;
+          d?: Record<string, unknown>;
+        };
+        if (
+          o?.t === "apply" &&
+          o.d &&
+          typeof o.d === "object" &&
+          !Array.isArray(o.d)
+        ) {
+          const tabId = collabReplicaIdRef.current.trim();
+          if (tabId) {
+            o.d.clientTabId = tabId;
+            wire = JSON.stringify(o);
+          }
+        }
+      } catch {
+        wire = json;
+      }
+      const sent = clientRef.current?.sendRaw(wire) ?? false;
       if (!sent) {
-        void collabOfflinePush(projectId, json);
+        void collabOfflinePush(projectId, wire);
       }
       return sent;
     },
@@ -867,7 +1039,7 @@ export const CollabProvider: FC<Props> = ({
       const now = Date.now();
       if (now - lastLocalTypingSent.current < LOCAL_TYPING_DEBOUNCE_MS) return;
       lastLocalTypingSent.current = now;
-      sendRaw(activityPayload("typing"));
+      sendRaw(activityPayload("typing", collabReplicaIdRef.current));
     };
     document.addEventListener("keydown", onKey, true);
     return () => document.removeEventListener("keydown", onKey, true);
@@ -880,6 +1052,7 @@ export const CollabProvider: FC<Props> = ({
       localUserId,
       localUserPhotoURL,
       remoteUserPhotoURLs,
+      presencePeerKeys,
       lastMessage,
       sendRaw,
       remoteCursors,
@@ -901,6 +1074,7 @@ export const CollabProvider: FC<Props> = ({
       localUserId,
       localUserPhotoURL,
       remoteUserPhotoURLs,
+      presencePeerKeys,
       lastMessage,
       sendRaw,
       remoteCursors,

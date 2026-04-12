@@ -2,7 +2,6 @@ package memory
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -41,7 +40,7 @@ func (r *ProjectMetadata) FindByProjectID(ctx context.Context, id id.ProjectID) 
 		}
 	}
 
-	return nil, errors.New("not found")
+	return nil, repo.ErrProjectMetadataNotFound
 }
 
 func (r *ProjectMetadata) FindByProjectIDList(ctx context.Context, ids id.ProjectIDList) ([]*project.ProjectMetadata, error) {

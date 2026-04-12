@@ -2,6 +2,7 @@ package mongodoc
 
 import (
 	"net/url"
+	"strings"
 	"time"
 
 	accountsID "github.com/reearth/reearth-accounts/server/pkg/id"
@@ -14,6 +15,7 @@ import (
 type ProjectDocument struct {
 	ID           string
 	Workspace    string
+	Scene        string
 	Name         string
 	Description  string
 	ImageURL     string
@@ -60,6 +62,7 @@ func NewProject(p *project.Project) (*ProjectDocument, string) {
 	return &ProjectDocument{
 		ID:           pid,
 		Workspace:    p.Workspace().String(),
+		Scene:        p.Scene().String(),
 		Name:         p.Name(),
 		Description:  p.Description(),
 		ImageURL:     imageURL,
@@ -98,11 +101,6 @@ func (d *ProjectDocument) Model() (*project.Project, error) {
 		return nil, err
 	}
 
-	// scene, err := id.SceneIDFrom(d.Scene)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
 	var imageURL *url.URL
 	if d.ImageURL != "" {
 		if imageURL, err = url.Parse(d.ImageURL); err != nil {
@@ -110,9 +108,19 @@ func (d *ProjectDocument) Model() (*project.Project, error) {
 		}
 	}
 
-	p, err := project.New().
+	b := project.New().
 		ID(pid).
-		Workspace(tid).
+		Workspace(tid)
+	if sid := strings.TrimSpace(d.Scene); sid != "" {
+		var sceneID id.SceneID
+		sceneID, err = id.SceneIDFrom(sid)
+		if err != nil {
+			return nil, err
+		}
+		b = b.Scene(sceneID)
+	}
+
+	p, err := b.
 		Name(d.Name).
 		Description(d.Description).
 		ImageURL(imageURL).

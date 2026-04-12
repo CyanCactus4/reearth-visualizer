@@ -70,10 +70,11 @@ func nlsLayerMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, li
 	if !active {
 		return true
 	}
-	if holder == from.userID {
+	if LockHeldBySameTab(holder, from.userID, from.clientID) {
 		return true
 	}
-	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "layer locked by " + holder}})
+	hu, _ := ParseLockHolderWire(holder)
+	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "layer locked by " + hu}})
 	return false
 }
 

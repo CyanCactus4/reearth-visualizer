@@ -42,7 +42,7 @@ export const useNLSLayerCustomPropertyMutations = (
       input: UpdateCustomPropertySchemaInput
     ): Promise<MutationReturn<UpdateCustomPropertiesMutation>> => {
       if (!input.layerId) return { status: "error" };
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyUpdateNlsCustomPropertiesPayload({
             sceneId: sceneIdForCollab,
@@ -99,7 +99,7 @@ export const useNLSLayerCustomPropertyMutations = (
       input: ChangeCustomPropertyTitleInput
     ): Promise<MutationReturn<ChangeCustomPropertyTitleMutation>> => {
       if (!input.layerId) return { status: "error" };
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyChangeNlsCustomPropertyTitlePayload({
             sceneId: sceneIdForCollab,
@@ -153,7 +153,7 @@ export const useNLSLayerCustomPropertyMutations = (
       input: RemoveCustomPropertyInput
     ): Promise<MutationReturn<RemoveCustomPropertyMutation>> => {
       if (!input.layerId) return { status: "error" };
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyRemoveNlsCustomPropertyPayload({
             sceneId: sceneIdForCollab,

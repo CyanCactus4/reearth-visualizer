@@ -1,26 +1,48 @@
 import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+
+import type { CollabContextValue } from "@reearth/services/collab";
 
 import CollabPresenceBar from "./CollabPresenceBar";
 
-const collabState = {
+const sendRawM = vi.fn(() => true);
+const sendChatM = vi.fn();
+
+const collabState: CollabContextValue = {
   projectId: "proj-1",
-  localUserId: undefined as string | undefined,
-  status: "open" as const,
-  lastMessage: null as { v: 1; t: string; d?: Record<string, string> } | null,
-  sendRaw: vi.fn(() => true),
-  remoteCursors: {} as Record<string, { x: number; y: number; inside: boolean; ts: number }>,
-  remoteTypingUserIds: [] as string[],
-  remoteMovingUserIds: [] as string[],
-  resourceLocks: {} as Record<string, { holderUserId: string; until?: string }>,
-  chatMessages: [] as { id: string; userId: string; text: string; ts: number }[],
-  sendChat: vi.fn(),
-  remoteSceneRev: undefined as number | undefined
+  localUserId: undefined,
+  localUserPhotoURL: undefined,
+  status: "open",
+  remoteUserPhotoURLs: {},
+  presencePeerKeys: [],
+  lastMessage: null,
+  sendRaw: sendRawM,
+  remoteCursors: {},
+  remoteTypingUserIds: [],
+  remoteMovingUserIds: [],
+  resourceLocks: {},
+  chatMessages: [],
+  sendChat: sendChatM,
+  remoteSceneRev: undefined,
+  widgetEntityClocks: {},
+  propertyFieldClocks: {},
+  propertyDocClocks: {},
+  collabReplicaId: "replica-test",
+  tickPropertyFieldHlc: vi.fn(() => ({
+    wall: 0,
+    logical: 0,
+    node: "n"
+  }))
 };
 
-vi.mock("@reearth/services/collab", () => ({
-  useCollab: () => collabState
-}));
+vi.mock("@reearth/services/collab", async (importOriginal) => {
+  const mod = await importOriginal<typeof import("@reearth/services/collab")>();
+  return {
+    ...mod,
+    useCollab: () => collabState
+  };
+});
 
 describe("CollabPresenceBar", () => {
   beforeEach(() => {
@@ -28,13 +50,14 @@ describe("CollabPresenceBar", () => {
     collabState.localUserId = undefined;
     collabState.status = "open";
     collabState.lastMessage = null;
+    collabState.presencePeerKeys = [];
     collabState.remoteCursors = {};
     collabState.remoteTypingUserIds = [];
     collabState.remoteMovingUserIds = [];
     collabState.resourceLocks = {};
     collabState.chatMessages = [];
-    collabState.sendRaw.mockClear();
-    collabState.sendChat.mockClear();
+    sendRawM.mockClear();
+    sendChatM.mockClear();
   });
 
   it("renders status when project is set", () => {
@@ -45,14 +68,18 @@ describe("CollabPresenceBar", () => {
     );
   });
 
-  it("lists user after presence join", () => {
-    collabState.lastMessage = {
-      v: 1,
-      t: "presence",
-      d: { event: "join", userId: "alice" }
-    };
+  it("lists user from presencePeerKeys", () => {
+    collabState.presencePeerKeys = ["alice"];
     render(<CollabPresenceBar />);
     expect(screen.getByTestId("collab-presence-bar")).toHaveTextContent("alice");
+  });
+
+  it("opens participants panel when toggle is clicked", async () => {
+    const user = userEvent.setup();
+    collabState.presencePeerKeys = ["alice"];
+    render(<CollabPresenceBar />);
+    await user.click(screen.getByTestId("collab-participants-toggle"));
+    expect(screen.getByRole("dialog")).toBeTruthy();
   });
 
   it("shows typing peers from context", () => {

@@ -1,6 +1,7 @@
 import {
   collabUserAvatarLetter,
   collabUserColor,
+  parsePeerInstanceKey,
   useCollab
 } from "@reearth/services/collab";
 import { FC, useMemo, useState } from "react";
@@ -90,9 +91,11 @@ const CollabRemoteCursors: FC = () => {
         overflow: "hidden"
       }}
     >
-      {entries.map(([userId, c]) => (
+      {entries.map(([peerKey, c]) => {
+        const { userId } = parsePeerInstanceKey(peerKey);
+        return (
         <div
-          key={userId}
+          key={peerKey}
           title={userId}
           style={{
             position: "absolute",
@@ -122,7 +125,8 @@ const CollabRemoteCursors: FC = () => {
             {shortUserLabel(userId)}
           </span>
         </div>
-      ))}
+        );
+      })}
     </div>
   );
 };

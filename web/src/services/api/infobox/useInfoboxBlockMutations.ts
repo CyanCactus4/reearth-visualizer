@@ -42,7 +42,7 @@ export const useInfoboxBlockMutations = (sceneIdForCollab?: string) => {
     async (
       input: AddNlsInfoboxBlockInput
     ): Promise<MutationReturn<AddNlsInfoboxBlockMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyAddNlsInfoboxBlockPayload({
             sceneId: sceneIdForCollab,
@@ -88,7 +88,7 @@ export const useInfoboxBlockMutations = (sceneIdForCollab?: string) => {
     async (
       input: RemoveNlsInfoboxBlockInput
     ): Promise<MutationReturn<RemoveNlsInfoboxBlockMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyRemoveNlsInfoboxBlockPayload({
             sceneId: sceneIdForCollab,
@@ -132,7 +132,7 @@ export const useInfoboxBlockMutations = (sceneIdForCollab?: string) => {
     async (
       input: MoveNlsInfoboxBlockInput
     ): Promise<MutationReturn<MoveNlsInfoboxBlockMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyMoveNlsInfoboxBlockPayload({
             sceneId: sceneIdForCollab,

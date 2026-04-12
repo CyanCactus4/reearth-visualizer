@@ -42,7 +42,7 @@ export const usePhotoOverlayMutations = (sceneIdForCollab?: string) => {
     async (
       input: CreateNlsPhotoOverlayInput
     ): Promise<MutationReturn<CreateNlsPhotoOverlayMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyCreateNlsPhotoOverlayPayload({
             sceneId: sceneIdForCollab,
@@ -80,7 +80,7 @@ export const usePhotoOverlayMutations = (sceneIdForCollab?: string) => {
     async (
       input: RemoveNlsPhotoOverlayInput
     ): Promise<MutationReturn<RemoveNlsPhotoOverlayMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyRemoveNlsPhotoOverlayPayload({
             sceneId: sceneIdForCollab,

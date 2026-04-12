@@ -3,6 +3,8 @@
 # =======================
 
 TEST_DIR ?= ./...
+# Optional: limit parallel packages (e.g. TEST_P=2) to reduce load on a single local Mongo.
+TEST_P ?=
 TARGET_TEST := ./...
 REEARTH_DB := mongodb://localhost
 REEARTH_DB_VIS := reearth

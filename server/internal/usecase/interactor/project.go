@@ -187,11 +187,12 @@ func (i *Project) FindActiveById(ctx context.Context, pid id.ProjectID, operator
 	}
 
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, pj.ID())
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
 		return nil, err
 	}
-
-	pj.SetMetadata(meta)
+	if meta != nil {
+		pj.SetMetadata(meta)
+	}
 	return pj, nil
 }
 
@@ -202,11 +203,12 @@ func (i *Project) FindActiveByAlias(ctx context.Context, alias string, operator 
 	}
 
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, pj.ID())
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
 		return nil, err
 	}
-
-	pj.SetMetadata(meta)
+	if meta != nil {
+		pj.SetMetadata(meta)
+	}
 	return pj, nil
 }
 
@@ -238,12 +240,13 @@ func (i *Project) FindByWorkspaceIDAndProjectAlias(ctx context.Context, workspac
 	// Public projects can be accessed by anyone (authenticated or not)
 
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, pj.ID())
-	if err != nil {
-		log.Errorf("project metadata not found for project ID %s: %v", pj.ID(), err)
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
+		log.Errorf("project metadata load failed for project ID %s: %v", pj.ID(), err)
 		return nil, err
 	}
-
-	pj.SetMetadata(meta)
+	if meta != nil {
+		pj.SetMetadata(meta)
+	}
 	return pj, nil
 }
 
@@ -1045,11 +1048,12 @@ func (i *Project) ExportProjectData(ctx context.Context, pid id.ProjectID, zipWr
 	}
 
 	meta, err := i.projectMetadataRepo.FindByProjectID(ctx, pid)
-	if err != nil {
+	if err != nil && !errors.Is(err, repo.ErrProjectMetadataNotFound) {
 		return nil, errors.New("project metadate " + err.Error())
 	}
-
-	prj.SetMetadata(meta)
+	if meta != nil {
+		prj.SetMetadata(meta)
+	}
 
 	return prj, nil
 
@@ -1270,6 +1274,12 @@ func updateProjectUpdatedAtByScene(ctx context.Context, sceneID id.SceneID, r re
 	}
 	err = updateProjectUpdatedAtByID(ctx, scene.Project(), r)
 	if err != nil {
+		return err
+	}
+	// NLS layers, styles, and story blocks only touched project.updatedAt before; collab
+	// publishes scene revision from scene.UpdatedAt, so keep it in sync for subscribers.
+	scene.SetUpdatedAt(time.Now().UTC())
+	if err := s.Save(ctx, scene); err != nil {
 		return err
 	}
 	return nil

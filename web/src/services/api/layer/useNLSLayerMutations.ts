@@ -43,7 +43,7 @@ export const useNLSLayerMutations = (sceneId?: string) => {
     async (
       input: AddNlsLayerSimpleInput
     ): Promise<MutationReturn<AddNlsLayerSimpleMutation>> => {
-      if (collab?.status === "open") {
+      if (collab) {
         const ok = collab.sendRaw(
           applyAddNlsLayerSimplePayload({
             sceneId: input.sceneId,
@@ -91,7 +91,7 @@ export const useNLSLayerMutations = (sceneId?: string) => {
       input: UpdateNlsLayerInput
     ): Promise<MutationReturn<UpdateNlsLayerMutation>> => {
       if (!input.layerId) return { status: "error" };
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyUpdateNlsLayerPayload({
             sceneId,
@@ -140,7 +140,7 @@ export const useNLSLayerMutations = (sceneId?: string) => {
       input: UpdateNlsLayersInput
     ): Promise<MutationReturn<UpdateNlsLayersMutation>> => {
       if (!input) return { status: "error" };
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyUpdateNlsLayersPayload({
             sceneId,
@@ -191,7 +191,7 @@ export const useNLSLayerMutations = (sceneId?: string) => {
       input: RemoveNlsLayerInput
     ): Promise<MutationReturn<RemoveNlsLayerMutation>> => {
       if (!input.layerId) return { status: "error" };
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyRemoveNlsLayerPayload({
             sceneId,

@@ -76,7 +76,7 @@ func TestDispatchApply_invalidJSON(t *testing.T) {
 
 func TestLockTable_lookup(t *testing.T) {
 	lt := newLockTable()
-	ok, holder, _ := lt.TryAcquire("p", "widget", "w1", "u1", 5*time.Minute)
+	ok, holder, _ := lt.TryAcquire("p", "widget", "w1", "u1", "", 5*time.Minute)
 	assert.True(t, ok)
 	assert.Equal(t, "u1", holder)
 	h, active := lt.Lookup("p", "widget", "w1")

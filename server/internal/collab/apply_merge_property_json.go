@@ -69,8 +69,9 @@ func sceneMustNotBeLockedForMergeUndo(ctx context.Context, hub *Hub, uc *interfa
 	if err != nil {
 		return err
 	}
-	if active && holder != "" && holder != uid {
-		return &mergePropertyJSONErr{"object_locked", "scene locked by " + holder}
+	if active && HTTPLockBlocksUser(holder, uid) {
+		hu, _ := ParseLockHolderWire(holder)
+		return &mergePropertyJSONErr{"object_locked", "scene locked by " + hu}
 	}
 	return nil
 }

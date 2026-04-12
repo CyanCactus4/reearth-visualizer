@@ -25,6 +25,7 @@ func (r *mutationResolver) AddGeoJSONFeature(ctx context.Context, input gqlmodel
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForLayer(ctx, lid)
 
 	featureGeometry, err := convertGeometry(res.Geometry())
 	if err != nil {
@@ -59,6 +60,7 @@ func (r *mutationResolver) UpdateGeoJSONFeature(ctx context.Context, input gqlmo
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForLayer(ctx, lid)
 
 	featureGeometry, err := convertGeometry(res.Geometry())
 	if err != nil {
@@ -91,6 +93,7 @@ func (r *mutationResolver) DeleteGeoJSONFeature(ctx context.Context, input gqlmo
 	if err != nil {
 		return nil, err
 	}
+	publishCollabSceneRevisionForLayer(ctx, lid)
 
 	return &gqlmodel.DeleteGeoJSONFeaturePayload{
 		DeletedFeatureID: gqlmodel.IDFrom(id),

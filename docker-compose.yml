@@ -82,9 +82,17 @@ services:
     ports:
       - 27017:27017
     volumes:
-      - ${PWD}/tmp/mongo:/data/db
+      # Paths relative to this compose file (repo root), not $PWD — avoids
+      # server/tmp/* when compose is run from server/ (breaks `go test ./...`).
+      - ./tmp/mongo:/data/db
       - ./mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
     command: ["mongod", "--bind_ip_all", "--replSet", "rs0"]
+    # Heavy local test suites (e2e + many DBs) can exhaust default nofile and
+    # trigger Mongo error 24 "Too many open files", then crashes / connection refused.
+    ulimits:
+      nofile:
+        soft: 65535
+        hard: 65535
     networks:
       - reearth
 
@@ -93,7 +101,7 @@ services:
     ports:
       - 4443:4443
     volumes:
-      - ${PWD}/tmp/gcs:/storage
+      - ./tmp/gcs:/storage
     command: -scheme http
     networks:
       - reearth

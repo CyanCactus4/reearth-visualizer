@@ -11,7 +11,6 @@ export async function fetchCollabChatHistory(
     const token = await getAccessToken();
     const url = buildCollabChatUrl(apiBase, projectId, limit);
     const res = await fetch(url, {
-      credentials: "include",
       headers: token ? { Authorization: `Bearer ${token}` } : {}
     });
     if (!res.ok) {

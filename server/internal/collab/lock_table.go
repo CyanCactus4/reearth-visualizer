@@ -33,22 +33,23 @@ func (t *lockTable) pruneLocked(now time.Time) {
 }
 
 // TryAcquire returns granted=true if caller holds the lock after this call.
-func (t *lockTable) TryAcquire(projectID, resource, resourceID, userID string, ttl time.Duration) (granted bool, holder string, until time.Time) {
+func (t *lockTable) TryAcquire(projectID, resource, resourceID, userID, clientID string, ttl time.Duration) (granted bool, holderWire string, until time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	now := time.Now()
 	t.pruneLocked(now)
+	wire := LockHolderWire(userID, clientID)
 	k := lockKey(projectID, resource, resourceID)
 	if e, ok := t.m[k]; ok && e.until.After(now) {
-		if e.holder == userID {
+		if e.holder == wire {
 			e.until = now.Add(ttl)
-			return true, userID, e.until
+			return true, wire, e.until
 		}
 		return false, e.holder, e.until
 	}
 	until = now.Add(ttl)
-	t.m[k] = &lockEntry{holder: userID, until: until}
-	return true, userID, until
+	t.m[k] = &lockEntry{holder: wire, until: until}
+	return true, wire, until
 }
 
 // Lookup returns the current non-expired lock holder, if any.
@@ -65,17 +66,18 @@ func (t *lockTable) Lookup(projectID, resource, resourceID string) (holder strin
 	return e.holder, true
 }
 
-func (t *lockTable) Release(projectID, resource, resourceID, userID string) (released bool) {
+func (t *lockTable) Release(projectID, resource, resourceID, userID, clientID string) (released bool) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	now := time.Now()
+	wire := LockHolderWire(userID, clientID)
 	k := lockKey(projectID, resource, resourceID)
 	e, ok := t.m[k]
 	if !ok || !e.until.After(now) {
 		delete(t.m, k)
 		return true
 	}
-	if e.holder != userID {
+	if e.holder != wire {
 		return false
 	}
 	delete(t.m, k)
@@ -83,16 +85,17 @@ func (t *lockTable) Release(projectID, resource, resourceID, userID string) (rel
 }
 
 // Heartbeat extends TTL for the current holder only.
-func (t *lockTable) Heartbeat(projectID, resource, resourceID, userID string, ttl time.Duration) (ok bool, until time.Time) {
+func (t *lockTable) Heartbeat(projectID, resource, resourceID, userID, clientID string, ttl time.Duration) (ok bool, until time.Time) {
 	t.mu.Lock()
 	defer t.mu.Unlock()
 	now := time.Now()
+	wire := LockHolderWire(userID, clientID)
 	k := lockKey(projectID, resource, resourceID)
 	e, ok := t.m[k]
 	if !ok || !e.until.After(now) {
 		return false, time.Time{}
 	}
-	if e.holder != userID {
+	if e.holder != wire {
 		return false, e.until
 	}
 	e.until = now.Add(ttl)

@@ -22,7 +22,7 @@ d-destroy:
 		docker network prune -f; \
 		echo "✓ All Docker resources have been removed"; \
 		echo "==== Removing data directory (requires sudo password) ===="; \
-		sudo rm -rf tmp/gcs tmp/mongo; \
+		sudo rm -rf ../tmp/gcs ../tmp/mongo; \
 		echo "✓ All data resources have been cleared"; \
 	else \
 		echo "✗ Operation cancelled"; \
@@ -84,7 +84,7 @@ d-reset-data:
 	${DOCKER_COMPOSE} --profile accounts down
 	@echo ""
 	@echo "==== Removing data directory (requires sudo password) ===="
-	sudo rm -rf tmp/gcs tmp/mongo
+	sudo rm -rf ../tmp/gcs ../tmp/mongo
 	@echo ""
 	@echo "==== Starting all services ===="
 	${DOCKER_COMPOSE} --profile accounts up -d reearth-mongo reearth-gcs reearth-accounts-api

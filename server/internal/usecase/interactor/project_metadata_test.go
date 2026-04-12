@@ -153,7 +153,7 @@ func TestProjectMetadata_FindByProjectID_NotFound(t *testing.T) {
 	}
 
 	found, err := uc.FindByProjectID(ctx, pid, operator)
-	assert.Error(t, err)
+	assert.NoError(t, err)
 	assert.Nil(t, found)
 }
 

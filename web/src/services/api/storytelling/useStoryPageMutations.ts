@@ -52,7 +52,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: CreateStoryPageInput
     ): Promise<MutationReturn<CreateStoryPageMutation>> => {
-      if (collab?.status === "open" && input.sceneId) {
+      if (collab && input.sceneId) {
         const ok = collab.sendRaw(
           applyCreateStoryPagePayload({
             sceneId: input.sceneId,
@@ -104,7 +104,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: DeleteStoryPageInput
     ): Promise<MutationReturn<DeleteStoryPageMutation>> => {
-      if (collab?.status === "open" && input.sceneId) {
+      if (collab && input.sceneId) {
         const ok = collab.sendRaw(
           applyRemoveStoryPagePayload({
             sceneId: input.sceneId,
@@ -150,7 +150,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: MoveStoryPageInput
     ): Promise<MutationReturn<MoveStoryPageMutation>> => {
-      if (collab?.status === "open" && sceneIdForCollab) {
+      if (collab && sceneIdForCollab) {
         const ok = collab.sendRaw(
           applyMoveStoryPagePayload({
             sceneId: sceneIdForCollab,
@@ -197,7 +197,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: UpdateStoryPageInput
     ): Promise<MutationReturn<UpdateStoryPageMutation>> => {
-      if (collab?.status === "open" && input.sceneId) {
+      if (collab && input.sceneId) {
         const ok = collab.sendRaw(
           applyUpdateStoryPagePayload({
             sceneId: input.sceneId,
@@ -252,7 +252,7 @@ export const useStoryPageMutations = (sceneIdForCollab?: string) => {
     async (
       input: DuplicateStoryPageInput
     ): Promise<MutationReturn<DuplicateStoryPageMutation>> => {
-      if (collab?.status === "open" && input.sceneId) {
+      if (collab && input.sceneId) {
         const ok = collab.sendRaw(
           applyDuplicateStoryPagePayload({
             sceneId: input.sceneId,

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"net/http"
 	"time"
 
 	"github.com/99designs/gqlgen/graphql"
@@ -19,6 +20,7 @@ import (
 	"github.com/reearth/reearth/server/pkg/i18n/message"
 	"github.com/reearth/reearth/server/pkg/verror"
 	"github.com/reearth/reearthx/log"
+	"github.com/gorilla/websocket"
 	"github.com/vektah/gqlparser/v2/ast"
 	"github.com/vektah/gqlparser/v2/gqlerror"
 	"go.opentelemetry.io/otel"
@@ -33,7 +35,7 @@ const (
 	maxMemorySize     = 100 * 1024 * 1024       // 100MB
 )
 
-func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, collabHub *collab.Hub, dev bool) echo.HandlerFunc {
+func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, collabHub *collab.Hub, dev bool, allowedOrigins []string) echo.HandlerFunc {
 
 	schema := gql.NewExecutableSchema(gql.Config{
 		Resolvers: gql.NewResolver(accountsAPIClient),
@@ -41,7 +43,24 @@ func GraphqlAPI(conf config.GraphQLConfig, accountsAPIClient *gqlclient.Client, 
 
 	srv := handler.New(schema)
 
+	wsUp := websocket.Upgrader{
+		ReadBufferSize:  1024,
+		WriteBufferSize: 1024,
+		CheckOrigin: func(r *http.Request) bool {
+			origin := r.Header.Get("Origin")
+			if origin == "" {
+				return true
+			}
+			for _, o := range allowedOrigins {
+				if o != "" && o == origin {
+					return true
+				}
+			}
+			return false
+		},
+	}
 	srv.AddTransport(transport.Websocket{
+		Upgrader:              wsUp,
 		KeepAlivePingInterval: 10 * time.Second,
 	})
 	srv.AddTransport(transport.Options{})

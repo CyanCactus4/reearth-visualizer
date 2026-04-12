@@ -52,6 +52,13 @@ export {
 export { CollabClient, type CollabInbound } from "./CollabClient";
 export { cursorPayload } from "./cursorMessages";
 export {
+  COLLAB_PEER_SEP,
+  isSameCollabTab,
+  parsePeerInstanceKey,
+  peerInstanceKey,
+  suppressCollabPeerAppliedNotification
+} from "./peerInstanceKey";
+export {
   collabOfflineDrain,
   collabOfflineFlush,
   collabOfflineNormalize,
@@ -93,9 +100,16 @@ export {
   buildCollabRedoPostUrl,
   buildCollabUndoPostUrl,
   buildCollabWsUrl,
+  postCollabAdminRestore,
   postCollabRedo,
   postCollabUndo
 } from "./collabUrl";
+export {
+  collabApplyKindLabel,
+  collabAuditEntryActionLabel,
+  collabPeerAppliedTargetHint,
+  formatCollabAuditTimestamp
+} from "./collabApplyPeerToast";
 export {
   sceneMergeRichDiff,
   type SceneMergeRichDiff

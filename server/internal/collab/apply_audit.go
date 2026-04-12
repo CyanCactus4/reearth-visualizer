@@ -50,3 +50,16 @@ type ApplyAuditStore interface {
 	// ListRecent returns newest-first rows for projectID. When sceneID is non-empty, only rows with that sceneId are returned.
 	ListRecent(ctx context.Context, projectID, sceneID string, limit int) ([]ApplyAuditListRow, error)
 }
+
+type noopApplyAuditStore struct{}
+
+func (noopApplyAuditStore) Append(context.Context, ApplyAuditRecord) error { return nil }
+
+func (noopApplyAuditStore) ListRecent(context.Context, string, string, int) ([]ApplyAuditListRow, error) {
+	return nil, nil
+}
+
+// NoopApplyAuditStore returns a store that never persists and always lists zero rows.
+func NoopApplyAuditStore() ApplyAuditStore {
+	return noopApplyAuditStore{}
+}

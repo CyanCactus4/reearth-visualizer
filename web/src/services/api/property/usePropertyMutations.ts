@@ -50,7 +50,7 @@ export const usePropertyMutations = (sceneId?: string) => {
       const gvt = valueTypeToGQL(vt);
       if (!gvt) return;
       const value = valueToGQL(v, vt);
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const fieldHlc = collab.tickPropertyFieldHlc();
         const isSceneCamera =
           schemaGroupId === "camera" && fieldId === "camera" && vt === "camera";
@@ -121,7 +121,7 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyAddPropertyItemPayload({
             sceneId,
@@ -172,7 +172,7 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyRemovePropertyItemPayload({
             sceneId,
@@ -226,7 +226,7 @@ export const usePropertyMutations = (sceneId?: string) => {
     ): Promise<
       MutationReturn<Partial<PropertyItemPayload["property"]["id"]>>
     > => {
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyMovePropertyItemPayload({
             sceneId,

@@ -14,25 +14,25 @@ func (h *Hub) LockHolder(ctx context.Context, projectID, resource, resourceID st
 	return hh, ok, nil
 }
 
-func (h *Hub) tryLockAcquire(ctx context.Context, projectID, resource, resourceID, userID string, ttl time.Duration) (ok bool, holder string, until time.Time, err error) {
+func (h *Hub) tryLockAcquire(ctx context.Context, projectID, resource, resourceID, userID, clientID string, ttl time.Duration) (ok bool, holder string, until time.Time, err error) {
 	if h.lockRedis != nil {
-		return redisLockTryAcquire(ctx, h.lockRedis, projectID, resource, resourceID, userID, ttl)
+		return redisLockTryAcquire(ctx, h.lockRedis, projectID, resource, resourceID, userID, clientID, ttl)
 	}
-	ok, holder, until = h.locks.TryAcquire(projectID, resource, resourceID, userID, ttl)
+	ok, holder, until = h.locks.TryAcquire(projectID, resource, resourceID, userID, clientID, ttl)
 	return ok, holder, until, nil
 }
 
-func (h *Hub) tryLockRelease(ctx context.Context, projectID, resource, resourceID, userID string) (ok bool, err error) {
+func (h *Hub) tryLockRelease(ctx context.Context, projectID, resource, resourceID, userID, clientID string) (ok bool, err error) {
 	if h.lockRedis != nil {
-		return redisLockRelease(ctx, h.lockRedis, projectID, resource, resourceID, userID)
+		return redisLockRelease(ctx, h.lockRedis, projectID, resource, resourceID, userID, clientID)
 	}
-	return h.locks.Release(projectID, resource, resourceID, userID), nil
+	return h.locks.Release(projectID, resource, resourceID, userID, clientID), nil
 }
 
-func (h *Hub) tryLockHeartbeat(ctx context.Context, projectID, resource, resourceID, userID string, ttl time.Duration) (ok bool, until time.Time, err error) {
+func (h *Hub) tryLockHeartbeat(ctx context.Context, projectID, resource, resourceID, userID, clientID string, ttl time.Duration) (ok bool, until time.Time, err error) {
 	if h.lockRedis != nil {
-		return redisLockHeartbeat(ctx, h.lockRedis, projectID, resource, resourceID, userID, ttl)
+		return redisLockHeartbeat(ctx, h.lockRedis, projectID, resource, resourceID, userID, clientID, ttl)
 	}
-	ok, until = h.locks.Heartbeat(projectID, resource, resourceID, userID, ttl)
+	ok, until = h.locks.Heartbeat(projectID, resource, resourceID, userID, clientID, ttl)
 	return ok, until, nil
 }

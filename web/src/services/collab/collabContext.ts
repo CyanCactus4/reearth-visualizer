@@ -27,25 +27,33 @@ export type CollabChatLine = {
 /** Server-side object lock (layer / widget), from lock_changed / lock_denied. */
 export type CollabResourceLock = {
   holderUserId: string;
+  /** When set, only that browser tab (see `collabReplicaId`) holds the lock for this user. */
+  holderClientId?: string;
   until?: string;
 };
 
 export type CollabContextValue = {
   status: CollabStatus;
   projectId: string | undefined;
-  /** Current user id (from GraphQL me) — used to ignore self in cursor/typing fan-out. */
+  /** Current user id (from GraphQL me) — with `collabReplicaId` distinguishes this tab from your other windows. */
   localUserId: string | undefined;
   /** Current user profile photo (GraphQL `me.metadata.photoURL`) for local UI. */
   localUserPhotoURL: string | undefined;
   /** Peer userId → photo URL from WS `presence` join (server passes accounts metadata). */
   remoteUserPhotoURLs: Readonly<Record<string, string>>;
+  /**
+   * Active collab room members (see `peerInstanceKey`), from `presence_snapshot`
+   * plus join/leave deltas. Sorted for stable UI.
+   */
+  presencePeerKeys: readonly string[];
   lastMessage: CollabInbound | null;
   /** Returns true if the frame was sent on the socket; false if queued offline. */
   sendRaw: (json: string) => boolean;
+  /** Keys: `userId` or `userId\u001fclientId` for another tab of the same account. */
   remoteCursors: Record<string, RemoteCursor>;
-  /** Peers recently reported typing (via activity); cleared on timeout server-side spacing applies too. */
+  /** Peer instance keys (see `remoteCursors`) recently typing outside this tab. */
   remoteTypingUserIds: readonly string[];
-  /** Peers recently moving the map/camera (`activity` kind `move`). */
+  /** Peer instance keys recently panning/zooming the map (`activity` kind `move`). */
   remoteMovingUserIds: readonly string[];
   /** Map key `layer:id` / `widget:id` → current holder (TASK.md FR-4). */
   resourceLocks: Readonly<Record<string, CollabResourceLock>>;

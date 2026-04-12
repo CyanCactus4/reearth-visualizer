@@ -22,7 +22,8 @@ const collabState = {
 vi.mock("@reearth/services/collab", () => ({
   useCollab: () => collabState,
   collabUserColor: (id: string) => `color-${id}`,
-  collabUserAvatarLetter: (id: string) => `AV-${id}`
+  collabUserAvatarLetter: (id: string) => `AV-${id}`,
+  parsePeerInstanceKey: (k: string) => ({ userId: k })
 }));
 
 describe("CollabRemoteCursors", () => {

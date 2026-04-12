@@ -6,7 +6,9 @@ import (
 	"io/fs"
 	"net/http"
 	"net/http/pprof"
+	"net/url"
 	"os"
+	"strings"
 
 	"github.com/99designs/gqlgen/graphql/playground"
 	"github.com/labstack/echo/v4"
@@ -62,7 +64,8 @@ func initEcho(
 	if len(origins) > 0 {
 		e.Use(
 			middleware.CORSWithConfig(middleware.CORSConfig{
-				AllowOrigins: origins,
+				AllowOrigins:     origins,
+				AllowCredentials: true,
 			}),
 		)
 	}
@@ -157,7 +160,7 @@ func initEcho(
 	}
 
 	// Main backend API
-	gqlHandler := GraphqlAPI(cfg.Config.GraphQL, cfg.AccountsAPIClient, cfg.CollabHub, gqldev)
+	gqlHandler := GraphqlAPI(cfg.Config.GraphQL, cfg.AccountsAPIClient, cfg.CollabHub, gqldev, origins)
 	apiPrivateRoute.POST("/graphql", gqlHandler)
 	apiPrivateRoute.GET("/graphql", gqlHandler)
 
@@ -175,6 +178,8 @@ func initEcho(
 	}
 	if cfg.CollabApplyAuditStore != nil {
 		apiPrivateRoute.GET("/collab/apply-audit", collab.ServeApplyAudit(cfg.CollabApplyAuditStore))
+	} else if cfg.CollabHub != nil {
+		apiPrivateRoute.GET("/collab/apply-audit", collab.ServeApplyAudit(collab.NoopApplyAuditStore()))
 	}
 
 	// Registering an initial auth0 user (for local development)
@@ -229,10 +234,35 @@ func allowedOrigins(cfg *ServerConfig) []string {
 		return nil
 	}
 	origins := append([]string{}, cfg.Config.Origins...)
-	if cfg.Debug {
+	// WebSocket CheckOrigin (collab + gqlgen) must allow the browser Origin.
+	// cfg.Debug is true for default (non-release) builds; Docker / CI may use -tags release
+	// with REEARTH_DEV=true — include dev origins in that case too.
+	if cfg.Debug || cfg.Config.Dev {
 		origins = append(origins, "http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:8080")
 	}
-	return origins
+	if hw := strings.TrimSpace(cfg.Config.Host_Web); hw != "" {
+		if u, err := url.Parse(hw); err == nil && u.Host != "" && (u.Scheme == "http" || u.Scheme == "https") {
+			origins = append(origins, u.Scheme+"://"+u.Host)
+		}
+	}
+	return dedupeNonEmptyStrings(origins)
+}
+
+func dedupeNonEmptyStrings(in []string) []string {
+	seen := make(map[string]struct{}, len(in))
+	out := make([]string, 0, len(in))
+	for _, s := range in {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			continue
+		}
+		if _, ok := seen[s]; ok {
+			continue
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	return out
 }
 
 func errorMessage(err error, log func(string, ...interface{})) (int, string) {

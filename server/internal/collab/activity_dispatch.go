@@ -7,7 +7,8 @@ import (
 )
 
 type activityInbound struct {
-	Kind string `json:"kind"`
+	Kind     string `json:"kind"`
+	ClientID string `json:"clientId,omitempty"`
 }
 
 func dispatchActivity(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage) error {
@@ -26,17 +27,21 @@ func dispatchActivity(ctx context.Context, hub *Hub, from *Conn, d json.RawMessa
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_activity", "message": "unknown kind"}})
 		return nil
 	}
-	if !hub.activityAllow(from.projectID, from.userID, m.Kind) {
+	if !hub.activityAllow(from.projectID, from.userID, m.ClientID, m.Kind) {
 		return nil
+	}
+	dOut := map[string]any{
+		"userId": from.userID,
+		"kind":   m.Kind,
+		"ts":     time.Now().UnixMilli(),
+	}
+	if m.ClientID != "" {
+		dOut["clientId"] = m.ClientID
 	}
 	b, err := json.Marshal(serverMessage{
 		V: 1,
 		T: "activity",
-		D: map[string]any{
-			"userId": from.userID,
-			"kind":   m.Kind,
-			"ts":     time.Now().UnixMilli(),
-		},
+		D: dOut,
 	})
 	if err != nil {
 		return nil

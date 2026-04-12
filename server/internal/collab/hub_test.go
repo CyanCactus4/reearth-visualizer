@@ -95,3 +95,70 @@ func TestPresenceBroadcast_photoURL(t *testing.T) {
 		t.Fatal("expected c1 to receive presence join for bob")
 	}
 }
+
+func TestPresenceBroadcast_clientId(t *testing.T) {
+	h := NewHub(Options{})
+	c := &Conn{
+		hub: h, projectID: "proj-1", userID: "alice", clientID: "tab-x",
+		send: make(chan []byte, 16), bgCtx: context.Background(),
+	}
+	h.register(c)
+	var snap struct {
+		T string         `json:"t"`
+		D map[string]any `json:"d"`
+	}
+	select {
+	case got := <-c.send:
+		require.NoError(t, json.Unmarshal(got, &snap))
+	default:
+		t.Fatal("expected presence_snapshot")
+	}
+	assert.Equal(t, "presence_snapshot", snap.T)
+	peers, _ := snap.D["peers"].([]any)
+	require.Len(t, peers, 1)
+
+	select {
+	case got := <-c.send:
+		var env struct {
+			T string         `json:"t"`
+			D map[string]any `json:"d"`
+		}
+		require.NoError(t, json.Unmarshal(got, &env))
+		assert.Equal(t, "presence", env.T)
+		assert.Equal(t, "join", env.D["event"])
+		assert.Equal(t, "alice", env.D["userId"])
+		assert.Equal(t, "tab-x", env.D["clientId"])
+	default:
+		t.Fatal("expected self presence join with clientId")
+	}
+}
+
+func TestPresenceSnapshot_twoMembers(t *testing.T) {
+	h := NewHub(Options{})
+	c1 := &Conn{
+		hub: h, projectID: "proj-1", userID: "alice", send: make(chan []byte, 16),
+		bgCtx: context.Background(),
+	}
+	c2 := &Conn{
+		hub: h, projectID: "proj-1", userID: "bob", clientID: "tab-b",
+		send: make(chan []byte, 16), bgCtx: context.Background(),
+	}
+	h.register(c1)
+	drainConnSend(t, c1)
+	h.register(c2)
+	select {
+	case got := <-c2.send:
+		var env struct {
+			T string         `json:"t"`
+			D map[string]any `json:"d"`
+		}
+		require.NoError(t, json.Unmarshal(got, &env))
+		assert.Equal(t, "presence_snapshot", env.T)
+		peers, ok := env.D["peers"].([]any)
+		require.True(t, ok)
+		assert.Len(t, peers, 2)
+	default:
+		t.Fatal("expected c2 to receive presence_snapshot with two peers")
+	}
+	drainConnSend(t, c2)
+}

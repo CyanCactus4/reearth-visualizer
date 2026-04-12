@@ -14,7 +14,8 @@ import (
 )
 
 type undoRedoBody struct {
-	SceneID string `json:"sceneId"`
+	SceneID  string `json:"sceneId"`
+	ClientID string `json:"clientId,omitempty"`
 }
 
 // ServeCollabUndo handles POST /api/collab/undo with JSON { "sceneId": "..." }.
@@ -98,6 +99,9 @@ func serveCollabUndoRedo(hub *Hub, undo bool) echo.HandlerFunc {
 			"userId":   userID,
 			"sceneRev": rev,
 			"sceneId":  sc.ID().String(),
+		}
+		if strings.TrimSpace(body.ClientID) != "" {
+			appliedD["clientId"] = strings.TrimSpace(body.ClientID)
 		}
 		if rec.Kind != "" {
 			appliedD["opKind"] = rec.Kind

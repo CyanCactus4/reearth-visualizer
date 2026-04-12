@@ -56,10 +56,11 @@ func sceneMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, sid i
 	if !active {
 		return true
 	}
-	if holder == from.userID {
+	if LockHeldBySameTab(holder, from.userID, from.clientID) {
 		return true
 	}
-	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "scene locked by " + holder}})
+	hu, _ := ParseLockHolderWire(holder)
+	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "scene locked by " + hu}})
 	return false
 }
 
@@ -278,9 +279,9 @@ func applyUpdatePropertyValueOp(ctx context.Context, hub *Hub, from *Conn, d jso
 		}
 		committed := hub.advancePropertyFieldHLC(sid.String(), p.PropertyID, sg, it, p.FieldID, p.FieldHLC.toHLC(), time.Now().UnixMilli())
 		extra["propertyFieldHlc"] = map[string]any{
-			"wall":     committed.Physical,
-			"logical":  committed.Logical,
-			"node":     committed.NodeID,
+			"wall":    committed.Physical,
+			"logical": committed.Logical,
+			"node":    committed.NodeID,
 		}
 		extra["propertyFieldClock"] = hub.BumpPropertyFieldClock(sid.String(), p.PropertyID, sg, it, p.FieldID)
 	}

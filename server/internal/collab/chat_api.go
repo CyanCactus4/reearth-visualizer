@@ -41,8 +41,8 @@ func ServeChatHistory(store ChatHistoryStore) echo.HandlerFunc {
 		if err != nil || pj == nil {
 			return echo.NewHTTPError(http.StatusForbidden, "project not accessible")
 		}
-		if !op.IsReadableScene(pj.Scene()) {
-			return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
+		if _, err := resolveProjectSceneForAccess(c.Request().Context(), uc, op, pj, pid); err != nil {
+			return err
 		}
 
 		limit := 100

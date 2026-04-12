@@ -43,13 +43,14 @@ func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 		if err != nil || pj == nil {
 			return echo.NewHTTPError(http.StatusForbidden, "project not accessible")
 		}
-		if !op.IsReadableScene(pj.Scene()) {
-			return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
+		projectScene, err := resolveProjectSceneForAccess(c.Request().Context(), uc, op, pj, pid)
+		if err != nil {
+			return err
 		}
 
 		sceneFilter, errScene := parseApplyAuditSceneFilterParam(
 			c.QueryParam("sceneId"),
-			pj.Scene(),
+			projectScene,
 			func(s id.SceneID) bool { return op.IsReadableScene(s) },
 		)
 		if errScene != nil {

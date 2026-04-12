@@ -38,7 +38,7 @@ export const useLayerStyleMutations = (sceneId?: string) => {
   const addLayerStyle = useCallback(
     async (input: AddStyleInput): Promise<MutationReturn<AddStyleMutation>> => {
       const sid = input.sceneId ?? sceneId;
-      if (collab?.status === "open" && sid) {
+      if (collab && sid) {
         const ok = collab.sendRaw(
           applyAddStylePayload({
             sceneId: sid,
@@ -84,7 +84,7 @@ export const useLayerStyleMutations = (sceneId?: string) => {
       input: UpdateStyleInput
     ): Promise<MutationReturn<UpdateStyleMutation>> => {
       if (!input.styleId) return { status: "error" };
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyUpdateStylePayload({
             sceneId,
@@ -131,7 +131,7 @@ export const useLayerStyleMutations = (sceneId?: string) => {
       input: RemoveStyleInput
     ): Promise<MutationReturn<RemoveStyleMutation>> => {
       if (!input.styleId) return { status: "error" };
-      if (collab?.status === "open" && sceneId) {
+      if (collab && sceneId) {
         const ok = collab.sendRaw(
           applyRemoveStylePayload({
             sceneId,

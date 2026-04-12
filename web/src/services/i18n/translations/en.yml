@@ -170,7 +170,60 @@ Collab lock conflict description: 'Another user ({{userId}}) holds the edit lock
 Collab lock conflict reload scene: Reload scene from server
 Collab chat placeholder: 'Message collaborators…'
 Collab chat send: Send
-Collab peer applied toast: '{{userId}} applied collaborative changes ({{kind}} · {{widgetId}}).'
+Collab peer applied heading: Collaboration
+Collab peer applied toast: '{{userId}} · {{action}}{{target}}'
+Collab participants title: Participants
+Collab participants heading: 'Participants — {{count}} online'
+Collab participants open: Participants
+Collab participants close: Close
+Collab participants empty: No one is connected in this room.
+Collab participants need live: Connect collaboration (Live) to see who is online.
+Collab participants you this tab: You (this tab)
+Collab participants you other tab: You (another tab)
+Collab participants status typing: typing…
+Collab participants status moving: moving map
+Collab presence connections: '{{count}} connection(s)'
+Collab history location hint: 'Apply journal lists edits on this scene. Peer edits also appear as toasts (~8s, top center).'
+Collab apply meta undo: 'reverted: {{op}}'
+Collab apply meta redo: 're-applied: {{op}}'
+Collab apply kind update_widget: 'updated a widget'
+Collab apply kind add_widget: 'added a widget'
+Collab apply kind remove_widget: 'removed a widget'
+Collab apply kind add_nls_layer_simple: 'added a layer'
+Collab apply kind remove_nls_layer: 'removed a layer'
+Collab apply kind update_nls_layer: 'updated a layer'
+Collab apply kind update_nls_layers: 'reordered layers'
+Collab apply kind merge_property_json: 'merged property fields'
+Collab apply kind update_property_value: 'updated a property value'
+Collab apply kind add_property_item: 'added a property item'
+Collab apply kind remove_property_item: 'removed a property item'
+Collab apply kind move_property_item: 'moved a property item'
+Collab apply kind add_style: 'added a layer style'
+Collab apply kind update_style: 'updated a layer style'
+Collab apply kind remove_style: 'removed a layer style'
+Collab apply kind move_story_block: 'moved a story block'
+Collab apply kind create_story_block: 'added a story block'
+Collab apply kind remove_story_block: 'removed a story block'
+Collab apply kind move_story_page: 'moved a story page'
+Collab apply kind create_story_page: 'added a story page'
+Collab apply kind remove_story_page: 'removed a story page'
+Collab apply kind update_story_page: 'updated a story page'
+Collab apply kind duplicate_story_page: 'duplicated a story page'
+Collab apply kind create_nls_photo_overlay: 'added a photo overlay'
+Collab apply kind remove_nls_photo_overlay: 'removed a photo overlay'
+Collab apply kind create_nls_infobox: 'added an infobox'
+Collab apply kind remove_nls_infobox: 'removed an infobox'
+Collab apply kind add_nls_infobox_block: 'added an infobox block'
+Collab apply kind move_nls_infobox_block: 'moved an infobox block'
+Collab apply kind remove_nls_infobox_block: 'removed an infobox block'
+Collab apply kind add_nls_geojson_feature: 'added a map feature'
+Collab apply kind update_nls_geojson_feature: 'updated a map feature'
+Collab apply kind delete_nls_geojson_feature: 'removed a map feature'
+Collab apply kind update_nls_custom_properties: 'updated custom fields'
+Collab apply kind change_nls_custom_property_title: 'renamed a custom field'
+Collab apply kind remove_nls_custom_property: 'removed a custom field'
+Collab apply kind collab_undo: 'undo'
+Collab apply kind collab_redo: 'redo'
 Collab apply stale toast: 'The scene changed on the server before your edit (revision mismatch). The editor was refreshed from the server.'
 Collab apply stale entity field toast: 'Some widget fields were already updated on the server (entity clock mismatch). Refresh and retry, or rely on merged fields only.'
 Collab apply stale property field toast: 'This property field was already updated on the server (field clock/HLC mismatch). Refetch the scene and retry.'
@@ -180,6 +233,14 @@ Collab apply failed toast: 'Your collaborative edit was rejected: {{message}} Th
 Collab chat mention notify: '{{userId}} mentioned you in chat: {{preview}}'
 Collab history show: Show collab history
 Collab history hide: Hide collab history
+Collab audit line undo: 'Undo: {{op}}'
+Collab audit line redo: 'Redo: {{op}}'
+Collab history refresh: Refresh journal
+Collab history loading: Loading…
+Collab history journal show: Show journal
+Collab history journal hide: Hide journal
+Collab history undo needs live: Requires Live collaboration (connected) for server undo/redo.
+Collab history count badge: "{{count}} entries"
 Collab history empty: No apply events yet.
 Collab history load failed: Could not load apply history.
 Collab history author you: You
@@ -195,6 +256,18 @@ Collab undo ok: Undo applied on the server.
 Collab redo ok: Redo applied on the server.
 Collab undo failed: Undo not available (nothing to undo or not configured).
 Collab redo failed: Redo not available (nothing to redo or not configured).
+Collab history undo scope note: 'How this works: (1) The list below is a server audit log of successful collaborative edits on this scene (who did what, at which scene revision). It is not a full version tree. (2) Undo / Redo only replays your own operations from the server stack for your account — they do not undo other people''s edits. (3) Admin restore (if shown) reloads a stored scene snapshot for maintainers — use with care.'
+Collab history entry you: Your edit
+Collab history entry other: Collaborator
+Collab admin restore heading: 'Admin — restore scene snapshot'
+Collab admin restore pick rev: 'Snapshot at or before scene revision (ms)'
+Collab admin restore run: Restore
+Collab admin restore confirm: 'Replace the current scene with the closest saved snapshot at or before this revision? This affects all collaborators.'
+Collab admin restore ok: 'Scene restored from snapshot.'
+Collab admin restore forbidden: 'Maintainer role is required to restore snapshots.'
+Collab admin restore no snapshots: 'Scene snapshots are not configured on the server (Mongo).'
+Collab admin restore not found: 'No snapshot exists at or before that revision.'
+Collab admin restore failed: 'Restore request failed.'
 Collab lock conflict col cache: This tab (cache)
 Collab lock conflict col network: Server (network)
 Layer: ''

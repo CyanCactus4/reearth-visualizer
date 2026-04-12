@@ -20,6 +20,23 @@ type applyEnvelope struct {
 	Kind string `json:"kind"`
 }
 
+// applyConnTabIDFromPayload copies clientTabId from the apply JSON into the connection when the WS
+// query param was missing (some proxies strip it). Locks and applied fan-out then match the browser tab.
+func applyConnTabIDFromPayload(from *Conn, d json.RawMessage) {
+	if from == nil || from.clientID != "" {
+		return
+	}
+	var probe struct {
+		ClientTabID string `json:"clientTabId"`
+	}
+	if err := json.Unmarshal(d, &probe); err != nil {
+		return
+	}
+	if x := NormalizeCollabClientID(probe.ClientTabID); x != "" {
+		from.clientID = x
+	}
+}
+
 type applyUpdateWidget struct {
 	Kind         string `json:"kind"`
 	SceneID      string `json:"sceneId"`
@@ -78,6 +95,7 @@ func dispatchApply(ctx context.Context, hub *Hub, from *Conn, d json.RawMessage)
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_json", "message": err.Error()}})
 		return nil
 	}
+	applyConnTabIDFromPayload(from, d)
 
 	switch head.Kind {
 	case "update_widget":
@@ -504,6 +522,9 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 		"userId":   actorUserID(from),
 		"sceneRev": sceneRevOf(sc),
 	}
+	if from != nil && from.clientID != "" {
+		d["clientId"] = from.clientID
+	}
 	for k, v := range extra {
 		d[k] = v
 	}
@@ -513,6 +534,8 @@ func broadcastApplied(ctx context.Context, hub *Hub, from *Conn, kind string, ex
 		return
 	}
 	hub.broadcastLocal(from.projectID, nb, from)
+	// Relay so other API instances deliver `applied` to every room tab (same user, other window, or load-balanced host).
+	hub.relayPublish(ctx, from.projectID, nb)
 	from.enqueueJSON(notify)
 
 	sidStr := ""
@@ -604,10 +627,11 @@ func widgetMustNotBeLockedByPeer(ctx context.Context, hub *Hub, from *Conn, wid 
 	if !active {
 		return true
 	}
-	if holder == from.userID {
+	if LockHeldBySameTab(holder, from.userID, from.clientID) {
 		return true
 	}
-	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "widget locked by " + holder}})
+	hu, _ := ParseLockHolderWire(holder)
+	from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "object_locked", "message": "widget locked by " + hu}})
 	return false
 }
 
