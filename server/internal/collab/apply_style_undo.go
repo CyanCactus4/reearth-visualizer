@@ -85,3 +85,42 @@ func collabRunUpdateStyleFromJSON(ctx context.Context, uc *interfaces.Container,
 	}
 	return scenes[0], nil
 }
+
+func buildRemoveStyleInverseJSON(styleID, sceneID string) json.RawMessage {
+	inv := applyRemoveStyle{
+		Kind:    "remove_style",
+		SceneID: sceneID,
+		StyleID: styleID,
+	}
+	b, err := json.Marshal(inv)
+	if err != nil {
+		return nil
+	}
+	return json.RawMessage(b)
+}
+
+// buildAddStyleInverseJSON is the undo inverse for remove_style (recreate same name/value; new style id).
+func buildAddStyleInverseJSON(st *scene.Style, sceneID string) json.RawMessage {
+	if st == nil {
+		return nil
+	}
+	ov := st.Value()
+	if ov == nil {
+		return nil
+	}
+	rawVal, err := json.Marshal(map[string]any(*ov))
+	if err != nil {
+		return nil
+	}
+	inv := applyAddStyle{
+		Kind:    "add_style",
+		SceneID: sceneID,
+		Name:    st.Name(),
+		Value:   json.RawMessage(rawVal),
+	}
+	b, err := json.Marshal(inv)
+	if err != nil {
+		return nil
+	}
+	return json.RawMessage(b)
+}

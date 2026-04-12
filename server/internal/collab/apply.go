@@ -360,6 +360,14 @@ func applyRemoveWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
+	sidStr := sid.String()
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		scenesPre, errPre := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, op)
+		if errPre == nil && len(scenesPre) > 0 {
+			invJSON = buildAddWidgetInverseJSON(scenesPre[0], sidStr, p.AlignSystem, wid)
+		}
+	}
 	sc, err2 := uc.Scene.RemoveWidget(opCtx, align, sid, wid, op)
 	if err2 != nil {
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "apply_failed", "message": err2.Error()}})
@@ -369,6 +377,23 @@ func applyRemoveWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMe
 		"sceneId":  p.SceneID,
 		"widgetId": p.WidgetID,
 	}, sc)
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sidStr,
+			UserID:    actorUserID(from),
+			Kind:      "remove_widget",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }
 
@@ -432,6 +457,26 @@ func applyAddWidgetOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessa
 		"pluginId":    p.PluginID,
 		"extensionId": p.ExtensionID,
 	}, sc)
+	if hub != nil && hub.opStack != nil && widStr != "" {
+		invJSON := buildRemoveWidgetInverseJSON(sid.String(), p.AlignSystem, widStr)
+		if len(invJSON) > 0 {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "add_widget",
+				Forward:   d,
+				Inverse:   invJSON,
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }
 

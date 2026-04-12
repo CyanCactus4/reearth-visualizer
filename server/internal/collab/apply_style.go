@@ -144,6 +144,26 @@ func applyAddStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMessag
 		"sceneId": p.SceneID,
 		"styleId": sidStr,
 	}, sc)
+	if hub != nil && hub.opStack != nil && st != nil {
+		invJSON := buildRemoveStyleInverseJSON(st.ID().String(), p.SceneID)
+		if len(invJSON) > 0 {
+			rec := UndoableOpRecord{
+				ProjectID: from.projectID,
+				SceneID:   sid.String(),
+				UserID:    actorUserID(from),
+				Kind:      "add_style",
+				Forward:   d,
+				Inverse:   invJSON,
+			}
+			go func() {
+				pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+				defer cancel2()
+				if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+					log.Warnfc(pctx, "collab: undo stack: %v", err)
+				}
+			}()
+		}
+	}
 	return nil
 }
 
@@ -278,11 +298,16 @@ func applyRemoveStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 		from.enqueueJSON(serverMessage{V: 1, T: "error", D: map[string]string{"code": "invalid_style", "message": err.Error()}})
 		return nil
 	}
-	if fetchStyleForCollabApply(ctx, uc, op, sid, stid, from) == nil {
+	st := fetchStyleForCollabApply(ctx, uc, op, sid, stid, from)
+	if st == nil {
 		return nil
 	}
 	if !styleMustNotBeLockedByPeer(ctx, hub, from, stid) {
 		return nil
+	}
+	var invJSON json.RawMessage
+	if hub != nil && hub.opStack != nil {
+		invJSON = buildAddStyleInverseJSON(st, p.SceneID)
 	}
 	opCtx, cancel := context.WithTimeout(ctx, applyOpTimeout)
 	defer cancel()
@@ -299,5 +324,22 @@ func applyRemoveStyleOp(ctx context.Context, hub *Hub, from *Conn, d json.RawMes
 		"sceneId": p.SceneID,
 		"styleId": p.StyleID,
 	}, sc)
+	if hub != nil && hub.opStack != nil && len(invJSON) > 0 {
+		rec := UndoableOpRecord{
+			ProjectID: from.projectID,
+			SceneID:   sid.String(),
+			UserID:    actorUserID(from),
+			Kind:      "remove_style",
+			Forward:   d,
+			Inverse:   invJSON,
+		}
+		go func() {
+			pctx, cancel2 := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel2()
+			if err := hub.opStack.RecordUndoable(pctx, rec); err != nil {
+				log.Warnfc(pctx, "collab: undo stack: %v", err)
+			}
+		}()
+	}
 	return nil
 }

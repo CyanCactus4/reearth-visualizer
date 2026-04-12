@@ -75,6 +75,54 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			Index:    p.Index,
 		}, operator)
 		return sc, err
+	case "add_widget":
+		var p applyAddWidget
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		align, err := parseAlignSystem(p.AlignSystem)
+		if err != nil {
+			return nil, err
+		}
+		pid, err := id.PluginIDFrom(p.PluginID)
+		if err != nil {
+			return nil, err
+		}
+		eid := id.PluginExtensionID(p.ExtensionID)
+		if string(eid) == "" {
+			return nil, fmt.Errorf("extensionId required")
+		}
+		sc, _, err := uc.Scene.AddWidget(opCtx, align, sid, pid, eid, operator)
+		return sc, err
+	case "remove_widget":
+		var p applyRemoveWidget
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		wid, err := id.WidgetIDFrom(p.WidgetID)
+		if err != nil {
+			return nil, err
+		}
+		align, err := parseAlignSystem(p.AlignSystem)
+		if err != nil {
+			return nil, err
+		}
+		sc, err := uc.Scene.RemoveWidget(opCtx, align, sid, wid, operator)
+		return sc, err
 	case "move_story_block":
 		var p applyMoveStoryBlock
 		if err := json.Unmarshal(raw, &p); err != nil {
@@ -156,6 +204,61 @@ func ExecuteCollabUndoJSON(ctx context.Context, raw json.RawMessage, operator *u
 			return nil, errors.New("write not allowed")
 		}
 		return collabRunUpdateStyleFromJSON(ctx, uc, operator, raw)
+	case "add_style":
+		var p applyAddStyle
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		val, err := parseStyleValueRaw(p.Value)
+		if err != nil {
+			return nil, err
+		}
+		if val == nil {
+			return nil, fmt.Errorf("value required")
+		}
+		if _, err := uc.Style.AddStyle(opCtx, interfaces.AddStyleInput{
+			SceneID: sid,
+			Name:    p.Name,
+			Value:   val,
+		}, operator); err != nil {
+			return nil, err
+		}
+		scenes, err2 := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, operator)
+		if err2 != nil || len(scenes) == 0 {
+			return nil, fmt.Errorf("scene reload failed")
+		}
+		return scenes[0], nil
+	case "remove_style":
+		var p applyRemoveStyle
+		if err := json.Unmarshal(raw, &p); err != nil {
+			return nil, err
+		}
+		sid, err := id.SceneIDFrom(p.SceneID)
+		if err != nil {
+			return nil, err
+		}
+		if operator == nil || !operator.IsWritableScene(sid) {
+			return nil, errors.New("write not allowed")
+		}
+		stid, err := id.StyleIDFrom(p.StyleID)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := uc.Style.RemoveStyle(opCtx, stid, operator); err != nil {
+			return nil, err
+		}
+		scenes, err2 := uc.Scene.Fetch(opCtx, []id.SceneID{sid}, operator)
+		if err2 != nil || len(scenes) == 0 {
+			return nil, fmt.Errorf("scene reload failed")
+		}
+		return scenes[0], nil
 	case "update_nls_layer":
 		var p applyUpdateNLSLayer
 		if err := json.Unmarshal(raw, &p); err != nil {
