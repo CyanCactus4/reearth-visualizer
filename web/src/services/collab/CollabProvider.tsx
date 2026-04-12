@@ -509,6 +509,7 @@ export const CollabProvider: FC<Props> = ({
               itemId?: string;
               propertyFieldClock?: number;
               propertyFieldHlc?: CollabHlcWire;
+              propertyDocClock?: number;
             }
           | undefined;
         if (typeof d?.sceneRev === "number") {

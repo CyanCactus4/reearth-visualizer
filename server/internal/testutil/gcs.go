@@ -6,7 +6,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
+	"net/url"
 	"os"
+	"strings"
+	"testing"
+	"time"
 
 	"cloud.google.com/go/storage"
 	"google.golang.org/api/iterator"
@@ -27,6 +32,32 @@ func GetFakeGCSTestHost() string {
 		return "http://localhost:4443"
 	}
 	return gcsHost
+}
+
+// GCSEmulatorDialAddr returns host:port for TCP reachability checks against the fake GCS used in tests.
+func GCSEmulatorDialAddr() string {
+	raw := os.Getenv("STORAGE_EMULATOR_HOST")
+	if raw == "" {
+		return "localhost:4443"
+	}
+	if strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		u, err := url.Parse(raw)
+		if err == nil && u.Host != "" {
+			return u.Host
+		}
+	}
+	return raw
+}
+
+// SkipUnlessFakeGCSEmulator skips the test when the storage emulator is not listening (avoids long hangs).
+func SkipUnlessFakeGCSEmulator(tb testing.TB) {
+	tb.Helper()
+	addr := GCSEmulatorDialAddr()
+	conn, err := net.DialTimeout("tcp", addr, 300*time.Millisecond)
+	if err != nil {
+		tb.Skipf("fake GCS storage emulator not reachable at %s: %v", addr, err)
+	}
+	_ = conn.Close()
 }
 
 func getFakeGCSTestEndpoint() string {

@@ -67,6 +67,7 @@ func TestFile_UploadAsset(t *testing.T) {
 }
 
 func TestFSFile_UploadAssetFromURL(t *testing.T) {
+	testutil.SkipUnlessFakeGCSEmulator(t)
 	ctx := context.Background()
 
 	gcsHost := testutil.GetFakeGCSTestHost()

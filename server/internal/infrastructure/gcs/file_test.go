@@ -30,6 +30,7 @@ func TestGetGCSObjectNameFromURL(t *testing.T) {
 }
 
 func TestGCSFile_UploadAssetFromURL(t *testing.T) {
+	testutil.SkipUnlessFakeGCSEmulator(t)
 	ctx := context.Background()
 
 	// Mock fileRepo
