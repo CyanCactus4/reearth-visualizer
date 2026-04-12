@@ -31,7 +31,18 @@ vi.mock("localforage", () => {
   };
 });
 
-import { collabOfflineDrain, collabOfflinePush } from "./offlineQueue";
+import localforage from "localforage";
+
+import {
+  collabOfflineDrain,
+  collabOfflineFlush,
+  collabOfflineNormalize,
+  collabOfflinePush
+} from "./offlineQueue";
+
+const offlineStore = localforage.createInstance({
+  name: "reearth-collab-offline"
+});
 
 beforeEach(() => {
   globalThis.__collabOfflineTestBuckets
@@ -53,5 +64,43 @@ describe("collabOfflinePush / collabOfflineDrain", () => {
 
     const d2 = await collabOfflineDrain("p2");
     expect(d2).toEqual(['{"x":1}']);
+  });
+});
+
+describe("collabOfflineNormalize", () => {
+  it("migrates legacy string[] to OfflineCollabEntry[]", async () => {
+    await offlineStore.setItem("outbox:legacy", ['{"m":1}', '{"m":2}']);
+    const entries = await collabOfflineNormalize("legacy");
+    expect(entries).toHaveLength(2);
+    expect(entries[0].raw).toBe('{"m":1}');
+    expect(entries[1].raw).toBe('{"m":2}');
+    expect(typeof entries[0].id).toBe("string");
+    expect(typeof entries[0].ts).toBe("number");
+    const stored = await offlineStore.getItem<unknown>("outbox:legacy");
+    expect(Array.isArray(stored)).toBe(true);
+    expect((stored as { raw: string }[])[0].raw).toBe('{"m":1}');
+  });
+});
+
+describe("collabOfflineFlush", () => {
+  it("removes queue when all sends succeed", async () => {
+    await collabOfflinePush("flush1", "a");
+    await collabOfflinePush("flush1", "b");
+    await collabOfflineFlush("flush1", () => true);
+    const tail = await collabOfflineNormalize("flush1");
+    expect(tail).toEqual([]);
+  });
+
+  it("keeps unsent tail when trySend fails mid-queue", async () => {
+    await collabOfflinePush("flush2", "x");
+    await collabOfflinePush("flush2", "y");
+    await collabOfflinePush("flush2", "z");
+    let n = 0;
+    await collabOfflineFlush("flush2", () => {
+      n += 1;
+      return n < 2;
+    });
+    const tail = await collabOfflineNormalize("flush2");
+    expect(tail.map((e) => e.raw)).toEqual(["y", "z"]);
   });
 });

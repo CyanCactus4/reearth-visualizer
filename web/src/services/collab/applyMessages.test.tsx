@@ -30,7 +30,14 @@ import {
   applyRemoveStylePayload,
   applyUpdateNlsLayerPayload,
   applyUpdateNlsLayersPayload,
+  applyAddPropertyItemPayload,
+  applyMergePropertyJsonPayload,
+  applyMovePropertyItemPayload,
+  applyRemovePropertyItemPayload,
   applyUpdatePropertyValuePayload,
+  propertyDocClockKey,
+  propertyFieldClockKey,
+  propertyFieldMergePatchKey,
   applyUpdateStylePayload,
   applyUpdateStoryPagePayload,
   applyRemoveWidgetPayload,
@@ -400,6 +407,117 @@ describe("apply payloads", () => {
       type: "NUMBER",
       value: 0.5,
       baseSceneRev: 9
+    });
+  });
+
+  it("propertyFieldClockKey is stable", () => {
+    expect(
+      propertyFieldClockKey({
+        propertyId: "p",
+        fieldId: "f",
+        schemaGroupId: "g",
+        itemId: "i"
+      })
+    ).toBe("p\0g\0i\0f");
+  });
+
+  it("update_property_value prefers fieldClock over baseSceneRev", () => {
+    const s = applyUpdatePropertyValuePayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      fieldId: "opacity",
+      type: "NUMBER",
+      value: 1,
+      baseSceneRev: 99,
+      fieldClock: 3
+    });
+    const d = JSON.parse(s).d as Record<string, unknown>;
+    expect(d.fieldClock).toBe(3);
+    expect(d.baseSceneRev).toBeUndefined();
+  });
+
+  it("update_property_value prefers fieldHlc over fieldClock and baseSceneRev", () => {
+    const hlc = { wall: 100, logical: 2, node: "r1" };
+    const s = applyUpdatePropertyValuePayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      fieldId: "opacity",
+      type: "NUMBER",
+      value: 1,
+      baseSceneRev: 99,
+      fieldClock: 3,
+      fieldHlc: hlc
+    });
+    const d = JSON.parse(s).d as Record<string, unknown>;
+    expect(d.fieldHlc).toEqual(hlc);
+    expect(d.fieldClock).toBeUndefined();
+    expect(d.baseSceneRev).toBeUndefined();
+  });
+
+  it("propertyFieldMergePatchKey and propertyDocClockKey", () => {
+    expect(
+      propertyFieldMergePatchKey({
+        schemaGroupId: "g",
+        itemId: "i",
+        fieldId: "f"
+      })
+    ).toBe("g\0i\0f");
+    expect(
+      propertyDocClockKey({ sceneId: "s", propertyId: "p" })
+    ).toBe("s\0p");
+  });
+
+  it("builds merge_property_json apply envelope", () => {
+    const s = applyMergePropertyJsonPayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      patch: {
+        ["a\0b\0c"]: { type: "NUMBER", value: 2 }
+      },
+      docClock: 4
+    });
+    expect(JSON.parse(s).d).toMatchObject({
+      kind: "merge_property_json",
+      sceneId: "sc1",
+      propertyId: "pr1",
+      docClock: 4
+    });
+  });
+
+  it("builds property item apply envelopes", () => {
+    const add = applyAddPropertyItemPayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      schemaGroupId: "list",
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(add).d).toMatchObject({
+      kind: "add_property_item",
+      propertyId: "pr1",
+      schemaGroupId: "list"
+    });
+    const rm = applyRemovePropertyItemPayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      schemaGroupId: "list",
+      itemId: "it1",
+      baseSceneRev: 2
+    });
+    expect(JSON.parse(rm).d).toMatchObject({
+      kind: "remove_property_item",
+      itemId: "it1"
+    });
+    const mv = applyMovePropertyItemPayload({
+      sceneId: "sc1",
+      propertyId: "pr1",
+      schemaGroupId: "list",
+      itemId: "it1",
+      index: 0,
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(mv).d).toMatchObject({
+      kind: "move_property_item",
+      index: 0
     });
   });
 
