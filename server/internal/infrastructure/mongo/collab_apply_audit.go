@@ -33,6 +33,16 @@ func (s *CollabApplyAudit) EnsureIndexes(ctx context.Context) error {
 			{Key: "ts", Value: -1},
 		},
 	})
+	if err != nil {
+		return err
+	}
+	_, err = s.coll.Indexes().CreateOne(ctx, mongo.IndexModel{
+		Keys: bson.D{
+			{Key: "projectId", Value: 1},
+			{Key: "sceneId", Value: 1},
+			{Key: "ts", Value: -1},
+		},
+	})
 	return err
 }
 
@@ -84,7 +94,7 @@ func (s *CollabApplyAudit) Append(ctx context.Context, rec collab.ApplyAuditReco
 	return err
 }
 
-func (s *CollabApplyAudit) ListRecent(ctx context.Context, projectID string, limit int) ([]collab.ApplyAuditListRow, error) {
+func (s *CollabApplyAudit) ListRecent(ctx context.Context, projectID, sceneID string, limit int) ([]collab.ApplyAuditListRow, error) {
 	if s == nil || s.coll == nil {
 		return []collab.ApplyAuditListRow{}, nil
 	}
@@ -94,10 +104,14 @@ func (s *CollabApplyAudit) ListRecent(ctx context.Context, projectID string, lim
 	if limit > 500 {
 		limit = 500
 	}
+	filter := bson.M{"projectId": projectID}
+	if sceneID != "" {
+		filter["sceneId"] = sceneID
+	}
 	opts := options.Find().
 		SetSort(bson.D{{Key: "ts", Value: -1}}).
 		SetLimit(int64(limit))
-	cur, err := s.coll.Find(ctx, bson.M{"projectId": projectID}, opts)
+	cur, err := s.coll.Find(ctx, filter, opts)
 	if err != nil {
 		return nil, err
 	}

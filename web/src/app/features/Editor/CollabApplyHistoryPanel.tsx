@@ -34,7 +34,12 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
     try {
       const token = await getAccessToken();
       const apiBase = window.REEARTH_CONFIG?.api || "/api";
-      const url = buildCollabApplyAuditUrl(apiBase, collab.projectId, 50);
+      const url = buildCollabApplyAuditUrl(
+        apiBase,
+        collab.projectId,
+        50,
+        sceneId
+      );
       const res = await fetch(url, {
         credentials: "include",
         headers: token ? { Authorization: `Bearer ${token}` } : {}
@@ -50,7 +55,7 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
       setErr(t("Collab history load failed"));
       setEntries([]);
     }
-  }, [collab?.projectId, getAccessToken, t]);
+  }, [collab?.projectId, getAccessToken, sceneId, t]);
 
   const runUndo = useCallback(async () => {
     setUndoMsg(null);

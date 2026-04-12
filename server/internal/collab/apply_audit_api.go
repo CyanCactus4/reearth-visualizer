@@ -10,7 +10,8 @@ import (
 	"github.com/reearth/reearth/server/pkg/id"
 )
 
-// ServeApplyAudit serves GET /api/collab/apply-audit?projectId=&limit= with the same access rules as ServeChatHistory.
+// ServeApplyAudit serves GET /api/collab/apply-audit?projectId=&limit=&sceneId= with the same access rules as ServeChatHistory.
+// Optional sceneId must match the project's scene and limits rows to that scene.
 // Rows are newest-first (by persisted ts).
 func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 	if store == nil {
@@ -46,6 +47,21 @@ func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 			return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
 		}
 
+		sceneFilter := ""
+		if q := strings.TrimSpace(c.QueryParam("sceneId")); q != "" {
+			sid, errS := id.SceneIDFrom(q)
+			if errS != nil {
+				return echo.NewHTTPError(http.StatusBadRequest, "invalid sceneId")
+			}
+			if sid != pj.Scene() {
+				return echo.NewHTTPError(http.StatusForbidden, "sceneId does not match project")
+			}
+			if !op.IsReadableScene(sid) {
+				return echo.NewHTTPError(http.StatusForbidden, "scene not readable")
+			}
+			sceneFilter = sid.String()
+		}
+
 		limit := 100
 		if q := strings.TrimSpace(c.QueryParam("limit")); q != "" {
 			if n, e := strconv.Atoi(q); e == nil && n > 0 {
@@ -56,7 +72,7 @@ func ServeApplyAudit(store ApplyAuditStore) echo.HandlerFunc {
 			limit = 500
 		}
 
-		recs, err := store.ListRecent(c.Request().Context(), pid.String(), limit)
+		recs, err := store.ListRecent(c.Request().Context(), pid.String(), sceneFilter, limit)
 		if err != nil {
 			return echo.NewHTTPError(http.StatusInternalServerError, "failed to load apply audit")
 		}

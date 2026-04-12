@@ -11,7 +11,7 @@ This document complements [AGENTS.md](../AGENTS.md) and the [MVP design doc](des
 | **MongoDB** | Collections `collabChatMessages` (chat), `collabApplyAudit` (successful `apply` **and** REST **`collab_undo` / `collab_redo`** journal; optional **`layerId`** / **`layerIds`**, **`userName`**, **`opKind`** (stack row kind)), `collabUndoOps` + `collabUndoState` (server undo/redo stacks); names overridable via env (see below). |
 | **SSE** `GET /api/collab/scene-rev/stream?sceneId=` | **Server-Sent Events** stream of `sceneRev` (scene `updatedAt` ms) after each successful collab `apply` on that scene. With **`REEARTH_COLLAB_REDIS_URL`**, revisions are also **fan-out via Redis** (`collab:srev:<sceneId>`) so every API instance updates its local subscribers. |
 | **GraphQL** `POST/GET /api/graphql` | Standard queries/mutations over HTTP; **WebSocket upgrade on GET** serves `graphql-ws` / `graphql-transport-ws` for **`subscription { collabSceneRevision(sceneId) }`** (scene `updatedAt` ms after collab applies). Same Redis fan-out as SSE when Redis is enabled. |
-| **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit`, `POST /api/collab/undo`, `POST /api/collab/redo` — same auth as private `/api`. |
+| **REST** | `GET /api/collab/chat`, `GET /api/collab/apply-audit` (optional **`sceneId`** query = project scene, filters journal), `POST /api/collab/undo`, `POST /api/collab/redo` — same auth as private `/api`. |
 
 ## Environment variables (collab-related)
 

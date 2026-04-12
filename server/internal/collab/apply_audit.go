@@ -47,5 +47,6 @@ type ApplyAuditListRow struct {
 // ApplyAuditStore appends successful apply operations for auditing / future undo UI.
 type ApplyAuditStore interface {
 	Append(ctx context.Context, rec ApplyAuditRecord) error
-	ListRecent(ctx context.Context, projectID string, limit int) ([]ApplyAuditListRow, error)
+	// ListRecent returns newest-first rows for projectID. When sceneID is non-empty, only rows with that sceneId are returned.
+	ListRecent(ctx context.Context, projectID, sceneID string, limit int) ([]ApplyAuditListRow, error)
 }

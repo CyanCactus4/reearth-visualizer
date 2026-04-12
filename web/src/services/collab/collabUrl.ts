@@ -35,7 +35,8 @@ export function buildCollabChatUrl(
 export function buildCollabApplyAuditUrl(
   apiBase: string,
   projectId: string,
-  limit?: number
+  limit?: number,
+  sceneId?: string
 ): string {
   const trimmed = apiBase.replace(/\/$/, "");
   const u = new URL(trimmed, window.location.origin);
@@ -43,6 +44,9 @@ export function buildCollabApplyAuditUrl(
   u.searchParams.set("projectId", projectId);
   if (limit != null && limit > 0) {
     u.searchParams.set("limit", String(limit));
+  }
+  if (sceneId != null && sceneId.trim() !== "") {
+    u.searchParams.set("sceneId", sceneId.trim());
   }
   return u.toString();
 }

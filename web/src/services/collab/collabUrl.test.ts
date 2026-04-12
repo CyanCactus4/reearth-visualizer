@@ -45,6 +45,20 @@ describe("buildCollabApplyAuditUrl", () => {
       "http://localhost:8080/api/collab/apply-audit?projectId=proj1&limit=20"
     );
   });
+
+  it("appends sceneId when provided", () => {
+    const u = buildCollabApplyAuditUrl(
+      "http://localhost:8080/api",
+      "proj1",
+      10,
+      "01fbpdqax0ttrftj3gb5gm4rw7"
+    );
+    expect(u).toContain("projectId=proj1");
+    expect(u).toContain("limit=10");
+    expect(u).toContain(
+      "sceneId=01fbpdqax0ttrftj3gb5gm4rw7"
+    );
+  });
 });
 
 describe("buildCollabUndoPostUrl / buildCollabRedoPostUrl", () => {
