@@ -92,8 +92,12 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 
 		bgCtx := context.WithoutCancel(c.Request().Context())
 		userID := ""
+		photoURL := ""
 		if u := adapter.User(bgCtx); u != nil {
 			userID = u.ID().String()
+			if md := u.Metadata(); md != nil {
+				photoURL = md.PhotoURL()
+			}
 		}
 		conn := &Conn{
 			hub:       hub,
@@ -101,6 +105,7 @@ func ServeWS(hub *Hub, cfg *config.CollabConfig, allowedOrigins []string) echo.H
 			projectID: pid.String(),
 			sceneID:   pj.Scene(),
 			userID:    userID,
+			photoURL:  photoURL,
 			operator:  op,
 			bgCtx:     bgCtx,
 			send:      make(chan []byte, sendChannelBuf),

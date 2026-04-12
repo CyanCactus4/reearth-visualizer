@@ -69,6 +69,8 @@ type Props = {
   sceneId?: string;
   /** GraphQL `me.id` — omit when unknown; own cursor/typing events are ignored. */
   localUserId?: string;
+  /** GraphQL `me.metadata.photoURL` — shown for local user where UI lists avatars. */
+  localUserPhotoURL?: string;
   /** Refetch scene from server (e.g. user chose “reload” after lock conflict). */
   onReconcileScene?: () => void;
   /** Optional: load two lightweight scene snapshots for merge-compare UI. */
@@ -88,6 +90,7 @@ export const CollabProvider: FC<Props> = ({
   projectId,
   sceneId,
   localUserId,
+  localUserPhotoURL,
   onReconcileScene,
   onLockConflictCompare,
   children
@@ -104,6 +107,9 @@ export const CollabProvider: FC<Props> = ({
     Record<string, RemoteCursor>
   >({});
   const [remoteTypingUserIds, setRemoteTypingUserIds] = useState<string[]>([]);
+  const [remoteUserPhotoURLs, setRemoteUserPhotoURLs] = useState<
+    Record<string, string>
+  >({});
   const [resourceLocks, setResourceLocks] = useState<
     Record<string, CollabResourceLock>
   >({});
@@ -348,6 +354,32 @@ export const CollabProvider: FC<Props> = ({
 
   const applyInbound = useCallback(
     (msg: CollabInbound) => {
+      if (msg.t === "presence") {
+        const d = msg.d as
+          | { event?: string; userId?: string; photoURL?: string }
+          | undefined;
+        const uid = d?.userId;
+        if (!uid) return;
+        if (d?.event === "join") {
+          const url =
+            typeof d.photoURL === "string" ? d.photoURL.trim() : "";
+          if (url.length > 0) {
+            setRemoteUserPhotoURLs((prev) =>
+              prev[uid] === url ? prev : { ...prev, [uid]: url }
+            );
+          }
+          return;
+        }
+        if (d?.event === "leave") {
+          setRemoteUserPhotoURLs((prev) => {
+            if (!(uid in prev)) return prev;
+            const next = { ...prev };
+            delete next[uid];
+            return next;
+          });
+        }
+        return;
+      }
       if (msg.t === "lock_changed") {
         const d = msg.d as
           | {
@@ -599,6 +631,7 @@ export const CollabProvider: FC<Props> = ({
     setWidgetEntityClocks({});
     setPropertyFieldClocks({});
     setPropertyDocClocks({});
+    setRemoteUserPhotoURLs({});
     seenChatIdsRef.current.clear();
     optimisticByKeyRef.current.clear();
     lastAppliedNotifyAtRef.current.clear();
@@ -811,6 +844,8 @@ export const CollabProvider: FC<Props> = ({
       status,
       projectId,
       localUserId,
+      localUserPhotoURL,
+      remoteUserPhotoURLs,
       lastMessage,
       sendRaw,
       remoteCursors,
@@ -829,6 +864,8 @@ export const CollabProvider: FC<Props> = ({
       status,
       projectId,
       localUserId,
+      localUserPhotoURL,
+      remoteUserPhotoURLs,
       lastMessage,
       sendRaw,
       remoteCursors,

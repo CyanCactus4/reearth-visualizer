@@ -89,20 +89,20 @@ func NewHub(o Options) *Hub {
 		chatMaxRunes: o.chatMaxRunes(),
 		chatEvery:    o.chatMinInterval(),
 
-		cursorEvery:         o.cursorMinInterval(),
-		activityTypingEvery: o.activityTypingInterval(),
-		activityMoveEvery:   o.activityMoveInterval(),
-		chatStore:           o.ChatHistory,
-		applyAudit:          o.ApplyAudit,
-		sceneRevSubs:        make(map[string][]chan int64),
-		widgetClocks:        make(map[string]int64),
+		cursorEvery:            o.cursorMinInterval(),
+		activityTypingEvery:    o.activityTypingInterval(),
+		activityMoveEvery:      o.activityMoveInterval(),
+		chatStore:              o.ChatHistory,
+		applyAudit:             o.ApplyAudit,
+		sceneRevSubs:           make(map[string][]chan int64),
+		widgetClocks:           make(map[string]int64),
 		propertyFieldClocks:    make(map[string]int64),
 		propertyFieldHLCMemory: newPropertyFieldHLCMemory(),
-		propertyDocClocks:       make(map[string]int64),
-		opStack:             o.OpStack,
-		sceneSnapshotStore:  o.SceneSnapshot,
-		snapLastAt:          make(map[string]time.Time),
-		mentionWebhook:      strings.TrimSpace(o.MentionWebhookURL),
+		propertyDocClocks:      make(map[string]int64),
+		opStack:                o.OpStack,
+		sceneSnapshotStore:     o.SceneSnapshot,
+		snapLastAt:             make(map[string]time.Time),
+		mentionWebhook:         strings.TrimSpace(o.MentionWebhookURL),
 	}
 	if o.RedisURL != "" {
 		if r := newRedisRelay(o.RedisURL, h.instanceID); r != nil {
@@ -259,10 +259,14 @@ func (h *Hub) presenceBroadcast(ctx context.Context, c *Conn, event string) {
 	if uid == "" {
 		uid = "unknown"
 	}
+	d := map[string]string{"event": event, "userId": uid}
+	if c.photoURL != "" {
+		d["photoURL"] = c.photoURL
+	}
 	b, err := json.Marshal(map[string]any{
 		"v": 1,
 		"t": "presence",
-		"d": map[string]string{"event": event, "userId": uid},
+		"d": d,
 	})
 	if err != nil {
 		return

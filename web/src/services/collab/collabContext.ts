@@ -35,6 +35,10 @@ export type CollabContextValue = {
   projectId: string | undefined;
   /** Current user id (from GraphQL me) — used to ignore self in cursor/typing fan-out. */
   localUserId: string | undefined;
+  /** Current user profile photo (GraphQL `me.metadata.photoURL`) for local UI. */
+  localUserPhotoURL: string | undefined;
+  /** Peer userId → photo URL from WS `presence` join (server passes accounts metadata). */
+  remoteUserPhotoURLs: Readonly<Record<string, string>>;
   lastMessage: CollabInbound | null;
   /** Returns true if the frame was sent on the socket; false if queued offline. */
   sendRaw: (json: string) => boolean;

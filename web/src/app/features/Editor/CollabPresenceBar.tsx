@@ -30,6 +30,9 @@ const CollabPresenceBar: FC = () => {
     return ` · typing: ${ids.join(", ")}`;
   }, [collab?.remoteTypingUserIds]);
 
+  const photos = collab?.remoteUserPhotoURLs ?? {};
+  const localPhoto = collab?.localUserPhotoURL;
+
   if (!collab?.projectId) {
     return null;
   }
@@ -42,12 +45,45 @@ const CollabPresenceBar: FC = () => {
         lineHeight: 1.4,
         padding: "2px 8px",
         opacity: 0.85,
-        borderBottom: "1px solid rgba(255,255,255,0.08)"
+        borderBottom: "1px solid rgba(255,255,255,0.08)",
+        display: "flex",
+        alignItems: "center",
+        gap: 6,
+        flexWrap: "wrap"
       }}
     >
-      Live: {collab.status}
-      {list.length > 0 ? ` · ${list.length} active: ${list.join(", ")}` : null}
-      {typingLine}
+      <span>
+        Live: {collab.status}
+        {list.length > 0
+          ? ` · ${list.length} active: ${list.join(", ")}`
+          : null}
+        {typingLine}
+      </span>
+      {list.length > 0 ? (
+        <span style={{ display: "inline-flex", gap: 3, alignItems: "center" }}>
+          {list.map((uid) => {
+            const src =
+              photos[uid] ||
+              (collab.localUserId === uid ? localPhoto : undefined);
+            if (!src || !/^https?:\/\//i.test(src)) return null;
+            return (
+              <img
+                key={uid}
+                src={src}
+                alt=""
+                title={uid}
+                referrerPolicy="no-referrer"
+                style={{
+                  width: 16,
+                  height: 16,
+                  borderRadius: 4,
+                  objectFit: "cover"
+                }}
+              />
+            );
+          })}
+        </span>
+      ) : null}
     </div>
   );
 };

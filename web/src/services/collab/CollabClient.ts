@@ -2,7 +2,11 @@ import { buildCollabWsUrl } from "./collabUrl";
 
 export type CollabInbound =
   | { v: 1; t: "pong" }
-  | { v: 1; t: "presence"; d?: { event?: string; userId?: string } }
+  | {
+      v: 1;
+      t: "presence";
+      d?: { event?: string; userId?: string; photoURL?: string };
+    }
   | {
       v: 1;
       t: "lock_changed";

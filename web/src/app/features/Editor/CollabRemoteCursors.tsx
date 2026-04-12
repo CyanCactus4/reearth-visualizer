@@ -3,7 +3,63 @@ import {
   collabUserColor,
   useCollab
 } from "@reearth/services/collab";
-import { FC, useMemo } from "react";
+import { FC, useMemo, useState } from "react";
+
+function CollabPeerAvatarChip({
+  userId,
+  photoUrl
+}: {
+  userId: string;
+  photoUrl?: string;
+}) {
+  const [imgFailed, setImgFailed] = useState(false);
+  const letter = collabUserAvatarLetter(userId);
+  const color = collabUserColor(userId);
+  const canImg =
+    photoUrl &&
+    !imgFailed &&
+    /^https?:\/\//i.test(photoUrl.trim());
+  if (canImg) {
+    return (
+      <img
+        alt=""
+        src={photoUrl.trim()}
+        referrerPolicy="no-referrer"
+        onError={() => setImgFailed(true)}
+        style={{
+          width: 22,
+          height: 22,
+          borderRadius: 999,
+          objectFit: "cover",
+          boxShadow: "0 0 0 2px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.35)"
+        }}
+      />
+    );
+  }
+  return (
+    <span
+      aria-label={`Avatar of ${userId}`}
+      data-testid={`collab-cursor-avatar-${userId}`}
+      style={{
+        minWidth: 22,
+        height: 22,
+        padding: "0 4px",
+        borderRadius: 999,
+        background: color,
+        boxShadow:
+          "0 0 0 2px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.35)",
+        color: "#fff",
+        fontSize: 10,
+        fontWeight: 700,
+        lineHeight: "22px",
+        textAlign: "center",
+        letterSpacing: -0.3
+      }}
+    >
+      {letter}
+    </span>
+  );
+}
 
 function shortUserLabel(userId: string): string {
   return userId.length <= 10 ? userId : `${userId.slice(0, 8)}…`;
@@ -49,26 +105,10 @@ const CollabRemoteCursors: FC = () => {
             whiteSpace: "nowrap"
           }}
         >
-          <span
-            aria-label={`Avatar of ${userId}`}
-            data-testid={`collab-cursor-avatar-${userId}`}
-            style={{
-              minWidth: 22,
-              height: 22,
-              padding: "0 4px",
-              borderRadius: 999,
-              background: collabUserColor(userId),
-              boxShadow: "0 0 0 2px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.35)",
-              color: "#fff",
-              fontSize: 10,
-              fontWeight: 700,
-              lineHeight: "22px",
-              textAlign: "center",
-              letterSpacing: -0.3
-            }}
-          >
-            {collabUserAvatarLetter(userId)}
-          </span>
+          <CollabPeerAvatarChip
+            userId={userId}
+            photoUrl={collab?.remoteUserPhotoURLs[userId]}
+          />
           <span
             style={{
               fontSize: 10,

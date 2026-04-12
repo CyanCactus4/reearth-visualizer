@@ -143,6 +143,7 @@ const Editor: FC<Props> = ({ sceneId, projectId, workspaceId, tab }) => {
       projectId={projectId}
       sceneId={sceneId}
       localUserId={me?.id}
+      localUserPhotoURL={me?.metadata?.photoURL ?? undefined}
       onReconcileScene={onCollabReconcileScene}
       onLockConflictCompare={onCollabLockCompare}
     >
