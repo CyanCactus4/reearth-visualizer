@@ -4,7 +4,7 @@
 
 ## Техническое задание
 
-Полное ТЗ на real-time collaboration — файл [TASK.md](TASK.md) (лабораторная + функциональные/технические требования). План фаз и статус — [PLAN.md](PLAN.md). **Фаза 0 (контракт):** [docs/design-doc/20260411_001_collaboration_protocol_mvp.md](docs/design-doc/20260411_001_collaboration_protocol_mvp.md). Любая новая работа по фиче должна явно трассироваться на пункты TASK.md / PLAN.md.
+Полное ТЗ на real-time collaboration — файл [TASK.md](TASK.md) (лабораторная + функциональные/технические требования). План фаз и статус — [PLAN.md](PLAN.md); **MVP по фазам 0–9 формально закрыт** (дата и критерии — раздел «Формальное закрытие варианта (MVP)» в PLAN.md; фаза 10 — чеклист харденинга). **Фаза 0 (контракт):** [docs/design-doc/20260411_001_collaboration_protocol_mvp.md](docs/design-doc/20260411_001_collaboration_protocol_mvp.md). Любая новая работа по фиче должна явно трассироваться на пункты TASK.md / PLAN.md.
 
 ## Окружение разработчика (типичное)
 
@@ -69,7 +69,7 @@
 
 ## Что важно помнить для TASK.md (collaboration)
 
-- Collab MVP в коде: **gorilla/websocket**, опциональный **Redis** (relay + locks), без OT/CRDT для сцены — дальнейшее по [PLAN.md](PLAN.md) / [TASK.md](TASK.md).
+- Collab MVP в коде: **gorilla/websocket**, опциональный **Redis** (relay + locks); для **сцены целиком** нет единого OT/CRDT — конфликты сценариев через **`baseSceneRev`** / блокировки; для **Property** — LWW+HLC, **`merge_property_json`**, item-операции (см. фазу 3 в [PLAN.md](PLAN.md)). Дальнейший бэклог — там же / [TASK.md](TASK.md).
 - История undo/redo в смысле **всего проекта** — не как единая готовая подсистема; локальный undo есть у отдельных UI (например Lexical). Мультипользовательская история из ТЗ потребует новой модели событий и хранения (Mongo).
 
 ## Обновление этого файла
