@@ -4,12 +4,17 @@ import { describe, expect, it, vi } from "vitest";
 
 import { CollabProvider } from "./CollabProvider";
 
+vi.mock("@apollo/client/react", () => ({
+  useSubscription: () => ({})
+}));
+
 vi.mock("@reearth/services/state", () => ({
   useNotification: () => [null, vi.fn()]
 }));
 
 vi.mock("@reearth/services/i18n/hooks", () => ({
-  useT: () => (key: string) => key
+  useT: () => (key: string) => key,
+  useLang: () => "en"
 }));
 
 vi.mock("@reearth/app/lib/reearth-ui", () => ({
