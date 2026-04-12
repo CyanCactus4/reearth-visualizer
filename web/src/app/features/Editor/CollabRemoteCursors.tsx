@@ -1,4 +1,8 @@
-import { collabUserColor, useCollab } from "@reearth/services/collab";
+import {
+  collabUserAvatarLetter,
+  collabUserColor,
+  useCollab
+} from "@reearth/services/collab";
 import { FC, useMemo } from "react";
 
 function shortUserLabel(userId: string): string {
@@ -46,14 +50,25 @@ const CollabRemoteCursors: FC = () => {
           }}
         >
           <span
+            aria-label={`Avatar of ${userId}`}
+            data-testid={`collab-cursor-avatar-${userId}`}
             style={{
-              width: 10,
-              height: 10,
-              borderRadius: "50%",
+              minWidth: 22,
+              height: 22,
+              padding: "0 4px",
+              borderRadius: 999,
               background: collabUserColor(userId),
-              boxShadow: "0 0 0 1px rgba(0,0,0,0.35)"
+              boxShadow: "0 0 0 2px rgba(255,255,255,0.9), 0 0 0 1px rgba(0,0,0,0.35)",
+              color: "#fff",
+              fontSize: 10,
+              fontWeight: 700,
+              lineHeight: "22px",
+              textAlign: "center",
+              letterSpacing: -0.3
             }}
-          />
+          >
+            {collabUserAvatarLetter(userId)}
+          </span>
           <span
             style={{
               fontSize: 10,

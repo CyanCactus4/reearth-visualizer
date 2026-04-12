@@ -43,7 +43,11 @@ export {
 export { activityPayload, type CollabActivityKind } from "./activityMessages";
 export { HybridLogicalClock, type CollabHlcWire } from "./hlc";
 export { chatPayload } from "./chatMessages";
-export { collabUserColor, collabUserHue } from "./collabUserColor";
+export {
+  collabUserAvatarLetter,
+  collabUserColor,
+  collabUserHue
+} from "./collabUserColor";
 export { CollabClient, type CollabInbound } from "./CollabClient";
 export { cursorPayload } from "./cursorMessages";
 export {

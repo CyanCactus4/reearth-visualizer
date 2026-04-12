@@ -19,7 +19,8 @@ const collabState = {
 
 vi.mock("@reearth/services/collab", () => ({
   useCollab: () => collabState,
-  collabUserColor: (id: string) => `color-${id}`
+  collabUserColor: (id: string) => `color-${id}`,
+  collabUserAvatarLetter: (id: string) => `AV-${id}`
 }));
 
 describe("CollabRemoteCursors", () => {
@@ -37,5 +38,9 @@ describe("CollabRemoteCursors", () => {
     expect(screen.getByTestId("collab-remote-cursors")).toBeInTheDocument();
     expect(screen.getByText("peer")).toBeInTheDocument();
     expect(container.querySelector('[title="peer"]')).toBeTruthy();
+    expect(screen.getByTestId("collab-cursor-avatar-peer")).toHaveTextContent(
+      "AV-peer"
+    );
+    expect(screen.getByLabelText("Avatar of peer")).toBeInTheDocument();
   });
 });

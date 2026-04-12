@@ -21,6 +21,8 @@
 | `e2e/` | Playwright: UI и API тесты |
 | `cerbos/policies/` | Политики Cerbos (при режиме с accounts) |
 | `docs/` | Документация и design docs |
+| `openspec/` | OpenSpec (SDD): [openspec/project.md](openspec/project.md), живые требования в `openspec/specs/` |
+| `.cursor/commands/` | Slash-команды OpenSpec для Cursor (`/opsx:explore`, `/opsx:propose`, `/opsx:apply`, `/opsx:archive`) после `npx @fission-ai/openspec@latest init . --tools cursor` |
 
 ## Архитектура данных (сервер)
 
