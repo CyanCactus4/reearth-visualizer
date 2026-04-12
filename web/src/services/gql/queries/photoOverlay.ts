@@ -9,3 +9,13 @@ export const CREATE_NLSPHOTOOVERLAY = gql(`
     }
   }
 `);
+
+export const REMOVE_NLSPHOTOOVERLAY = gql(`
+  mutation RemoveNLSPhotoOverlay($input: RemoveNLSPhotoOverlayInput!) {
+    removeNLSPhotoOverlay(input: $input) {
+      layer {
+        id
+      }
+    }
+  }
+`);

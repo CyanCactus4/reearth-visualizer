@@ -27,6 +27,8 @@ type Props = {
   selectedFeature: SelectedFeature | undefined;
   visualizerRef: MutableRefObject<MapRef | null>;
   ignoreCoreLayerUnselect: MutableRefObject<boolean>;
+  /** When set (editor scene), sketch GeoJSON mutations go through collab WS when connected. */
+  sceneId?: string;
 };
 
 export type FeatureProps = {
@@ -54,7 +56,8 @@ export default ({
   selectedLayer,
   selectedFeature,
   visualizerRef,
-  ignoreCoreLayerUnselect
+  ignoreCoreLayerUnselect,
+  sceneId
 }: Props) => {
   const [sketchType, setSketchType] = useState<SketchType | undefined>(
     undefined
@@ -91,7 +94,7 @@ export default ({
   );
 
   const { addGeoJsonFeature, updateGeoJSONFeature, deleteGeoJSONFeature } =
-    useFeatureCollectionMutations();
+    useFeatureCollectionMutations(sceneId);
 
   const handleSketchLayerAdd = useCallback(
     async (inp: FeatureProps) => {

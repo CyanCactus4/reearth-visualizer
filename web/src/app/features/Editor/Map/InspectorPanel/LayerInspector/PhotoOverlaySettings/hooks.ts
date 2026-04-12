@@ -7,26 +7,38 @@ import { useCallback, useMemo } from "react";
 
 export default ({
   layerId,
-  property
+  property,
+  sceneId
 }: {
   layerId: string;
   property?: PropertyFragmentFragment | null;
+  sceneId?: string;
 }) => {
-  const { createNLSPhotoOverlay } = usePhotoOverlayMutations();
+  const { createNLSPhotoOverlay, removeNLSPhotoOverlay } =
+    usePhotoOverlayMutations(sceneId);
 
   const visibleItems: Item[] | undefined = useMemo(
     () => filterVisibleItems(convert(property)),
     [property]
   );
 
-  const handlePhotoOverlayCreate = useCallback(async () => {
-    if (!property) {
-      await createNLSPhotoOverlay({ layerId });
-    }
-  }, [layerId, property, createNLSPhotoOverlay]);
+  const handlePhotoOverlayCreate = useCallback(
+    async (enabled?: boolean) => {
+      if (enabled !== true) return;
+      if (!property) {
+        await createNLSPhotoOverlay({ layerId });
+      }
+    },
+    [layerId, property, createNLSPhotoOverlay]
+  );
+
+  const handlePhotoOverlayRemove = useCallback(async () => {
+    await removeNLSPhotoOverlay({ layerId });
+  }, [layerId, removeNLSPhotoOverlay]);
 
   return {
     visibleItems,
-    handlePhotoOverlayCreate
+    handlePhotoOverlayCreate,
+    handlePhotoOverlayRemove
   };
 };

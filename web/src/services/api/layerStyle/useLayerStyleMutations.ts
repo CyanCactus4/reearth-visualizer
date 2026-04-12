@@ -37,10 +37,11 @@ export const useLayerStyleMutations = (sceneId?: string) => {
   });
   const addLayerStyle = useCallback(
     async (input: AddStyleInput): Promise<MutationReturn<AddStyleMutation>> => {
-      if (collab?.status === "open") {
+      const sid = input.sceneId ?? sceneId;
+      if (collab?.status === "open" && sid) {
         const ok = collab.sendRaw(
           applyAddStylePayload({
-            sceneId: input.sceneId,
+            sceneId: sid,
             name: input.name,
             value: input.value,
             baseSceneRev: collab.remoteSceneRev
@@ -72,7 +73,7 @@ export const useLayerStyleMutations = (sceneId?: string) => {
 
       return { data, status: "success" };
     },
-    [addLayerStyleMutation, collab, setNotification, t]
+    [addLayerStyleMutation, collab, sceneId, setNotification, t]
   );
 
   const [updateLayerStyleMutation] = useMutation(UPDATE_LAYERSTYLE, {

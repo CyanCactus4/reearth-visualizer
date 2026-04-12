@@ -16,24 +16,37 @@ type Props = {
 const Infobox: FC<Props> = ({ selectedLayerId, infobox, sceneId }) => {
   const t = useT();
 
-  const { visibleItems, handleInfoboxCreate } = useHooks({
+  const { visibleItems, handleInfoboxCreate, handleInfoboxRemove } = useHooks({
     layerId: selectedLayerId,
-    property: infobox?.property
+    property: infobox?.property,
+    sceneId
   });
 
   return (
     <Wrapper>
       {visibleItems ? (
-        visibleItems.map((i) =>
-          infobox?.property?.id ? (
-            <PropertyItem
-              key={i.id ?? ""}
-              propertyId={infobox.property.id}
-              item={i}
-              sceneId={sceneId}
+        <>
+          {infobox?.property?.id ? (
+            <SwitchField
+              title={t("Infobox enabled")}
+              description={t("Disable infobox description")}
+              value
+              onChange={async (on) => {
+                if (!on) await handleInfoboxRemove();
+              }}
             />
-          ) : null
-        )
+          ) : null}
+          {visibleItems.map((i) =>
+            infobox?.property?.id ? (
+              <PropertyItem
+                key={i.id ?? ""}
+                propertyId={infobox.property.id}
+                item={i}
+                sceneId={sceneId}
+              />
+            ) : null
+          )}
+        </>
       ) : (
         <SwitchField
           title={t("Enable Infobox")}

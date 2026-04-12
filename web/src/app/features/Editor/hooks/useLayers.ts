@@ -97,7 +97,7 @@ export default function ({
     updateCustomProperties,
     changeCustomPropertyTitle,
     removeCustomProperty
-  } = useNLSLayerCustomPropertyMutations();
+  } = useNLSLayerCustomPropertyMutations(sceneId);
 
   const { nlsLayers: originNlsLayers } = useNLSLayers({ sceneId });
 

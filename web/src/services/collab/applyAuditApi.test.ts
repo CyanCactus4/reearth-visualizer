@@ -67,6 +67,28 @@ describe("parseApplyAuditResponse", () => {
     expect(rows[1].layerIds).toEqual(["a", "b"]);
   });
 
+  it("parses blockId for infobox / story apply rows", () => {
+    const rows = parseApplyAuditResponse({
+      entries: [
+        {
+          id: "01",
+          userId: "u1",
+          kind: "add_nls_infobox_block",
+          sceneRev: 5,
+          ts: 2,
+          layerId: "lay01",
+          blockId: "iblk01"
+        }
+      ]
+    });
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({
+      kind: "add_nls_infobox_block",
+      layerId: "lay01",
+      blockId: "iblk01"
+    });
+  });
+
   it("drops rows missing required fields", () => {
     expect(
       parseApplyAuditResponse({

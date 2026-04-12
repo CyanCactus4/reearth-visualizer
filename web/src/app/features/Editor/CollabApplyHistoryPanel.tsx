@@ -200,6 +200,7 @@ const CollabApplyHistoryPanel: FC<Props> = ({ sceneId }) => {
                     : e.layerId
                       ? ` · ${t("Collab history layer single")} ${e.layerId.slice(0, 8)}…`
                       : null}
+                  {e.blockId ? ` · block ${e.blockId.slice(0, 8)}…` : null}
                 </li>
               ))}
             </ul>

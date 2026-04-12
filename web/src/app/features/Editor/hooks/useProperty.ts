@@ -1,8 +1,12 @@
 import { usePropertyMutations } from "@reearth/services/api/property";
 import { useCallback } from "react";
 
-export default () => {
-  const { updatePropertyValue } = usePropertyMutations();
+type Props = {
+  sceneId: string;
+};
+
+export default ({ sceneId }: Props) => {
+  const { updatePropertyValue } = usePropertyMutations(sceneId);
   const handlePropertyValueUpdate = useCallback(
     async (
       propertyId?: string,

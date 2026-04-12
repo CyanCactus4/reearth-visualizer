@@ -282,6 +282,237 @@ export function applyRemoveNlsLayerPayload(params: {
   return JSON.stringify({ v: 1, t: "apply", d });
 }
 
+/** Collab apply when enabling the infobox on an NLS layer (server `NLSLayer.CreateNLSInfobox`). */
+export function applyCreateNlsInfoboxPayload(params: {
+  sceneId: string;
+  layerId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "create_nls_infobox",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Collab apply when removing the infobox from an NLS layer (server `NLSLayer.RemoveNLSInfobox`). */
+export function applyRemoveNlsInfoboxPayload(params: {
+  sceneId: string;
+  layerId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_nls_infobox",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Sketch / NLS layer photo overlay (server `NLSLayer.CreateNLSPhotoOverlay`). */
+export function applyCreateNlsPhotoOverlayPayload(params: {
+  sceneId: string;
+  layerId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "create_nls_photo_overlay",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.RemoveNLSPhotoOverlay`. */
+export function applyRemoveNlsPhotoOverlayPayload(params: {
+  sceneId: string;
+  layerId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_nls_photo_overlay",
+    sceneId: params.sceneId,
+    layerId: params.layerId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Sketch custom property schema (server `NLSLayer.AddOrUpdateCustomProperties`). */
+export function applyUpdateNlsCustomPropertiesPayload(params: {
+  sceneId: string;
+  layerId: string;
+  schema: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_nls_custom_properties",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    schema: params.schema
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.ChangeCustomPropertyTitle`. */
+export function applyChangeNlsCustomPropertyTitlePayload(params: {
+  sceneId: string;
+  layerId: string;
+  schema: unknown;
+  oldTitle: string;
+  newTitle: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "change_nls_custom_property_title",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    schema: params.schema,
+    oldTitle: params.oldTitle,
+    newTitle: params.newTitle
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.RemoveCustomProperty`. */
+export function applyRemoveNlsCustomPropertyPayload(params: {
+  sceneId: string;
+  layerId: string;
+  schema: unknown;
+  removedTitle: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_nls_custom_property",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    schema: params.schema,
+    removedTitle: params.removedTitle
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.AddGeoJSONFeature`. */
+export function applyAddNlsGeojsonFeaturePayload(params: {
+  sceneId: string;
+  layerId: string;
+  type: string;
+  geometry: unknown;
+  properties?: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "add_nls_geojson_feature",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    type: params.type,
+    geometry: params.geometry
+  };
+  if (params.properties !== undefined) d.properties = params.properties;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.UpdateGeoJSONFeature`. */
+export function applyUpdateNlsGeojsonFeaturePayload(params: {
+  sceneId: string;
+  layerId: string;
+  featureId: string;
+  geometry?: unknown;
+  properties?: unknown;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "update_nls_geojson_feature",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    featureId: params.featureId
+  };
+  if (params.geometry !== undefined) d.geometry = params.geometry;
+  if (params.properties !== undefined) d.properties = params.properties;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Server `NLSLayer.DeleteGeoJSONFeature`. */
+export function applyDeleteNlsGeojsonFeaturePayload(params: {
+  sceneId: string;
+  layerId: string;
+  featureId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "delete_nls_geojson_feature",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    featureId: params.featureId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+/** Collab apply for NLS layer infobox plugin blocks (server `NLSLayer.AddNLSInfoboxBlock`). */
+export function applyAddNlsInfoboxBlockPayload(params: {
+  sceneId: string;
+  layerId: string;
+  pluginId: string;
+  extensionId: string;
+  index?: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "add_nls_infobox_block",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    pluginId: params.pluginId,
+    extensionId: params.extensionId
+  };
+  if (params.index != null) d.index = params.index;
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyMoveNlsInfoboxBlockPayload(params: {
+  sceneId: string;
+  layerId: string;
+  infoboxBlockId: string;
+  index: number;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "move_nls_infobox_block",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    infoboxBlockId: params.infoboxBlockId,
+    index: params.index
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
+export function applyRemoveNlsInfoboxBlockPayload(params: {
+  sceneId: string;
+  layerId: string;
+  infoboxBlockId: string;
+  baseSceneRev?: number;
+}): string {
+  const d: Record<string, unknown> = {
+    kind: "remove_nls_infobox_block",
+    sceneId: params.sceneId,
+    layerId: params.layerId,
+    infoboxBlockId: params.infoboxBlockId
+  };
+  if (params.baseSceneRev != null) d.baseSceneRev = params.baseSceneRev;
+  return JSON.stringify({ v: 1, t: "apply", d });
+}
+
 export function applyUpdateNlsLayerPayload(params: {
   sceneId: string;
   layerId: string;

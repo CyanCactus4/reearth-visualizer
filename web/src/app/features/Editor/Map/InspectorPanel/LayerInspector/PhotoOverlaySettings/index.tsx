@@ -20,24 +20,41 @@ const PhotoOverlaySettings: FC<Props> = ({
 }) => {
   const t = useT();
 
-  const { visibleItems, handlePhotoOverlayCreate } = useHooks({
+  const {
+    visibleItems,
+    handlePhotoOverlayCreate,
+    handlePhotoOverlayRemove
+  } = useHooks({
     layerId: selectedLayerId,
-    property: photoOverlay?.property
+    property: photoOverlay?.property,
+    sceneId
   });
 
   return (
     <Wrapper>
       {visibleItems ? (
-        visibleItems.map((i) =>
-          photoOverlay?.property?.id ? (
-            <PropertyItem
-              key={i.id ?? ""}
-              propertyId={photoOverlay.property.id}
-              item={i}
-              sceneId={sceneId}
+        <>
+          {photoOverlay?.property?.id ? (
+            <SwitchField
+              title={t("Photo overlay enabled")}
+              description={t("Disable photo overlay description")}
+              value
+              onChange={async (on) => {
+                if (!on) await handlePhotoOverlayRemove();
+              }}
             />
-          ) : null
-        )
+          ) : null}
+          {visibleItems.map((i) =>
+            photoOverlay?.property?.id ? (
+              <PropertyItem
+                key={i.id ?? ""}
+                propertyId={photoOverlay.property.id}
+                item={i}
+                sceneId={sceneId}
+              />
+            ) : null
+          )}
+        </>
       ) : (
         <SwitchField
           title={t("Enable PhotoOverlay")}

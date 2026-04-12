@@ -236,9 +236,17 @@ Feature: 地物
 Layer Style: レイヤースタイル
 Infobox: インフォボックス
 Enable Infobox: インフォボックスを有効化
+Infobox enabled: インフォボックスを有効
+Disable infobox description: オフにすると、このレイヤーからインフォボックスを削除します（ブロックと設定は失われます）。
+Infobox removed from layer: インフォボックスをレイヤーから削除しました
+Failed to remove infobox from layer: インフォボックスの削除に失敗しました
 Show infobox when the user clicks on a layer: レイヤーをクリックした際にインフォボックスを表示
 NO STYLE: スタイルなし
 Enable PhotoOverlay: フォトオーバーレイを有効化
+Photo overlay enabled: フォトオーバーレイを有効
+Disable photo overlay description: オフにすると、このレイヤーからフォトオーバーレイを削除します。
+Photo overlay removed from layer: フォトオーバーレイをレイヤーから削除しました
+Failed to remove photo overlay from layer: フォトオーバーレイの削除に失敗しました
 Show photo overlay when the user clicks on a layer: レイヤーをクリックした際にフォトオーバーレイを表示
 Settings: 設定
 Add Layer from Resource: リソースからレイヤーを追加

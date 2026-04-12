@@ -7,12 +7,14 @@ import { useCallback, useMemo } from "react";
 
 export default ({
   layerId,
-  property
+  property,
+  sceneId
 }: {
   layerId: string;
   property?: PropertyFragmentFragment | null | undefined;
+  sceneId?: string;
 }) => {
-  const { createNLSInfobox } = useInfoboxMutations();
+  const { createNLSInfobox, removeNLSInfobox } = useInfoboxMutations(sceneId);
 
   const visibleItems: Item[] | undefined = useMemo(
     () => filterVisibleItems(convert(property)),
@@ -25,8 +27,13 @@ export default ({
     }
   }, [layerId, property, createNLSInfobox]);
 
+  const handleInfoboxRemove = useCallback(async () => {
+    await removeNLSInfobox({ layerId });
+  }, [layerId, removeNLSInfobox]);
+
   return {
     visibleItems,
-    handleInfoboxCreate
+    handleInfoboxCreate,
+    handleInfoboxRemove
   };
 };

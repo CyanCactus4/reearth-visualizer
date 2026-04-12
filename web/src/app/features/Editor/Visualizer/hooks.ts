@@ -74,7 +74,7 @@ export default ({
   } = usePropertyMutations(sceneId);
 
   const { createInfoboxBlock, deleteInfoboxBlock, moveInfoboxBlock } =
-    useInfoboxBlockMutations();
+    useInfoboxBlockMutations(sceneId);
 
   const [currentCamera, setCurrentCamera] = useCurrentCamera();
   const handleCameraUpdate = useCallback(

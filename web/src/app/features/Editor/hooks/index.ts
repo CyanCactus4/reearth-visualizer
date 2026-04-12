@@ -81,7 +81,8 @@ export default ({ sceneId, projectId, tab }: Props) => {
     selectedLayer,
     selectedFeature,
     ignoreCoreLayerUnselect,
-    visualizerRef
+    visualizerRef,
+    sceneId
   });
 
   const {
@@ -146,7 +147,7 @@ export default ({ sceneId, projectId, tab }: Props) => {
     selectWidget
   } = useWidgets({ tab });
 
-  const { handlePropertyValueUpdate } = useProperty();
+  const { handlePropertyValueUpdate } = useProperty({ sceneId });
 
   const mapPageValue: MapPageContextType = useMemo(
     () => ({

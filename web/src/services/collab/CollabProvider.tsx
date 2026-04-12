@@ -184,6 +184,7 @@ export const CollabProvider: FC<Props> = ({
           widgetId?: string;
           layerId?: string;
           layerIds?: string[];
+          blockId?: string;
           styleId?: string;
           propertyId?: string;
           fieldId?: string;
@@ -207,7 +208,8 @@ export const CollabProvider: FC<Props> = ({
     const stid = typeof d?.styleId === "string" ? d.styleId : "";
     const propId = typeof d?.propertyId === "string" ? d.propertyId : "";
     const fldId = typeof d?.fieldId === "string" ? d.fieldId : "";
-    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${stid}\0${propId}\0${fldId}`;
+    const blkId = typeof d?.blockId === "string" ? d.blockId : "";
+    const key = `${peer}\0${kind}\0${opKind}\0${wid}\0${lid}\0${lids}\0${blkId}\0${stid}\0${propId}\0${fldId}`;
     const now = Date.now();
     const prev = lastAppliedNotifyAtRef.current.get(key) ?? 0;
     if (now - prev < 4000) return;
@@ -217,7 +219,7 @@ export const CollabProvider: FC<Props> = ({
       text: tCollab("Collab peer applied toast", {
         userId: peer,
         kind: kindLabel || "edit",
-        widgetId: wid || lid || lids || stid || propId || fldId || "—"
+        widgetId: wid || lid || lids || blkId || stid || propId || fldId || "—"
       })
     });
   }, [lastMessage, localUserId, setNotification, tCollab]);

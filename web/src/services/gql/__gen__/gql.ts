@@ -48,6 +48,7 @@ type Documents = {
     "\n  mutation UpdateStyle($input: UpdateStyleInput!) {\n    updateStyle(input: $input) {\n      style {\n        id\n        name\n      }\n    }\n  }\n": typeof types.UpdateStyleDocument,
     "\n  mutation RemoveStyle($input: RemoveStyleInput!) {\n    removeStyle(input: $input) {\n      styleId\n    }\n  }\n": typeof types.RemoveStyleDocument,
     "\n  mutation CreateNLSPhotoOverlay($input: CreateNLSPhotoOverlayInput!) {\n    createNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n": typeof types.CreateNlsPhotoOverlayDocument,
+    "\n  mutation RemoveNLSPhotoOverlay($input: RemoveNLSPhotoOverlayInput!) {\n    removeNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n": typeof types.RemoveNlsPhotoOverlayDocument,
     "\n  mutation InstallPlugin($sceneId: ID!, $pluginId: ID!) {\n    installPlugin(input: { sceneId: $sceneId, pluginId: $pluginId }) {\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": typeof types.InstallPluginDocument,
     "\n  mutation UpgradePlugin($sceneId: ID!, $pluginId: ID!, $toPluginId: ID!) {\n    upgradePlugin(input: { sceneId: $sceneId, pluginId: $pluginId, toPluginId: $toPluginId }) {\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": typeof types.UpgradePluginDocument,
     "\n  mutation UploadPlugin($sceneId: ID!, $file: Upload, $url: URL) {\n    uploadPlugin(input: { sceneId: $sceneId, file: $file, url: $url }) {\n      plugin {\n        id\n        name\n        version\n        description\n        author\n      }\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": typeof types.UploadPluginDocument,
@@ -135,6 +136,7 @@ const documents: Documents = {
     "\n  mutation UpdateStyle($input: UpdateStyleInput!) {\n    updateStyle(input: $input) {\n      style {\n        id\n        name\n      }\n    }\n  }\n": types.UpdateStyleDocument,
     "\n  mutation RemoveStyle($input: RemoveStyleInput!) {\n    removeStyle(input: $input) {\n      styleId\n    }\n  }\n": types.RemoveStyleDocument,
     "\n  mutation CreateNLSPhotoOverlay($input: CreateNLSPhotoOverlayInput!) {\n    createNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n": types.CreateNlsPhotoOverlayDocument,
+    "\n  mutation RemoveNLSPhotoOverlay($input: RemoveNLSPhotoOverlayInput!) {\n    removeNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n": types.RemoveNlsPhotoOverlayDocument,
     "\n  mutation InstallPlugin($sceneId: ID!, $pluginId: ID!) {\n    installPlugin(input: { sceneId: $sceneId, pluginId: $pluginId }) {\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": types.InstallPluginDocument,
     "\n  mutation UpgradePlugin($sceneId: ID!, $pluginId: ID!, $toPluginId: ID!) {\n    upgradePlugin(input: { sceneId: $sceneId, pluginId: $pluginId, toPluginId: $toPluginId }) {\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": types.UpgradePluginDocument,
     "\n  mutation UploadPlugin($sceneId: ID!, $file: Upload, $url: URL) {\n    uploadPlugin(input: { sceneId: $sceneId, file: $file, url: $url }) {\n      plugin {\n        id\n        name\n        version\n        description\n        author\n      }\n      scenePlugin {\n        pluginId\n        propertyId\n      }\n    }\n  }\n": types.UploadPluginDocument,
@@ -338,6 +340,10 @@ export function gql(source: "\n  mutation RemoveStyle($input: RemoveStyleInput!)
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */
 export function gql(source: "\n  mutation CreateNLSPhotoOverlay($input: CreateNLSPhotoOverlayInput!) {\n    createNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation CreateNLSPhotoOverlay($input: CreateNLSPhotoOverlayInput!) {\n    createNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n"];
+/**
+ * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
+ */
+export function gql(source: "\n  mutation RemoveNLSPhotoOverlay($input: RemoveNLSPhotoOverlayInput!) {\n    removeNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n"): (typeof documents)["\n  mutation RemoveNLSPhotoOverlay($input: RemoveNLSPhotoOverlayInput!) {\n    removeNLSPhotoOverlay(input: $input) {\n      layer {\n        id\n      }\n    }\n  }\n"];
 /**
  * The gql function is used to parse GraphQL queries into a document that can be used by GraphQL clients.
  */

@@ -15,15 +15,23 @@ import {
   MOVE_NLSINFOBOX_BLOCK,
   REMOVE_NLSINFOBOX_BLOCK
 } from "@reearth/services/gql/queries/infobox";
+import {
+  applyAddNlsInfoboxBlockPayload,
+  applyMoveNlsInfoboxBlockPayload,
+  applyRemoveNlsInfoboxBlockPayload,
+  useCollab
+} from "@reearth/services/collab";
 import { useT } from "@reearth/services/i18n/hooks";
 import { useNotification } from "@reearth/services/state";
 import { useCallback } from "react";
 
 import { MutationReturn } from "../types";
 
-export const useInfoboxBlockMutations = () => {
+/** Pass `sceneId` when the editor is bound to a scene so infobox block ops use collab WS. */
+export const useInfoboxBlockMutations = (sceneIdForCollab?: string) => {
   const [, setNotification] = useNotification();
   const t = useT();
+  const collab = useCollab();
 
   const [createInfoboxBlockMutation] = useMutation<
     AddNlsInfoboxBlockMutation,
@@ -34,6 +42,25 @@ export const useInfoboxBlockMutations = () => {
     async (
       input: AddNlsInfoboxBlockInput
     ): Promise<MutationReturn<AddNlsInfoboxBlockMutation>> => {
+      if (collab?.status === "open" && sceneIdForCollab) {
+        const ok = collab.sendRaw(
+          applyAddNlsInfoboxBlockPayload({
+            sceneId: sceneIdForCollab,
+            layerId: input.layerId,
+            pluginId: input.pluginId,
+            extensionId: input.extensionId,
+            index: input.index ?? undefined,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "success",
+            text: t("Successfully created a block!")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await createInfoboxBlockMutation({
         variables: { input }
       });
@@ -49,7 +76,7 @@ export const useInfoboxBlockMutations = () => {
 
       return { data, status: "success" };
     },
-    [createInfoboxBlockMutation, setNotification, t]
+    [collab, createInfoboxBlockMutation, sceneIdForCollab, setNotification, t]
   );
 
   const [removeInfoboxBlockMutation] = useMutation<
@@ -61,6 +88,23 @@ export const useInfoboxBlockMutations = () => {
     async (
       input: RemoveNlsInfoboxBlockInput
     ): Promise<MutationReturn<RemoveNlsInfoboxBlockMutation>> => {
+      if (collab?.status === "open" && sceneIdForCollab) {
+        const ok = collab.sendRaw(
+          applyRemoveNlsInfoboxBlockPayload({
+            sceneId: sceneIdForCollab,
+            layerId: input.layerId,
+            infoboxBlockId: input.infoboxBlockId,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Block was successfully deleted.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await removeInfoboxBlockMutation({
         variables: { input }
       });
@@ -76,7 +120,7 @@ export const useInfoboxBlockMutations = () => {
 
       return { data, status: "success" };
     },
-    [removeInfoboxBlockMutation, setNotification, t]
+    [collab, removeInfoboxBlockMutation, sceneIdForCollab, setNotification, t]
   );
 
   const [moveInfoboxBlockMutation] = useMutation<
@@ -88,6 +132,24 @@ export const useInfoboxBlockMutations = () => {
     async (
       input: MoveNlsInfoboxBlockInput
     ): Promise<MutationReturn<MoveNlsInfoboxBlockMutation>> => {
+      if (collab?.status === "open" && sceneIdForCollab) {
+        const ok = collab.sendRaw(
+          applyMoveNlsInfoboxBlockPayload({
+            sceneId: sceneIdForCollab,
+            layerId: input.layerId,
+            infoboxBlockId: input.infoboxBlockId,
+            index: input.index,
+            baseSceneRev: collab.remoteSceneRev
+          })
+        );
+        if (ok) {
+          setNotification({
+            type: "info",
+            text: t("Block was successfully moved.")
+          });
+          return { status: "success" as const };
+        }
+      }
       const { data, error } = await moveInfoboxBlockMutation({
         variables: { input }
       });
@@ -103,7 +165,7 @@ export const useInfoboxBlockMutations = () => {
 
       return { data, status: "success" };
     },
-    [moveInfoboxBlockMutation, setNotification, t]
+    [collab, moveInfoboxBlockMutation, sceneIdForCollab, setNotification, t]
   );
 
   return {

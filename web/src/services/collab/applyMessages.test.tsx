@@ -3,16 +3,29 @@ import { describe, expect, it } from "vitest";
 
 import {
   alignSystemForCollab,
+  applyAddNlsInfoboxBlockPayload,
   applyAddNlsLayerSimplePayload,
   applyAddStylePayload,
   applyAddWidgetPayload,
+  applyCreateNlsInfoboxPayload,
+  applyAddNlsGeojsonFeaturePayload,
+  applyChangeNlsCustomPropertyTitlePayload,
+  applyCreateNlsPhotoOverlayPayload,
+  applyDeleteNlsGeojsonFeaturePayload,
+  applyRemoveNlsCustomPropertyPayload,
+  applyRemoveNlsInfoboxPayload,
+  applyRemoveNlsPhotoOverlayPayload,
+  applyUpdateNlsCustomPropertiesPayload,
+  applyUpdateNlsGeojsonFeaturePayload,
   applyCreateStoryBlockPayload,
   applyCreateStoryPagePayload,
   applyDuplicateStoryPagePayload,
+  applyMoveNlsInfoboxBlockPayload,
   applyMoveStoryBlockPayload,
   applyMoveStoryPagePayload,
   applyRemoveStoryBlockPayload,
   applyRemoveStoryPagePayload,
+  applyRemoveNlsInfoboxBlockPayload,
   applyRemoveNlsLayerPayload,
   applyRemoveStylePayload,
   applyUpdateNlsLayerPayload,
@@ -387,6 +400,199 @@ describe("apply payloads", () => {
       type: "NUMBER",
       value: 0.5,
       baseSceneRev: 9
+    });
+  });
+
+  it("builds NLS photo overlay apply envelopes", () => {
+    const cr = applyCreateNlsPhotoOverlayPayload({
+      sceneId: "sc1",
+      layerId: "layp",
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(cr).d).toMatchObject({
+      kind: "create_nls_photo_overlay",
+      sceneId: "sc1",
+      layerId: "layp",
+      baseSceneRev: 3
+    });
+    const rm = applyRemoveNlsPhotoOverlayPayload({
+      sceneId: "sc1",
+      layerId: "layp",
+      baseSceneRev: 4
+    });
+    expect(JSON.parse(rm).d).toMatchObject({
+      kind: "remove_nls_photo_overlay",
+      sceneId: "sc1",
+      layerId: "layp",
+      baseSceneRev: 4
+    });
+  });
+
+  it("builds NLS sketch custom property apply envelopes", () => {
+    const upd = applyUpdateNlsCustomPropertiesPayload({
+      sceneId: "sc1",
+      layerId: "layc",
+      schema: { a: { type: "string" } },
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(upd).d).toMatchObject({
+      kind: "update_nls_custom_properties",
+      sceneId: "sc1",
+      layerId: "layc",
+      schema: { a: { type: "string" } },
+      baseSceneRev: 1
+    });
+    const ch = applyChangeNlsCustomPropertyTitlePayload({
+      sceneId: "sc1",
+      layerId: "layc",
+      schema: {},
+      oldTitle: "x",
+      newTitle: "y",
+      baseSceneRev: 2
+    });
+    expect(JSON.parse(ch).d).toMatchObject({
+      kind: "change_nls_custom_property_title",
+      sceneId: "sc1",
+      layerId: "layc",
+      oldTitle: "x",
+      newTitle: "y",
+      baseSceneRev: 2
+    });
+    const rmProp = applyRemoveNlsCustomPropertyPayload({
+      sceneId: "sc1",
+      layerId: "layc",
+      schema: {},
+      removedTitle: "x",
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(rmProp).d).toMatchObject({
+      kind: "remove_nls_custom_property",
+      sceneId: "sc1",
+      layerId: "layc",
+      removedTitle: "x",
+      baseSceneRev: 3
+    });
+  });
+
+  it("builds NLS GeoJSON feature apply envelopes", () => {
+    const add = applyAddNlsGeojsonFeaturePayload({
+      sceneId: "sc1",
+      layerId: "layg",
+      type: "Feature",
+      geometry: { type: "Point", pointCoordinates: [1, 2] },
+      properties: { id: "f1" },
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(add).d).toMatchObject({
+      kind: "add_nls_geojson_feature",
+      sceneId: "sc1",
+      layerId: "layg",
+      type: "Feature",
+      geometry: { type: "Point", pointCoordinates: [1, 2] },
+      properties: { id: "f1" },
+      baseSceneRev: 1
+    });
+    const upd = applyUpdateNlsGeojsonFeaturePayload({
+      sceneId: "sc1",
+      layerId: "layg",
+      featureId: "fid",
+      properties: { id: "f1", x: 1 },
+      baseSceneRev: 2
+    });
+    expect(JSON.parse(upd).d).toMatchObject({
+      kind: "update_nls_geojson_feature",
+      sceneId: "sc1",
+      layerId: "layg",
+      featureId: "fid",
+      properties: { id: "f1", x: 1 },
+      baseSceneRev: 2
+    });
+    const del = applyDeleteNlsGeojsonFeaturePayload({
+      sceneId: "sc1",
+      layerId: "layg",
+      featureId: "fid",
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(del).d).toMatchObject({
+      kind: "delete_nls_geojson_feature",
+      sceneId: "sc1",
+      layerId: "layg",
+      featureId: "fid",
+      baseSceneRev: 3
+    });
+  });
+
+  it("builds NLS infobox block apply envelopes", () => {
+    const create = applyCreateNlsInfoboxPayload({
+      sceneId: "sc1",
+      layerId: "lay0",
+      baseSceneRev: 0
+    });
+    expect(JSON.parse(create).d).toMatchObject({
+      kind: "create_nls_infobox",
+      sceneId: "sc1",
+      layerId: "lay0",
+      baseSceneRev: 0
+    });
+
+    const rmInf = applyRemoveNlsInfoboxPayload({
+      sceneId: "sc1",
+      layerId: "lay0",
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(rmInf).d).toMatchObject({
+      kind: "remove_nls_infobox",
+      sceneId: "sc1",
+      layerId: "lay0",
+      baseSceneRev: 1
+    });
+
+    const add = applyAddNlsInfoboxBlockPayload({
+      sceneId: "sc1",
+      layerId: "lay1",
+      pluginId: "p~1",
+      extensionId: "markdown",
+      index: 0,
+      baseSceneRev: 1
+    });
+    expect(JSON.parse(add).d).toMatchObject({
+      kind: "add_nls_infobox_block",
+      sceneId: "sc1",
+      layerId: "lay1",
+      pluginId: "p~1",
+      extensionId: "markdown",
+      index: 0,
+      baseSceneRev: 1
+    });
+
+    const mv = applyMoveNlsInfoboxBlockPayload({
+      sceneId: "sc1",
+      layerId: "lay1",
+      infoboxBlockId: "ib1",
+      index: 2,
+      baseSceneRev: 2
+    });
+    expect(JSON.parse(mv).d).toMatchObject({
+      kind: "move_nls_infobox_block",
+      sceneId: "sc1",
+      layerId: "lay1",
+      infoboxBlockId: "ib1",
+      index: 2,
+      baseSceneRev: 2
+    });
+
+    const rm = applyRemoveNlsInfoboxBlockPayload({
+      sceneId: "sc1",
+      layerId: "lay1",
+      infoboxBlockId: "ib1",
+      baseSceneRev: 3
+    });
+    expect(JSON.parse(rm).d).toMatchObject({
+      kind: "remove_nls_infobox_block",
+      sceneId: "sc1",
+      layerId: "lay1",
+      infoboxBlockId: "ib1",
+      baseSceneRev: 3
     });
   });
 });
